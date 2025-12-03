@@ -1,0 +1,410 @@
+﻿@model List<SeniorManagement.Models.Senior>
+
+@{
+    ViewData["Title"] = "";
+}
+
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3><i class="fas fa-user-friends me-2"></i>Senior Records</h3>
+        <a href="@Url.Action("DeletedSeniors", "Senior")" class="btn-primary btn-sm" style="background: #6c757d;">
+            <i class="fas fa-archive me-1"></i> View Archived Records
+        </a>
+        <a asp-action="CreateSenior" class="btn btn-create-new-blue with-count">
+            <i class="fas fa-plus-circle"></i>
+            <span>Create New Senior</span>
+            <span class="count-badge">+</span>
+        </a>
+    </div>
+
+
+<div class="card">
+    <div class="card-header"></div>
+    </div>
+    <div class="card-body">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Full Name</th>
+                            <th>Age</th>
+                            <th>Sex</th>
+                            <th>Contact</th>
+                            <th>Barangay</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var senior in Model)
+                        {
+                            <tr>
+                                <td>@senior.Id</td>
+                                <td>@senior.FullName</td>
+                                <td>@senior.s_age</td>
+                                <td>@senior.s_sex</td>
+                                <td>@(string.IsNullOrEmpty(senior.s_contact) ? "N/A" : senior.s_contact)</td>
+                                <td>@(string.IsNullOrEmpty(senior.s_barangay) ? "N/A" : senior.s_barangay)</td>
+                                <td>
+                                    <span class="badge @(senior.Status == "Active" ? "badge-active" : "badge-inactive")">
+                                        @senior.Status
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="@Url.Action("EditSenior", "Senior", new { id = senior.Id })" class="btn-primary btn-sm">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <form method="post" action="@Url.Action("ArchiveSenior", "Senior")" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@senior.Id" />
+                                            <button type="submit" class="btn-primary btn-sm" style="background: #ffc107; border-color: #ffc107; color: #000;"
+                                                    onclick="return confirm('Are you sure you want to archive this senior record? It will be moved to archived records and can be restored later.')">
+                                                <i class="fas fa-archive"></i> Archive
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <i class="fas fa-user-friends fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No Senior Records Found</h4>
+                <p class="text-muted">There are no senior records in the system yet.</p>
+                <p class="text-muted small">Staff members can add new senior records.</p>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h3 class="text-primary">@Model.Count</h3>
+                <p class="text-muted">Total Seniors</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h3 class="text-primary">@Model.Count(s => s.Status == "Active")</h3>
+                <p class="text-muted">Active Seniors</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h3 class="text-primary">@Model.Count(s => s.s_sex == "Male")</h3>
+                <p class="text-muted">Male</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h3 class="text-primary">@Model.Count(s => s.s_sex == "Female")</h3>
+                <p class="text-muted">Female</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .badge-active {
+            background-color: #28a745;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .badge-inactive {
+            background-color: #6c757d;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+            color: white;
+            padding: 5px 10px;
+            margin: 2px;
+            text-decoration: none;
+            display: inline-block;
+            border-radius: 4px;
+        }
+
+            .btn-primary:hover {
+                background-color: #0056b3;
+                border-color: #0056b3;
+            }
+
+        /* Blue Create New Senior Button Styles */
+        .btn-create-new-blue {
+            background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 25px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(33, 147, 176, 0.3);
+            position: relative;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+            border: 2px solid transparent;
+        }
+
+            .btn-create-new-blue::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+                transition: 0.6s;
+            }
+
+            .btn-create-new-blue:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 10px 25px rgba(33, 147, 176, 0.5);
+                color: white;
+                text-decoration: none;
+                border-color: rgba(255, 255, 255, 0.5);
+            }
+
+                .btn-create-new-blue:hover::before {
+                    left: 100%;
+                }
+
+            .btn-create-new-blue:active {
+                transform: translateY(-1px);
+                box-shadow: 0 5px 15px rgba(33, 147, 176, 0.4);
+            }
+
+            .btn-create-new-blue i {
+                font-size: 1.1rem;
+                transition: all 0.3s ease;
+            }
+
+            .btn-create-new-blue:hover i {
+                transform: scale(1.2) rotate(90deg);
+            }
+
+        /* Alternative Blue Gradient */
+        .btn-create-new-blue-alt {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+            .btn-create-new-blue-alt:hover {
+                box-shadow: 0 10px 25px rgba(52, 152, 219, 0.5);
+            }
+
+        /* Ocean Blue Gradient */
+        .btn-create-new-ocean {
+            background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
+            box-shadow: 0 4px 15px rgba(43, 88, 118, 0.3);
+        }
+
+            .btn-create-new-ocean:hover {
+                box-shadow: 0 10px 25px rgba(43, 88, 118, 0.5);
+            }
+
+        /* Sky Blue Gradient */
+        .btn-create-new-sky {
+            background: linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%);
+            box-shadow: 0 4px 15px rgba(86, 204, 242, 0.3);
+        }
+
+            .btn-create-new-sky:hover {
+                box-shadow: 0 10px 25px rgba(86, 204, 242, 0.5);
+            }
+
+        /* Optional: Floating animation */
+        @@keyframes float-blue {
+            0%, 100%
+
+        {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-5px);
+        }
+
+        }
+
+        .btn-create-new-blue.floating {
+            animation: float-blue 3s ease-in-out infinite;
+        }
+
+        /* For the button container on Index page */
+        .create-btn-container-blue {
+            padding: 15px 0;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Notification badge */
+        .btn-create-new-blue .badge-notification {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%);
+            color: white;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(255, 65, 108, 0.3);
+            z-index: 1;
+        }
+
+        /* Ripple effect on click */
+        .btn-create-new-blue {
+            position: relative;
+            overflow: hidden;
+        }
+
+            .btn-create-new-blue:after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 5px;
+                height: 5px;
+                background: rgba(255, 255, 255, 0.5);
+                opacity: 0;
+                border-radius: 100%;
+                transform: scale(1, 1) translate(-50%);
+                transform-origin: 50% 50%;
+            }
+
+            .btn-create-new-blue:focus:not(:active)::after {
+                animation: ripple-blue 1s ease-out;
+            }
+
+        @@keyframes ripple-blue {
+            0%
+
+        {
+            transform: scale(0, 0);
+            opacity: 0.5;
+        }
+
+        100% {
+            transform: scale(40, 40);
+            opacity: 0;
+        }
+
+        }
+
+        /* Dark mode support */
+        @@media (prefers-color-scheme: dark) {
+            .btn-create-new-blue
+
+        {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            box-shadow: 0 4px 15px rgba(30, 60, 114, 0.4);
+        }
+
+        .btn-create-new-blue:hover {
+            box-shadow: 0 10px 25px rgba(30, 60, 114, 0.6);
+        }
+
+        }
+
+        /* Responsive design */
+        @@media (max-width: 768px) {
+            .btn-create-new-blue
+
+        {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .create-btn-container-blue {
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        }
+
+        /* Optional: Button with count */
+        .btn-create-new-blue.with-count {
+            padding-right: 45px;
+            position: relative;
+        }
+
+        .btn-create-new-blue .count-badge {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Hover glow effect */
+        .btn-create-new-blue.glow:hover {
+            box-shadow: 0 10px 25px rgba(33, 147, 176, 0.5), 0 0 15px rgba(33, 147, 176, 0.6);
+        }
+
+        /* Pulse animation for attention */
+        @@keyframes pulse-blue {
+            0%
+
+        {
+            box-shadow: 0 4px 15px rgba(33, 147, 176, 0.3);
+        }
+
+        50% {
+            box-shadow: 0 4px 25px rgba(33, 147, 176, 0.6), 0 0 20px rgba(33, 147, 176, 0.4);
+        }
+
+        100% {
+            box-shadow: 0 4px 15px rgba(33, 147, 176, 0.3);
+        }
+
+        }
+
+        .btn-create-new-blue.pulse {
+            animation: pulse-blue 2s infinite;
+        }
+    </style>
+}

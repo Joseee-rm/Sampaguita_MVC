@@ -1,0 +1,252 @@
+﻿@model List<SeniorManagement.Models.Event>
+
+@{
+    ViewData["Title"] = "Archived Events";
+}
+
+<div class="card card-blue shadow-lg">
+    <div class="card-header card-header-blue">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h3 class="mb-1"><i class="fas fa-archive me-2"></i>Archived Events</h3>
+                <p class="mb-0 opacity-90">Manage your archived events - they can be restored if needed</p>
+            </div>
+            <div>
+                <a href="@Url.Action("Index", "Event")" class="btn btn-outline-light">
+                    <i class="fas fa-calendar-alt me-2"></i> Back to Active Events
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+        @if (Model.Any(e => e.IsDeleted))
+        {
+            <div class="table-responsive">
+                <table class="table table-blue">
+                    <thead>
+                        <tr>
+                            <th>Event Title</th>
+                            <th>Type</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Attendance</th>
+                            <th>Archived On</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var eventItem in Model.Where(e => e.IsDeleted))
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-bold" style="color: #0D47A1;">@eventItem.EventTitle</div>
+                                    <small class="text-muted">@(eventItem.EventDescription?.Length > 50 ? eventItem.EventDescription.Substring(0, 50) + "..." : eventItem.EventDescription)</small>
+                                </td>
+                                <td>
+                                    <span class="badge badge-admin">@eventItem.EventTypeDisplay</span>
+                                </td>
+                                <td>@eventItem.EventDate.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    <span class="badge @GetStatusBadgeClass(eventItem.Status)">
+                                        @eventItem.Status
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (eventItem.Status == "Completed")
+                                    {
+                                        <span class="badge bg-success-blue">
+                                            <i class="fas fa-users me-1"></i>@eventItem.AttendanceCount
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted fst-italic">N/A</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (eventItem.DeletedAt.HasValue)
+                                    {
+                                        <div>
+                                            <small>@eventItem.DeletedAt.Value.ToString("MMM dd, yyyy")</small>
+                                            <br>
+                                            <small class="text-muted">@eventItem.DeletedAt.Value.ToString("h:mm tt")</small>
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <form asp-action="Restore" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@eventItem.Id" />
+                                            <button type="button" class="btn btn-action-blue btn-restore-blue"
+                                                    onclick="confirmRestore(@eventItem.Id, '@eventItem.EventTitle')"
+                                                    title="Restore Event">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                        </form>
+                                        <button type="button" class="btn btn-action-blue btn-edit-blue"
+                                                data-bs-toggle="modal" data-bs-target="#detailsModal@(eventItem.Id)"
+                                                title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+
+                                        <!-- Details Modal -->
+                                        <div class="modal fade modal-blue" id="detailsModal@(eventItem.Id)" tabindex="-1">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">
+                                                            <i class="fas fa-info-circle me-2"></i>Event Details
+                                                        </h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <h5 class="mb-3" style="color: #0D47A1;">@eventItem.EventTitle</h5>
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <p><strong>Type:</strong> @eventItem.EventTypeDisplay</p>
+                                                                <p><strong>Date:</strong> @eventItem.EventDate.ToString("MMM dd, yyyy")</p>
+                                                                <p><strong>Time:</strong> @eventItem.DisplayTime</p>
+                                                                <p><strong>Location:</strong> @eventItem.EventLocation</p>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <p><strong>Organizer:</strong> @eventItem.OrganizedBy</p>
+                                                                <p><strong>Status:</strong> <span class="badge @GetStatusBadgeClass(eventItem.Status)">@eventItem.Status</span></p>
+                                                                <p><strong>Created:</strong> @eventItem.CreatedAt.ToString("MMM dd, yyyy")</p>
+                                                                <p><strong>Archived:</strong> @eventItem.DeletedAt?.ToString("MMM dd, yyyy h:mm tt")</p>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mt-3">
+                                                            <strong>Description:</strong>
+                                                            <p class="text-muted">@eventItem.EventDescription</p>
+                                                        </div>
+                                                        @if (eventItem.Status == "Completed")
+                                                        {
+                                                            <div class="mt-3">
+                                                                <strong>Attendance:</strong>
+                                                                <div class="d-flex align-items-center mt-2">
+                                                                    <span class="badge bg-success-blue me-3">
+                                                                        <i class="fas fa-users me-1"></i>@eventItem.AttendanceCount
+                                                                    </span>
+                                                                    @if (eventItem.MaxCapacity.HasValue)
+                                                                    {
+                                                                        <span>out of @eventItem.MaxCapacity capacity</span>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-outline-blue" data-bs-dismiss="modal">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="text-center mt-4">
+                <div class="alert alert-blue">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Archived events are not shown in the main events list. You can restore them here if needed.
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <div class="empty-state-blue">
+                    <i class="fas fa-inbox fa-4x text-primary mb-4"></i>
+                    <h4 class="text-primary mb-3">No Archived Events</h4>
+                    <p class="text-muted mb-4">There are no archived events. Archived events will appear here.</p>
+                    <a href="@Url.Action("Index", "Event")" class="btn btn-primary-blue">
+                        <i class="fas fa-calendar-alt me-2"></i>Go to Active Events
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function confirmRestore(eventId, eventTitle) {
+            Swal.fire({
+                title: 'Restore Event',
+                html: `<p>Are you sure you want to restore <strong>${eventTitle}</strong>?</p>
+                       <p class="text-muted small">This will move the event back to the active events list.</p>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#2196F3',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, restore it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Find and submit the form
+                    const form = document.querySelector(`form input[value="${eventId}"]`).closest('form');
+                    form.submit();
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show success/error messages from TempData
+            @if (TempData["SuccessMessage"] != null)
+            {
+                    <text>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: '@TempData["SuccessMessage"]',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                        background: '#E3F2FD',
+                        color: '#0D47A1'
+                    });
+                    </text>
+            }
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                    <text>
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: '@TempData["ErrorMessage"]',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                    </text>
+            }
+        });
+    </script>
+}
+
+@functions {
+    public string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Scheduled" => "badge badge-status-scheduled",
+            "Ongoing" => "badge badge-status-ongoing",
+            "Completed" => "badge badge-status-completed",
+            "Cancelled" => "badge badge-status-cancelled",
+            _ => "badge bg-secondary"
+        };
+    }
+}

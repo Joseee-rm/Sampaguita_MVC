@@ -1,0 +1,270 @@
+﻿@model SeniorManagement.Models.User
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<style>
+    /* Button Styles */
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+        cursor: pointer;
+    }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+            color: white;
+        }
+
+    .btn-save {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important;
+    }
+
+    .btn-cancel {
+        background: linear-gradient(135deg, #868f96 0%, #596164 100%) !important;
+    }
+
+    /* Form Styles */
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 10px 15px;
+        transition: all 0.3s ease;
+    }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+
+    .form-check-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 20px;
+        border-radius: 15px 15px 0 0 !important;
+    }
+
+    /* Badge Styles */
+    .badge-active {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 14px;
+        display: inline-block;
+    }
+
+    .badge-inactive {
+        background: linear-gradient(135deg, #868f96 0%, #596164 100%);
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 14px;
+        display: inline-block;
+    }
+
+    .text-danger {
+        font-size: 14px;
+        margin-top: 5px;
+        display: block;
+    }
+</style>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="mb-0"><i class="fas fa-edit me-2"></i>Edit User</h3>
+    </div>
+    <div class="card-body">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        <form asp-action="EditUser" method="post" id="editUserForm">
+            @Html.AntiForgeryToken()
+
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="CreatedAt" />
+            <input type="hidden" asp-for="IsActive" />
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label asp-for="Name" class="form-label">Full Name *</label>
+                        <input asp-for="Name" class="form-control" placeholder="Enter full name" required />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label asp-for="Username" class="form-label">Username *</label>
+                        <input asp-for="Username" class="form-control" placeholder="Enter username" required />
+                        <span asp-validation-for="Username" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label asp-for="Role" class="form-label">Role *</label>
+                        <select asp-for="Role" class="form-select" id="RoleSelect" required>
+                            <option value="">-- Select Role --</option>
+                            <option value="Administrator">Administrator</option>
+                            <option value="Staff">Staff</option>
+                        </select>
+                        <span asp-validation-for="Role" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Admin Privileges</label>
+                        <div class="form-check mt-2">
+                            <input asp-for="IsAdmin" class="form-check-input" id="IsAdminCheckbox" />
+                            <label asp-for="IsAdmin" class="form-check-label">
+                                Grant administrator privileges
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Information (Readonly) -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label">User Status</label>
+                        <div>
+                            @if (Model.IsActive)
+                            {
+                                <span class="badge-active">
+                                    <i class="fas fa-check-circle"></i> Active
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge-inactive">
+                                    <i class="fas fa-times-circle"></i> Inactive
+                                </span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Created Date</label>
+                        <input type="text" class="form-control" value="@Model.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")" readonly />
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group mt-4">
+                <button type="submit" class="btn-primary btn-save me-2" id="submitBtn">
+                    <i class="fas fa-save"></i> Update User
+                </button>
+                <a href="@Url.Action("ManageUsers", "Admin")" class="btn-primary btn-cancel">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Set initial values for dropdown and checkbox
+        document.addEventListener('DOMContentLoaded', function() {
+            const roleSelect = document.getElementById('RoleSelect');
+            const isAdminCheckbox = document.getElementById('IsAdminCheckbox');
+
+            // Set the selected role
+            roleSelect.value = '@Model.Role';
+
+            // Set checkbox based on role
+            if ('@Model.Role' === 'Administrator') {
+                isAdminCheckbox.checked = true;
+            } else {
+                isAdminCheckbox.checked = false;
+            }
+
+            // Sync role and checkbox
+            roleSelect.addEventListener('change', function() {
+                if (this.value === 'Administrator') {
+                    isAdminCheckbox.checked = true;
+                } else if (this.value === 'Staff') {
+                    isAdminCheckbox.checked = false;
+                }
+            });
+
+            isAdminCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    roleSelect.value = 'Administrator';
+                } else {
+                    roleSelect.value = 'Staff';
+                }
+            });
+        });
+
+        // Form validation and submission
+        document.getElementById('editUserForm').addEventListener('submit', function(e) {
+            const name = document.getElementById('Name').value.trim();
+            const username = document.getElementById('Username').value.trim();
+            const role = document.getElementById('RoleSelect').value;
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Basic validation
+            if (!name || !username || !role) {
+                e.preventDefault();
+                alert('Please fill in all required fields.');
+                return false;
+            }
+
+            // Show loading state
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            submitBtn.disabled = true;
+
+            // Allow form to submit
+            return true;
+        });
+    </script>
+}

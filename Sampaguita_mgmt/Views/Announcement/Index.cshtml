@@ -1,0 +1,163 @@
+﻿@model List<SeniorManagement.Models.Announcement>
+@{
+    ViewData["Title"] = "";
+}
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-2 text-gray-800">Announcements</h1>
+            <p class="mb-0">Latest updates and event notifications</p>
+        </div>
+        <div class="btn-group">
+            @if (Context.Session.GetString("UserRole") == "Administrator")
+            {
+                <form asp-action="ClearAll" method="post" onsubmit="return confirm('Are you sure you want to clear all announcements?');">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="fas fa-trash me-2"></i>Clear All
+                    </button>
+                </form>
+            }
+            <button class="btn btn-outline-primary" onclick="window.location.reload()">
+                <i class="fas fa-sync-alt me-2"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Announcements Cards -->
+    <div class="row">
+        <div class="col-lg-8">
+            @if (Model.Any())
+            {
+                foreach (var announcement in Model)
+                {
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <i class="fas @announcement.Icon @announcement.BadgeColor text-white p-2 rounded me-3"></i>
+                                <div>
+                                    <h6 class="m-0 font-weight-bold text-primary">@announcement.Title</h6>
+                                    <small class="text-muted">@announcement.FormattedDate</small>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge @announcement.BadgeColor">@announcement.Type</span>
+                                @if (!announcement.IsRead)
+                                {
+                                    <span class="badge bg-warning text-dark">New</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">@announcement.Message</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-user me-1"></i>Posted by @announcement.CreatedBy
+                                </small>
+                                <div>
+                                    <a href="@Url.Action("Details", new { id = announcement.Id })" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye me-1"></i>View Details
+                                    </a>
+                                    @if (!announcement.IsRead)
+                                    {
+                                        <form asp-action="MarkAsRead" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@announcement.Id" />
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-check me-1"></i>Mark Read
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="card shadow mb-4">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-bullhorn fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No Announcements</h4>
+                        <p class="text-muted">There are no announcements to display at the moment.</p>
+                        <a href="@Url.Action("Create", "Event")" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create New Event
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Sidebar Stats -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Announcements Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <div class="card border-left-primary shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                                Total
+                                            </div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count</div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-bullhorn fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="card border-left-warning shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                                Unread
+                                            </div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count(a => !a.IsRead)</div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-envelope fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <h6 class="font-weight-bold">Types</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-1">
+                                <i class="fas fa-calendar-alt text-primary me-2"></i>
+                                Events: @Model.Count(a => a.Type == "Event")
+                            </li>
+                            <li class="mb-1">
+                                <i class="fas fa-info-circle text-info me-2"></i>
+                                Information: @Model.Count(a => a.Type == "Info")
+                            </li>
+                            <li class="mb-1">
+                                <i class="fas fa-cog text-secondary me-2"></i>
+                                System: @Model.Count(a => a.Type == "System")
+                            </li>
+                            <li class="mb-1">
+                                <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                                Alerts: @Model.Count(a => a.Type == "Alert")
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

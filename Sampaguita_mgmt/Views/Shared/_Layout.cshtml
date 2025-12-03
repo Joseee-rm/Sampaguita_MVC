@@ -1,0 +1,1529 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>@ViewData["Title"] - Senior Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Render additional styles from views -->
+    @await RenderSectionAsync("Styles", required: false)
+
+    <style>
+        :root {
+            --sidebar-width: 250px;
+            --sidebar-collapsed-width: 60px;
+            --header-height: 60px;
+            --primary-color: #1e3c72;
+            --secondary-color: #2a5298;
+            --accent-color: #4CAF50;
+            --event-primary: #007bff;
+            --event-secondary: #0056b3;
+            --event-success: #28a745;
+            --event-warning: #ffc107;
+            --event-danger: #dc3545;
+            --event-info: #17a2b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* ===== MOBILE-FIRST RESPONSIVE DESIGN ===== */
+
+        /* Sidebar for Mobile */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            transition: all 0.3s ease;
+            z-index: 1050;
+            box-shadow: 3px 0 10px rgba(0,0,0,0.1);
+            transform: translateX(-100%);
+        }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+        .sidebar-header {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            position: relative;
+        }
+
+            .sidebar-header h4 {
+                margin: 0;
+                font-weight: 600;
+                font-size: 1.1rem;
+                white-space: nowrap;
+            }
+
+        .sidebar-menu {
+            padding: 0.5rem 0;
+            height: calc(100vh - 70px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .menu-item {
+            padding: 0.75rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            white-space: nowrap;
+        }
+
+            .menu-item:hover,
+            .menu-item.active {
+                background: rgba(255,255,255,0.1);
+                color: white;
+                border-left-color: var(--accent-color);
+            }
+
+            .menu-item i {
+                width: 20px;
+                margin-right: 10px;
+                font-size: 1rem;
+                text-align: center;
+            }
+
+        .menu-text {
+            flex: 1;
+        }
+
+        /* Mobile Toggle Button - ALWAYS SHOW ON MOBILE */
+        .mobile-toggle {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 9999;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 5px;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        /* SHOW ON MOBILE */
+        @@media screen and (max-width: 767px) {
+            .mobile-toggle {
+                display: flex !important;
+            }
+        }
+
+        /* HIDE ON DESKTOP */
+        @@media screen and (min-width: 768px) {
+            .mobile-toggle {
+                display: none !important;
+            }
+        }
+
+        /* Overlay for mobile sidebar */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1040;
+        }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+        /* Main Content Area */
+        .main-content {
+            min-height: 100vh;
+            transition: all 0.3s ease;
+            padding-top: var(--header-height);
+        }
+
+        /* Header Styles */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            height: var(--header-height);
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1030;
+        }
+
+        .header-left h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-info {
+            text-align: right;
+            display: none; /* Hidden on mobile */
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        .logout-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+            .logout-btn:hover {
+                background: var(--secondary-color);
+            }
+
+        /* Content Area */
+        .content {
+            padding: 1rem;
+            background: #f8f9fa;
+            min-height: calc(100vh - var(--header-height));
+        }
+
+        /* Responsive Cards */
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 1rem;
+        }
+
+            .card-header h3,
+            .card-header h6 {
+                margin: 0;
+                color: var(--primary-color);
+                font-weight: 600;
+                font-size: 1rem;
+            }
+
+        .card-body {
+            padding: 1rem;
+        }
+
+        /* Responsive Tables */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+            .table th {
+                background: #f8f9fa;
+                color: var(--primary-color);
+                font-weight: 600;
+                padding: 0.75rem;
+                border-bottom: 2px solid #e0e0e0;
+                white-space: nowrap;
+            }
+
+            .table td {
+                padding: 0.75rem;
+                border-bottom: 1px solid #e0e0e0;
+                vertical-align: middle;
+            }
+
+        /* Responsive Forms */
+        .form-control,
+        .form-select {
+            font-size: 16px !important; /* Prevents zoom on iOS */
+            padding: 0.5rem;
+            height: auto;
+        }
+
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            border-radius: 5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .btn-group {
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+            .btn-group .btn {
+                margin: 0.125rem;
+            }
+
+        /* Badge Styles */
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        /* Chart Containers */
+        .chart-pie, .chart-bar, .chart-area {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        /* Loading Spinner */
+        .spinner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+        }
+
+        /* ===== EVENT SPECIFIC STYLES ===== */
+
+        /* Create Event Button */
+        .gradient-btn {
+            background: linear-gradient(135deg, var(--event-primary) 0%, var(--event-secondary) 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-height: 44px;
+        }
+
+            .gradient-btn:hover {
+                background: linear-gradient(135deg, var(--event-secondary) 0%, #004085 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
+                color: white;
+            }
+
+            .gradient-btn:active {
+                transform: translateY(0);
+            }
+
+        /* Event Stats Cards */
+        .stat-card {
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+            transition: all 0.3s ease;
+            height: 100%;
+            background: white;
+        }
+
+            .stat-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            }
+
+            .stat-card.bg-primary {
+                background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+                border-color: #90caf9;
+            }
+
+            .stat-card.bg-info {
+                background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+                border-color: #80deea;
+            }
+
+            .stat-card.bg-success {
+                background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+                border-color: #a5d6a7;
+            }
+
+            .stat-card.bg-warning {
+                background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+                border-color: #ffcc80;
+            }
+
+        .icon-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        /* Event Table Styles */
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            color: var(--event-primary);
+            font-weight: 600;
+            border-top: none;
+        }
+
+        .table td {
+            vertical-align: middle;
+            padding: 1rem 0.75rem;
+        }
+
+        /* Attendance Counter */
+        .attendance-counter {
+            min-width: 140px;
+        }
+
+        .attendance-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border: 2px solid var(--event-primary);
+            background: white;
+            color: var(--event-primary);
+            transition: all 0.2s ease;
+        }
+
+            .attendance-btn:hover:not(:disabled) {
+                background: var(--event-primary);
+                color: white;
+                transform: scale(1.1);
+            }
+
+            .attendance-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            .attendance-btn.plus {
+                border-color: var(--event-success);
+                color: var(--event-success);
+            }
+
+                .attendance-btn.plus:hover:not(:disabled) {
+                    background: var(--event-success);
+                    color: white;
+                }
+
+            .attendance-btn.minus {
+                border-color: var(--event-danger);
+                color: var(--event-danger);
+            }
+
+                .attendance-btn.minus:hover:not(:disabled) {
+                    background: var(--event-danger);
+                    color: white;
+                }
+
+        /* Progress Bar for Capacity */
+        .capacity-progress {
+            height: 6px;
+            border-radius: 3px;
+            background-color: #e9ecef;
+            margin-top: 0.25rem;
+            overflow: hidden;
+        }
+
+            .capacity-progress .progress-bar {
+                background: linear-gradient(90deg, var(--event-info), #2dd4bf);
+                transition: width 0.5s ease;
+            }
+
+        /* Status Badges */
+        .badge.bg-primary {
+            background-color: var(--event-primary) !important;
+        }
+
+        .badge.bg-success {
+            background-color: var(--event-success) !important;
+        }
+
+        .badge.bg-warning {
+            background-color: var(--event-warning) !important;
+            color: #212529;
+        }
+
+        .badge.bg-danger {
+            background-color: var(--event-danger) !important;
+        }
+
+        .badge.bg-info {
+            background-color: var(--event-info) !important;
+        }
+
+        .badge.bg-secondary {
+            background-color: #6c757d !important;
+        }
+
+        /* Status Dropdown */
+        .status-dropdown {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            min-width: 120px;
+            transition: all 0.2s ease;
+        }
+
+            .status-dropdown:focus {
+                border-color: var(--event-primary);
+                box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+            }
+
+        /* Action Buttons */
+        .btn-group-sm .btn {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            border: 1px solid transparent;
+        }
+
+        .btn-outline-primary {
+            color: var(--event-primary);
+            border-color: var(--event-primary);
+        }
+
+            .btn-outline-primary:hover {
+                background-color: var(--event-primary);
+                border-color: var(--event-primary);
+                color: white;
+            }
+
+        .btn-outline-warning {
+            color: var(--event-warning);
+            border-color: var(--event-warning);
+        }
+
+            .btn-outline-warning:hover {
+                background-color: var(--event-warning);
+                border-color: var(--event-warning);
+                color: #212529;
+            }
+
+        /* Archive/Restore Buttons */
+        .archive-btn, .restore-btn {
+            min-height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            font-weight: 500;
+        }
+
+        /* Event Type Badges */
+        .event-type-badge {
+            padding: 0.35em 0.65em;
+            font-size: 0.75em;
+            border-radius: 0.5rem;
+            font-weight: 600;
+        }
+
+        /* Responsive Event Cards (for mobile) */
+        .event-card-mobile {
+            display: none;
+        }
+
+        /* Print Styles for Events */
+        @@media print {
+            .no-print,
+            .btn,
+            .attendance-btn,
+            .status-dropdown,
+            .archive-btn,
+            .restore-btn,
+            .gradient-btn {
+                display: none !important;
+            }
+
+            .table {
+                border: 1px solid #dee2e6;
+            }
+
+                .table th {
+                    background-color: #f8f9fa !important;
+                    -webkit-print-color-adjust: exact;
+                }
+        }
+
+        /* Animation for attendance updates */
+        @@keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .attendance-updated {
+            animation: pulse 0.5s ease;
+        }
+
+        /* Loading state for buttons */
+        .btn-loading {
+            position: relative;
+            color: transparent !important;
+        }
+
+            .btn-loading::after {
+                content: '';
+                position: absolute;
+                width: 16px;
+                height: 16px;
+                border: 2px solid rgba(255,255,255,0.3);
+                border-top-color: white;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+        .btn-outline-primary.btn-loading::after {
+            border: 2px solid rgba(0,123,255,0.3);
+            border-top-color: var(--event-primary);
+        }
+
+        @@keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Tooltips for event actions */
+        [data-bs-toggle="tooltip"] {
+            cursor: pointer;
+        }
+
+        /* Accessibility improvements */
+        .attendance-btn:focus,
+        .status-dropdown:focus,
+        .archive-btn:focus {
+            outline: 2px solid var(--event-primary);
+            outline-offset: 2px;
+        }
+
+        /* Hover effects for table rows */
+        .table tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        /* Custom scrollbar for event tables */
+        .table-responsive::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: var(--event-primary);
+            border-radius: 3px;
+        }
+
+            .table-responsive::-webkit-scrollbar-thumb:hover {
+                background: var(--event-secondary);
+            }
+
+        /* Card shadows for depth */
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            transition: box-shadow 0.3s ease;
+        }
+
+            .card:hover {
+                box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+            }
+
+        /* Responsive adjustments for event tabs */
+        .nav-tabs .nav-link {
+            color: #6c757d;
+            border: none;
+            padding: 0.75rem 1rem;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+        }
+
+            .nav-tabs .nav-link.active {
+                color: var(--event-primary);
+                background-color: transparent;
+                border-bottom-color: var(--event-primary);
+            }
+
+            .nav-tabs .nav-link:hover {
+                color: var(--event-primary);
+                border-bottom-color: rgba(0, 123, 255, 0.3);
+            }
+
+        /* Event type specific colors */
+        .badge-medical-mission {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .badge-assistance-program {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge-wellness-activity {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .badge-community-gathering {
+            background-color: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        /* Event status colors */
+        .event-status-scheduled {
+            color: var(--event-primary);
+        }
+
+        .event-status-ongoing {
+            color: var(--event-warning);
+        }
+
+        .event-status-completed {
+            color: var(--event-success);
+        }
+
+        .event-status-cancelled {
+            color: var(--event-danger);
+        }
+
+        .event-status-archived {
+            color: #6c757d;
+        }
+
+        /* Capacity indicators */
+        .capacity-low {
+            color: var(--event-success);
+        }
+
+        .capacity-medium {
+            color: var(--event-warning);
+        }
+
+        .capacity-high {
+            color: var(--event-danger);
+        }
+
+        .capacity-full {
+            color: var(--event-danger);
+            font-weight: bold;
+        }
+
+        /* ===== MEDIA QUERIES ===== */
+
+        /* Small devices (landscape phones, 576px and up) */
+        @@media (min-width: 576px) {
+            .header-left h1 {
+                font-size: 1.3rem;
+            }
+
+            .user-info {
+                display: block;
+            }
+
+            .content {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Medium devices (tablets, 768px and up) */
+        @@media (min-width: 768px) {
+            .sidebar {
+                transform: translateX(0);
+            }
+
+            .mobile-toggle,
+            .sidebar-overlay {
+                display: none !important;
+            }
+
+            .main-content {
+                margin-left: var(--sidebar-width);
+                padding-top: 0;
+            }
+
+            .header {
+                position: static;
+                padding: 0 1.5rem;
+            }
+
+            .header-left h1 {
+                font-size: 1.5rem;
+            }
+
+            .content {
+                padding: 2rem;
+                min-height: calc(100vh - var(--header-height));
+            }
+
+            .card {
+                margin-bottom: 1.5rem;
+            }
+
+            .table {
+                font-size: 0.9rem;
+            }
+            /* Responsive Event Cards */
+            .event-card-mobile {
+                display: none;
+            }
+        }
+
+        /* Large devices (desktops, 992px and up) */
+        @@media (min-width: 992px) {
+            .sidebar-menu {
+                padding: 1rem 0;
+            }
+
+            .menu-item {
+                padding: 0.75rem 1.5rem;
+            }
+
+            .content {
+                padding: 2rem;
+            }
+        }
+
+        /* Extra large devices (large desktops, 1200px and up) */
+        @@media (min-width: 1200px) {
+            .container-fluid {
+                max-width: 1140px;
+                margin: 0 auto;
+            }
+        }
+
+        /* Mobile Event Cards */
+        @@media (max-width: 767px) {
+            .event-table-desktop {
+                display: none;
+            }
+
+            .event-card-mobile {
+                display: block;
+            }
+
+            .event-card {
+                background: white;
+                border-radius: 10px;
+                padding: 1rem;
+                margin-bottom: 1rem;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                border: 1px solid #dee2e6;
+            }
+
+            .event-card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 1rem;
+            }
+
+            .event-card-title {
+                font-weight: 600;
+                color: var(--event-primary);
+                margin-bottom: 0.25rem;
+            }
+
+            .event-card-meta {
+                font-size: 0.875rem;
+                color: #6c757d;
+            }
+
+            .event-card-actions {
+                display: flex;
+                gap: 0.5rem;
+                margin-top: 1rem;
+                padding-top: 1rem;
+                border-top: 1px solid #dee2e6;
+            }
+
+            .attendance-counter-mobile {
+                margin: 1rem 0;
+            }
+        }
+
+        /* ===== TOUCH-FRIENDLY STYLES ===== */
+
+        /* Increase touch targets */
+        .btn,
+        .menu-item,
+        .dropdown-item,
+        .form-check-label {
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Prevent text selection on interactive elements */
+        .btn,
+        .menu-item,
+        .dropdown-toggle {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Better focus styles for accessibility */
+        *:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        /* Hide scrollbars but keep functionality */
+        .sidebar-menu::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .sidebar-menu::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .sidebar-menu::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+        }
+
+        /* ===== PRINT STYLES ===== */
+        @@media print {
+            .sidebar,
+            .header,
+            .btn-group,
+            .alert,
+            .user-menu,
+            .logout-btn,
+            .no-print {
+                display: none !important;
+            }
+
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+
+            .content {
+                padding: 0 !important;
+                background: white !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    @{
+        // Safely get user info from session
+        var isAdmin = Context.Session.GetString("IsAdmin") == "True";
+        var userName = Context.Session.GetString("UserName") ?? "User";
+        var userRole = Context.Session.GetString("UserRole") ?? "Staff";
+        var name = Context.Session.GetString("Name") ?? userName;
+    }
+
+    <!-- Mobile Toggle Button -->
+    <button class="mobile-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h4><i class="fas fa-building me-2"></i>Senior Management</h4>
+        </div>
+        <div class="sidebar-menu">
+            @if (User.Identity.IsAuthenticated && (User.IsInRole("Administrator") || isAdmin))
+            {
+                <a href="@Url.Action("Dashboard", "Admin")" class="menu-item">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span class="menu-text">Admin Dashboard</span>
+                </a>
+                <a href="@Url.Action("ManageUsers", "Admin")" class="menu-item">
+                    <i class="fas fa-users"></i>
+                    <span class="menu-text">Manage Users</span>
+                </a>
+            }
+            else
+            {
+                <a href="@Url.Action("Index", "Home")" class="menu-item">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span class="menu-text">Dashboard</span>
+                </a>
+            }
+            <a href="@Url.Action("Index", "Senior")" class="menu-item">
+                <i class="fas fa-user-friends"></i>
+                <span class="menu-text">Senior Records</span>
+            </a>
+            <a href="@Url.Action("Index", "Event")" class="menu-item">
+                <i class="fas fa-calendar-alt"></i>
+                <span class="menu-text">Events</span>
+            </a>
+            <a href="@Url.Action("Index", "Report")" class="menu-item">
+                <i class="fas fa-chart-bar"></i>
+                <span class="menu-text">Reports</span>
+            </a>
+            <a href="@Url.Action("Index", "Announcement")" class="menu-item">
+                <i class="fas fa-bullhorn"></i>
+                <span class="menu-text">Announcements</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1>@ViewData["Title"]</h1>
+            </div>
+            <div class="user-menu">
+                <div class="user-info">
+                    <div class="user-name">@name</div>
+                    <div class="user-role">@userRole</div>
+                </div>
+                <form asp-controller="Account" asp-action="Logout" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span class="d-none d-sm-inline">Logout</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show no-print" role="alert">
+                    @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show no-print" role="alert">
+                    @TempData["ErrorMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (TempData["InfoMessage"] != null)
+            {
+                <div class="alert alert-info alert-dismissible fade show no-print" role="alert">
+                    @TempData["InfoMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @RenderBody()
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mobile sidebar toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const mainContent = document.getElementById('mainContent');
+
+            // Toggle sidebar on mobile
+            function toggleSidebar() {
+                sidebar.classList.toggle('active');
+                sidebarOverlay.classList.toggle('active');
+                document.body.classList.toggle('sidebar-open');
+            }
+
+            // Close sidebar when clicking overlay
+            function closeSidebar() {
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+                document.body.classList.remove('sidebar-open');
+            }
+
+            // Event listeners
+            sidebarToggle.addEventListener('click', toggleSidebar);
+            sidebarOverlay.addEventListener('click', closeSidebar);
+
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener('click', function(event) {
+                if (window.innerWidth < 768 &&
+                    !sidebar.contains(event.target) &&
+                    !sidebarToggle.contains(event.target) &&
+                    sidebar.classList.contains('active')) {
+                    closeSidebar();
+                }
+            });
+
+            // Add active class to current menu item
+            const currentUrl = window.location.href;
+            const menuItems = document.querySelectorAll('.menu-item');
+
+            menuItems.forEach(item => {
+                if (item.href === currentUrl) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // Handle window resize
+            let resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (window.innerWidth >= 768) {
+                        closeSidebar();
+                    }
+                }, 250);
+            });
+
+            // Prevent zoom on input focus for iOS
+            document.addEventListener('touchstart', function(event) {
+                if (event.target.tagName === 'INPUT' ||
+                    event.target.tagName === 'TEXTAREA' ||
+                    event.target.tagName === 'SELECT') {
+                    event.target.style.fontSize = '16px';
+                }
+            });
+
+            // Auto-hide alerts after 5 seconds
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+                alerts.forEach(alert => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                });
+            }, 5000);
+
+            // Add touch feedback to buttons
+            const buttons = document.querySelectorAll('.btn, .menu-item, .card');
+            buttons.forEach(button => {
+                button.addEventListener('touchstart', function() {
+                    this.classList.add('touch-active');
+                });
+
+                button.addEventListener('touchend', function() {
+                    this.classList.remove('touch-active');
+                });
+            });
+        });
+
+        // Event-specific JavaScript functions
+        function updateAttendance(eventId, change) {
+            const counter = document.querySelector(`[data-event-id="${eventId}"] .attendance-count`);
+            const maxCapacity = counter ? counter.getAttribute('data-max-capacity') : null;
+            const currentCount = parseInt(counter ? counter.textContent : 0);
+            let newCount = currentCount + change;
+
+            // Validate bounds
+            if (newCount < 0) newCount = 0;
+            if (maxCapacity && newCount > parseInt(maxCapacity)) newCount = parseInt(maxCapacity);
+
+            // Animate update
+            if (counter) {
+                counter.classList.add('attendance-updated');
+                counter.textContent = newCount;
+
+                // Update progress bar if exists
+                const progressBar = document.querySelector(`[data-event-id="${eventId}"] .progress-bar`);
+                if (progressBar && maxCapacity) {
+                    const percentage = (newCount / maxCapacity) * 100;
+                    progressBar.style.width = `${percentage}%`;
+                    progressBar.setAttribute('aria-valuenow', percentage);
+                }
+
+                // Remove animation class after animation completes
+                setTimeout(() => {
+                    counter.classList.remove('attendance-updated');
+                }, 500);
+            }
+
+            // Send update to server
+            fetch(`/Event/UpdateAttendance?id=${eventId}&attendanceCount=${newCount}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                }
+            }).then(response => {
+                if (!response.ok) {
+                    // Revert on error
+                    if (counter) {
+                        counter.textContent = currentCount;
+                        counter.classList.add('attendance-updated');
+                        setTimeout(() => {
+                            counter.classList.remove('attendance-updated');
+                        }, 500);
+                    }
+                }
+            }).catch(error => {
+                console.error('Error updating attendance:', error);
+                // Revert on error
+                if (counter) {
+                    counter.textContent = currentCount;
+                }
+            });
+        }
+
+        function archiveEvent(eventId, eventTitle) {
+            if (confirm(`Are you sure you want to archive "${eventTitle}"? This event will be moved to the archived section.`)) {
+                // Add loading state
+                const archiveBtn = document.querySelector(`[data-event-id="${eventId}"]`);
+                if (archiveBtn) {
+                    const originalHTML = archiveBtn.innerHTML;
+                    archiveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    archiveBtn.classList.add('btn-loading');
+                }
+
+                fetch(`/Event/Archive?id=${eventId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        // Refresh page after successful archive
+                        window.location.reload();
+                    } else {
+                        // Restore button on error
+                        if (archiveBtn) {
+                            archiveBtn.innerHTML = originalHTML;
+                            archiveBtn.classList.remove('btn-loading');
+                        }
+                        alert('Failed to archive event. Please try again.');
+                    }
+                }).catch(error => {
+                    console.error('Error archiving event:', error);
+                    if (archiveBtn) {
+                        archiveBtn.innerHTML = originalHTML;
+                        archiveBtn.classList.remove('btn-loading');
+                    }
+                    alert('Error archiving event. Please check your connection and try again.');
+                });
+            }
+        }
+
+        function restoreEvent(eventId, eventTitle) {
+            if (confirm(`Are you sure you want to restore "${eventTitle}"? This event will be moved back to active events.`)) {
+                // Add loading state
+                const restoreBtn = document.querySelector(`[data-restore-id="${eventId}"]`);
+                if (restoreBtn) {
+                    const originalHTML = restoreBtn.innerHTML;
+                    restoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    restoreBtn.classList.add('btn-loading');
+                }
+
+                fetch(`/Event/Restore?id=${eventId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        // Refresh page after successful restore
+                        window.location.reload();
+                    } else {
+                        // Restore button on error
+                        if (restoreBtn) {
+                            restoreBtn.innerHTML = originalHTML;
+                            restoreBtn.classList.remove('btn-loading');
+                        }
+                        alert('Failed to restore event. Please try again.');
+                    }
+                }).catch(error => {
+                    console.error('Error restoring event:', error);
+                    if (restoreBtn) {
+                        restoreBtn.innerHTML = originalHTML;
+                        restoreBtn.classList.remove('btn-loading');
+                    }
+                    alert('Error restoring event. Please check your connection and try again.');
+                });
+            }
+        }
+
+        // Initialize tooltips for event actions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Bootstrap tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Update status dropdown functionality
+            document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+                dropdown.addEventListener('change', function() {
+                    const eventId = this.getAttribute('data-event-id');
+                    const newStatus = this.value;
+                    const originalStatus = this.getAttribute('data-original-status') || this.value;
+
+                    // Show loading state
+                    const originalValue = this.value;
+                    this.value = 'Updating...';
+                    this.disabled = true;
+
+                    fetch(`/Event/UpdateStatus?id=${eventId}&status=${encodeURIComponent(newStatus)}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                        }
+                    }).then(response => {
+                        if (response.ok) {
+                            // Success - reload page
+                            window.location.reload();
+                        } else {
+                            // Error - revert to original status
+                            this.value = originalStatus;
+                            this.disabled = false;
+                            alert('Failed to update status. Please try again.');
+                        }
+                    }).catch(error => {
+                        console.error('Error updating status:', error);
+                        this.value = originalStatus;
+                        this.disabled = false;
+                        alert('Error updating status. Please check your connection and try again.');
+                    });
+                });
+            });
+
+            // Mobile view adjustments for events
+            if (window.innerWidth < 768) {
+                // Convert table to cards for mobile
+                convertTableToCards();
+            }
+
+            // Handle window resize for responsive events
+            window.addEventListener('resize', function() {
+                if (window.innerWidth < 768) {
+                    convertTableToCards();
+                } else {
+                    convertCardsToTable();
+                }
+            });
+        });
+
+        // Helper function for mobile responsive events
+        function convertTableToCards() {
+            const table = document.querySelector('.event-table-desktop');
+            if (!table) return;
+
+            const rows = table.querySelectorAll('tbody tr');
+            let cardsContainer = document.querySelector('.event-card-mobile');
+
+            if (!cardsContainer) {
+                // Create cards container if it doesn't exist
+                cardsContainer = document.createElement('div');
+                cardsContainer.className = 'event-card-mobile';
+                table.parentNode.insertBefore(cardsContainer, table.nextSibling);
+            } else {
+                cardsContainer.innerHTML = '';
+            }
+
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 6) return;
+
+                const card = document.createElement('div');
+                card.className = 'event-card';
+
+                // Extract data from table cells
+                const eventTitle = cells[0].querySelector('.fw-bold')?.textContent || 'No Title';
+                const eventDescription = cells[0].querySelector('small')?.textContent || '';
+                const eventType = cells[1].querySelector('.badge')?.textContent || 'General';
+                const eventDate = cells[2].querySelector('.fw-bold')?.textContent || '';
+                const eventTime = cells[2].querySelector('small')?.textContent || '';
+                const eventLocation = cells[3]?.textContent || '';
+                const attendanceElement = cells[4].querySelector('.fw-bold');
+                const attendanceCount = attendanceElement ? attendanceElement.textContent : '0';
+                const eventId = row.getAttribute('data-event-id') || '';
+
+                card.innerHTML = `
+                    <div class="event-card-header">
+                        <div>
+                            <div class="event-card-title">${eventTitle}</div>
+                            <div class="event-card-meta">${eventType} • ${eventDate} ${eventTime}</div>
+                        </div>
+                        <span class="badge bg-primary">${eventType}</span>
+                    </div>
+                    <div class="event-card-body">
+                        <p class="text-muted mb-2">${eventDescription}</p>
+                        <div class="mb-2">
+                            <i class="fas fa-map-marker-alt me-1"></i>
+                            <span>${eventLocation}</span>
+                        </div>
+                        <div class="attendance-counter-mobile">
+                            <div class="d-flex align-items-center justify-content-center mb-1">
+                                <button class="attendance-btn minus" onclick="updateAttendance('${eventId}', -1)">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <div class="mx-3 text-center">
+                                    <div class="fw-bold fs-4 attendance-count">${attendanceCount}</div>
+                                    <small class="text-muted">Attendance</small>
+                                </div>
+                                <button class="attendance-btn plus" onclick="updateAttendance('${eventId}', 1)">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="event-card-actions">
+                        <a href="/Event/Edit/${eventId}" class="btn btn-sm btn-outline-primary flex-fill">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <button class="btn btn-sm btn-outline-warning flex-fill" onclick="archiveEvent('${eventId}', '${eventTitle.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-archive"></i> Archive
+                        </button>
+                    </div>
+                `;
+
+                cardsContainer.appendChild(card);
+            });
+
+            // Hide table, show cards
+            table.style.display = 'none';
+            cardsContainer.style.display = 'block';
+        }
+
+        function convertCardsToTable() {
+            const table = document.querySelector('.event-table-desktop');
+            const cardsContainer = document.querySelector('.event-card-mobile');
+
+            if (table) {
+                table.style.display = '';
+            }
+            if (cardsContainer) {
+                cardsContainer.style.display = 'none';
+            }
+        }
+
+        // Handle form submissions with loading state
+        document.addEventListener('submit', function(event) {
+            if (event.target.tagName === 'FORM') {
+                const submitBtn = event.target.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+                    submitBtn.disabled = true;
+                }
+            }
+        });
+
+        // Back button handling for mobile
+        window.addEventListener('popstate', function() {
+            location.reload();
+        });
+    </script>
+
+    <!-- Render additional scripts from views -->
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+
+
+@using Sampaguita_mgmt
+@using Sampaguita_mgmt.Models
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@using SeniorManagement
+@using SeniorManagement.Models
+@using SeniorManagement.Helpers
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers

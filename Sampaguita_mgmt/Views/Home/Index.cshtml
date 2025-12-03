@@ -1,0 +1,536 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+    var stats = ViewBag.DashboardStats as SeniorManagement.Models.DashboardStatistics;
+    var announcements = ViewBag.RecentAnnouncements as List<SeniorManagement.Models.Announcement>;
+    var activities = ViewBag.RecentActivities as List<SeniorManagement.Models.ActivityLog>;
+}
+
+<div class="container-fluid px-0">
+    <!-- Welcome Header -->
+    <div class="row mx-0 mb-4">
+        <div class="col-12 px-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h3>
+                <button id="refreshBtn" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-sync-alt me-1"></i> Refresh
+                </button>
+            </div>
+
+            <div class="alert alert-info mb-0">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">
+                            <i class="fas fa-user-circle me-2"></i>Welcome, @ViewBag.Name!
+                        </h5>
+                        <p class="mb-0 small">
+                            Logged in as <strong>@ViewBag.UserRole</strong>
+                            @if (ViewBag.IsAdmin)
+                            {
+                                <span class="badge bg-danger ms-2">Administrator</span>
+                            }
+                        </p>
+                    </div>
+                    <div>
+                        <small class="text-muted">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards - Stack on mobile -->
+    <div class="row mx-0">
+        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
+            <div class="card border-left-primary shadow h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="text-muted small mb-1">Total Seniors</div>
+                            <div class="h4 mb-0 font-weight-bold" id="totalSeniors">@stats?.TotalSeniors</div>
+                            <small class="text-muted" id="recentRegistrations">+@stats?.RecentRegistrations this week</small>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-users fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
+            <div class="card border-left-success shadow h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="text-muted small mb-1">Active Seniors</div>
+                            <div class="h4 mb-0 font-weight-bold" id="activeSeniors">@stats?.ActiveSeniors</div>
+                            <small class="text-muted">Currently active</small>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-user-check fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
+            <div class="card border-left-info shadow h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="text-muted small mb-1">Male</div>
+                            <div class="h4 mb-0 font-weight-bold" id="maleCount">@stats?.MaleCount</div>
+                            <small class="text-muted" id="malePercentage">
+                                @if (stats?.TotalSeniors > 0)
+                                {
+                                    @Math.Round((double)stats.MaleCount / stats.TotalSeniors * 100, 1)
+                                
+                                    <text>%</text>
+                                }
+                                else
+                                {
+                                    @:0%
+                                }
+                            </small>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-male fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
+            <div class="card border-left-warning shadow h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="text-muted small mb-1">Female</div>
+                            <div class="h4 mb-0 font-weight-bold" id="femaleCount">@stats?.FemaleCount</div>
+                            <small class="text-muted" id="femalePercentage">
+                                @if (stats?.TotalSeniors > 0)
+                                {
+                                    @Math.Round((double)stats.FemaleCount / stats.TotalSeniors * 100, 1)
+                                
+                                    <text>%</text>
+                                }
+                                else
+                                {
+                                    @:0%
+                                }
+                            </small>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-female fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row of Stats -->
+    <div class="row mx-0">
+        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
+            <div class="card border-left-secondary shadow h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="text-muted small mb-1">Total Users</div>
+                            <div class="h4 mb-0 font-weight-bold" id="totalUsers">@stats?.TotalUsers</div>
+                            <small class="text-muted">System users</small>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-user-friends fa-2x text-secondary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
+            <div class="card border-left-danger shadow h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="text-muted small mb-1">Active Users</div>
+                            <div class="h4 mb-0 font-weight-bold" id="activeUsers">@stats?.ActiveUsers</div>
+                            <small class="text-muted">Currently active</small>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-user-check fa-2x text-danger"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
+            <div class="card border-left-dark shadow h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="text-muted small mb-1">Upcoming Events</div>
+                            <div class="h4 mb-0 font-weight-bold" id="upcomingEvents">@stats?.UpcomingEvents</div>
+                            <small class="text-muted">Scheduled events</small>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-calendar-alt fa-2x text-dark"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
+            <div class="card border-left-purple shadow h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="text-muted small mb-1">System Status</div>
+                            <div class="h4 mb-0 font-weight-bold text-success">Online</div>
+                            <small class="text-muted">All systems operational</small>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-server fa-2x text-purple"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Quick Actions - Stack on mobile -->
+    <div class="row mx-0">
+        <div class="col-12 col-lg-6 px-2 mb-3">
+            <div class="card shadow">
+                <div class="card-header py-2">
+                    <h6 class="m-0 font-weight-bold text-primary">Gender Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie">
+                        <canvas id="genderChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6 px-2 mb-3">
+            <div class="card shadow">
+                <div class="card-header py-2">
+                    <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        @if (ViewBag.IsAdmin)
+                        {
+                            <div class="col-6">
+                                <a href="@Url.Action("ManageUsers", "Admin")" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center p-2">
+                                    <i class="fas fa-users-cog fa-2x mb-2"></i>
+                                    <span class="small text-center">Manage Users</span>
+                                </a>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="col-6">
+                                <a href="@Url.Action("Index", "Profile")" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center p-2">
+                                    <i class="fas fa-user-cog fa-2x mb-2"></i>
+                                    <span class="small text-center">My Profile</span>
+                                </a>
+                            </div>
+                        }
+
+                        <div class="col-6">
+                            <a href="@Url.Action("Index", "Senior")" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center p-2">
+                                <i class="fas fa-user-friends fa-2x mb-2"></i>
+                                <span class="small text-center">Senior Records</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="@Url.Action("Index", "Event")" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center p-2">
+                                <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                                <span class="small text-center">Events</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="@Url.Action("Index", "Report")" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center p-2">
+                                <i class="fas fa-chart-bar fa-2x mb-2"></i>
+                                <span class="small text-center">Reports</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities & Announcements - Stack on mobile -->
+    <div class="row mx-0">
+        <div class="col-12 col-lg-6 px-2 mb-3">
+            <div class="card shadow">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Activities</h6>
+                    <a href="@Url.Action("Index", "ActivityLog")" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        @if (activities != null && activities.Any())
+                        {
+                            foreach (var activity in activities.Take(5))
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-1">
+                                                <span class="badge @(activity.UserRole == "Administrator" ? "bg-danger" : "bg-info") me-2">
+                                                    @activity.UserName
+                                                </span>
+                                                <small class="text-muted">@activity.Action</small>
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(activity.Details))
+                                            {
+                                                <small class="text-muted d-block text-truncate" style="max-width: 200px;">
+                                                    @activity.Details
+                                                </small>
+                                            }
+                                        </div>
+                                        <small class="text-muted">@activity.CreatedAt.ToString("hh:mm tt")</small>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="list-group-item text-center text-muted py-3">
+                                <i class="fas fa-info-circle me-2"></i>No recent activities
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6 px-2 mb-3">
+            <div class="card shadow">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Announcements</h6>
+                    <a href="@Url.Action("Index", "Announcement")" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        @if (announcements != null && announcements.Any())
+                        {
+                            foreach (var announcement in announcements.Take(5))
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex">
+                                        <div class="me-3">
+                                            <div class="rounded-circle @announcement.BadgeColor p-2" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas @announcement.Icon text-white"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 small">@announcement.Title</h6>
+                                            <p class="mb-1 small text-muted text-truncate" style="max-width: 250px;">
+                                                @announcement.Message
+                                            </p>
+                                            <small class="text-muted">@announcement.TimeAgo • By @announcement.CreatedBy</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="list-group-item text-center text-muted py-3">
+                                <i class="fas fa-bullhorn me-2"></i>No announcements
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Gender Distribution Chart
+        let genderChart = null;
+
+        function initChart(maleCount, femaleCount) {
+            var genderCtx = document.getElementById('genderChart').getContext('2d');
+
+            if (genderChart) {
+                genderChart.destroy();
+            }
+
+            genderChart = new Chart(genderCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Male', 'Female'],
+                    datasets: [{
+                        data: [maleCount, femaleCount],
+                        backgroundColor: ['#4e73df', '#1cc88a'],
+                        hoverBackgroundColor: ['#2e59d9', '#17a673'],
+                        borderWidth: 0,
+                        hoverBorderWidth: 2,
+                        hoverBorderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let value = context.raw || 0;
+                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    let percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            adjustChartSize();
+        }
+
+        function adjustChartSize() {
+            if (window.innerWidth < 768) {
+                document.getElementById('genderChart').parentNode.style.height = '250px';
+            } else {
+                document.getElementById('genderChart').parentNode.style.height = '300px';
+            }
+            if (genderChart) {
+                genderChart.resize();
+            }
+        }
+
+        // Refresh dashboard data
+        document.getElementById('refreshBtn').addEventListener('click', function() {
+            const btn = this;
+            const originalHTML = btn.innerHTML;
+
+            // Show loading state
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Refreshing...';
+            btn.disabled = true;
+
+            fetch('@Url.Action("GetDashboardStats", "Home")')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update statistics
+                        document.getElementById('totalSeniors').textContent = data.stats.totalSeniors;
+                        document.getElementById('activeSeniors').textContent = data.stats.activeSeniors;
+                        document.getElementById('maleCount').textContent = data.stats.maleCount;
+                        document.getElementById('femaleCount').textContent = data.stats.femaleCount;
+                        document.getElementById('recentRegistrations').textContent = `+${data.stats.recentRegistrations} this week`;
+                        document.getElementById('upcomingEvents').textContent = data.stats.upcomingEvents;
+                        document.getElementById('totalUsers').textContent = data.stats.totalUsers;
+                        document.getElementById('activeUsers').textContent = data.stats.activeUsers;
+
+                        // Update percentages
+                        const totalSeniors = data.stats.totalSeniors;
+                        const malePercentage = totalSeniors > 0 ? Math.round((data.stats.maleCount / totalSeniors) * 100 * 10) / 10 : 0;
+                        const femalePercentage = totalSeniors > 0 ? Math.round((data.stats.femaleCount / totalSeniors) * 100 * 10) / 10 : 0;
+
+                        document.getElementById('malePercentage').textContent = `${malePercentage}%`;
+                        document.getElementById('femalePercentage').textContent = `${femalePercentage}%`;
+
+                        // Update chart
+                        initChart(data.stats.maleCount, data.stats.femaleCount);
+
+                        // Show success message
+                        showNotification('Dashboard refreshed successfully!', 'success');
+                    } else {
+                        showNotification('Error refreshing data: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Error refreshing data. Please try again.', 'error');
+                })
+                .finally(() => {
+                    // Restore button state
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                });
+        });
+
+        // Notification function
+        function showNotification(message, type) {
+            // Remove any existing notification
+            const existingNotification = document.querySelector('.notification-toast');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            const notification = document.createElement('div');
+            notification.className = `notification-toast alert alert-${type} position-fixed`;
+            notification.style.cssText = `
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 300px;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    <div>${message}</div>
+                    <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.animation = 'slideOut 0.3s ease-in';
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 3000);
+        }
+
+               // Add animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @@keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @@keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+        // Initialize chart on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart(@stats?.MaleCount ?? 0, @stats?.FemaleCount ?? 0);
+
+            // Adjust chart on window resize
+            window.addEventListener('resize', adjustChartSize);
+        });
+    </script>
+}

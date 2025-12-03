@@ -1,0 +1,232 @@
+﻿@model List<SeniorManagement.Models.Event>
+
+@{
+    ViewData["Title"] = "Events Management";
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <!-- Header with improved design -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="mb-1 text-primary"><i class="fas fa-calendar-alt me-2"></i>Events Management</h3>
+                <p class="text-muted mb-0">Manage your scheduled activities and track attendance</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="@Url.Action("Archived", "Event")" class="btn btn-outline-secondary">
+                    <i class="fas fa-archive me-1"></i> View Archived
+                </a>
+                <a href="@Url.Action("Create", "Event")" class="btn btn-primary gradient-btn">
+                    <i class="fas fa-plus-circle me-1"></i> Create New Event
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card bg-primary bg-opacity-10 border-primary">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1">Total Events</h6>
+                                <h3 class="mb-0">@Model.Count</h3>
+                            </div>
+                            <div class="icon-circle bg-primary">
+                                <i class="fas fa-calendar text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-info bg-opacity-10 border-info">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1">Total Attendance</h6>
+                                <h3 class="mb-0">@Model.Sum(e => e.AttendanceCount)</h3>
+                            </div>
+                            <div class="icon-circle bg-info">
+                                <i class="fas fa-users text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-success bg-opacity-10 border-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1">Completed</h6>
+                                <h3 class="mb-0">@Model.Count(e => e.Status == "Completed")</h3>
+                            </div>
+                            <div class="icon-circle bg-success">
+                                <i class="fas fa-check-circle text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-warning bg-opacity-10 border-warning">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1">Scheduled</h6>
+                                <h3 class="mb-0">@Model.Count(e => e.Status == "Scheduled")</h3>
+                            </div>
+                            <div class="icon-circle bg-warning">
+                                <i class="fas fa-clock text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Filter Tabs -->
+        <div class="mb-4">
+            <ul class="nav nav-tabs" id="statusTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                        <i class="fas fa-list me-1"></i> All Events (@Model.Count)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="scheduled-tab" data-bs-toggle="tab" data-bs-target="#scheduled" type="button" role="tab">
+                        <i class="fas fa-clock me-1"></i> Scheduled (@Model.Count(e => e.Status == "Scheduled"))
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="ongoing-tab" data-bs-toggle="tab" data-bs-target="#ongoing" type="button" role="tab">
+                        <i class="fas fa-play-circle me-1"></i> Ongoing (@Model.Count(e => e.Status == "Ongoing"))
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">
+                        <i class="fas fa-check-circle me-1"></i> Completed (@Model.Count(e => e.Status == "Completed"))
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="statusTabContent">
+            <div class="tab-pane fade show active" id="all" role="tabpanel">
+                @await Html.PartialAsync("_EventsTable", Model)
+            </div>
+            <div class="tab-pane fade" id="scheduled" role="tabpanel">
+                @await Html.PartialAsync("_EventsTable", Model.Where(e => e.Status == "Scheduled").ToList())
+            </div>
+            <div class="tab-pane fade" id="ongoing" role="tabpanel">
+                @await Html.PartialAsync("_EventsTable", Model.Where(e => e.Status == "Ongoing").ToList())
+            </div>
+            <div class="tab-pane fade" id="completed" role="tabpanel">
+                @await Html.PartialAsync("_EventsTable", Model.Where(e => e.Status == "Completed").ToList())
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Blue theme styles */
+    .gradient-btn {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+        .gradient-btn:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+
+    .stat-card {
+        transition: transform 0.3s ease;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+    .icon-circle {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        padding: 0.75rem 1.5rem;
+    }
+
+        .nav-tabs .nav-link.active {
+            color: #007bff;
+            background-color: transparent;
+            border-bottom: 3px solid #007bff;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: #007bff;
+        }
+
+    .btn-outline-primary {
+        border-color: #007bff;
+        color: #007bff;
+    }
+
+        .btn-outline-primary:hover {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+    .progress-bar {
+        background-color: #17a2b8;
+    }
+
+    .badge.bg-primary {
+        background-color: #007bff !important;
+    }
+
+    .badge.bg-success {
+        background-color: #28a745 !important;
+    }
+
+    .badge.bg-warning {
+        background-color: #ffc107 !important;
+    }
+
+    .badge.bg-danger {
+        background-color: #dc3545 !important;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // Initialize Bootstrap tabs
+        var triggerTabList = [].slice.call(document.querySelectorAll('#statusTabs button'))
+        triggerTabList.forEach(function (triggerEl) {
+            var tabTrigger = new bootstrap.Tab(triggerEl)
+            triggerEl.addEventListener('click', function (event) {
+                event.preventDefault()
+                tabTrigger.show()
+            })
+        })
+
+        // Auto-dismiss alerts
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    </script>
+}

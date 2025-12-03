@@ -1,0 +1,436 @@
+﻿@model List<SeniorManagement.Models.User>
+@{
+    ViewData["Title"] = "Manage Users";
+}
+
+<style>
+    /* Button Styles */
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+        cursor: pointer;
+    }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-primary.btn-sm {
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+
+    .btn-add {
+        background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%) !important;
+    }
+
+    .btn-edit {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+    }
+
+    .btn-reset {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+    }
+
+    .btn-deactivate {
+        background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%) !important;
+        color: #333 !important;
+    }
+
+    .btn-activate {
+        background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%) !important;
+    }
+
+    .btn-cancel {
+        background: linear-gradient(135deg, #868f96 0%, #596164 100%) !important;
+    }
+
+    .btn-save {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important;
+    }
+
+    /* Notification Popup */
+    .notification-popup {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        max-width: 400px;
+        animation: slideIn 0.3s ease-out;
+        border: none;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        display: none;
+    }
+
+    .notification-success {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        box-shadow: 0 4px 15px rgba(67, 233, 123, 0.3);
+    }
+
+    .notification-error {
+        background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+        box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3);
+    }
+
+    @@keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @@keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+
+    /* Badge Styles */
+    .badge-admin {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        display: inline-block;
+    }
+
+    .badge-staff {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        display: inline-block;
+    }
+
+    .badge-active {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        display: inline-block;
+    }
+
+    .badge-inactive {
+        background: linear-gradient(135deg, #868f96 0%, #596164 100%);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        display: inline-block;
+    }
+
+    /* Table Styles */
+    .table th {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        font-weight: 600;
+        color: #333;
+        border: none;
+        padding: 15px;
+    }
+
+    .table td {
+        vertical-align: middle;
+        border-top: 1px solid #e9ecef;
+        padding: 15px;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s;
+    }
+
+    .card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        margin-bottom: 30px;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 20px;
+        border-radius: 15px 15px 0 0 !important;
+    }
+
+    .card-body {
+        padding: 30px;
+    }
+
+    /* Action buttons group */
+    .btn-group {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 5px;
+    }
+
+        .btn-group form {
+            margin: 0;
+        }
+</style>
+
+<!-- Notification Popup Container -->
+<div id="notificationContainer"></div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="mb-0"><i class="fas fa-users me-2"></i>Manage Users</h3>
+        <a href="@Url.Action("AddUser", "Admin")" class="btn-primary btn-add">
+            <i class="fas fa-plus-circle"></i> Add New User
+        </a>
+    </div>
+    <div class="card-body">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Admin</th>
+                            <th>Status</th>
+                            <th>Created Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model)
+                        {
+                            <tr>
+                                <td>@user.Id</td>
+                                <td>@user.Name</td>
+                                <td>@user.Username</td>
+                                <td>
+                                    <span class="badge @(user.Role == "Administrator" ? "badge-admin" : "badge-staff")">
+                                        @user.Role
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (user.IsAdmin)
+                                    {
+                                        <span class="badge badge-admin">Yes</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-staff">No</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (user.IsActive)
+                                    {
+                                        <span class="badge badge-active">
+                                            <i class="fas fa-check-circle"></i> Active
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-inactive">
+                                            <i class="fas fa-times-circle"></i> Inactive
+                                        </span>
+                                    }
+                                </td>
+                                <td>@user.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <!-- Edit Button -->
+                                        <a href="@Url.Action("EditUser", "Admin", new { id = user.Id })" class="btn-primary btn-edit btn-sm">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+
+                                        <!-- Password Reset Button -->
+                                        <form method="post" action="@Url.Action("ResetPassword", "Admin")" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@user.Id" />
+                                            <button type="submit" class="btn-primary btn-reset btn-sm"
+                                                    onclick="return confirm('Are you sure you want to reset this user\\'s password? Default password will be: password123')">
+                                                <i class="fas fa-key"></i> Reset PW
+                                            </button>
+                                        </form>
+
+                                        <!-- Activate/Deactivate Button -->
+                                        <form method="post" action="@Url.Action("ToggleUserStatus", "Admin")" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@user.Id" />
+                                            @if (user.IsActive)
+                                            {
+                                                <button type="submit" class="btn-primary btn-deactivate btn-sm"
+                                                        onclick="return confirm('Are you sure you want to deactivate this user?')">
+                                                    <i class="fas fa-user-slash"></i> Deactivate
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="submit" class="btn-primary btn-activate btn-sm"
+                                                        onclick="return confirm('Are you sure you want to activate this user?')">
+                                                    <i class="fas fa-user-check"></i> Activate
+                                                </button>
+                                            }
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No Users Found</h4>
+                <p class="text-muted">There are no users in the system yet.</p>
+                <a href="@Url.Action("AddUser", "Admin")" class="btn-primary btn-add">
+                    <i class="fas fa-plus-circle"></i> Add First User
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h2 class="text-primary">@Model.Count</h2>
+                <p class="text-muted">Total Users</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h2 class="text-primary">@Model.Count(u => u.IsAdmin)</h2>
+                <p class="text-muted">Administrators</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h2 class="text-primary">@Model.Count(u => !u.IsAdmin)</h2>
+                <p class="text-muted">Staff Members</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h2 class="text-primary">@Model.Count(u => u.IsActive)</h2>
+                <p class="text-muted">Active Users</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Function to show notification popup
+        function showNotification(message, type) {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification-popup notification-${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                <strong>${type === 'success' ? 'Success!' : 'Error!'}</strong> ${message}
+            `;
+
+            container.appendChild(notification);
+            notification.style.display = 'block';
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => {
+                    if (notification.parentNode === container) {
+                        container.removeChild(notification);
+                    }
+                }, 300);
+            }, 5000);
+        }
+
+        // Check for TempData messages and show popup
+        document.addEventListener('DOMContentLoaded', function () {
+            const successMessage = '@Html.Raw(TempData["SuccessMessage"])';
+            const errorMessage = '@Html.Raw(TempData["ErrorMessage"])';
+
+            if (successMessage) {
+                showNotification(successMessage, 'success');
+            }
+
+            if (errorMessage) {
+                showNotification(errorMessage, 'error');
+            }
+        });
+
+        // Handle form submissions with confirmation
+        document.addEventListener('submit', function (e) {
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+
+            if (submitBtn && submitBtn.hasAttribute('onclick')) {
+                // If already has onclick handler, don't add another
+                return;
+            }
+
+            if (form.action.includes('ToggleUserStatus')) {
+                const isActive = form.querySelector('button').innerHTML.includes('Deactivate');
+                e.preventDefault();
+                if (confirm(`Are you sure you want to ${isActive ? 'deactivate' : 'activate'} this user?`)) {
+                    form.submit();
+                }
+            }
+        });
+    </script>
+}

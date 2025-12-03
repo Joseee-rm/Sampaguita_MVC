@@ -1,0 +1,403 @@
+﻿@model SeniorManagement.Models.ReportViewModel
+@{
+    ViewData["Title"] = "";
+}
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <div>
+            <h1 class="h3 mb-2 text-gray-800">Senior Citizens Reports</h1>
+            <p class="mb-0">Comprehensive analytics and insights about senior citizens data</p>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" onclick="exportToPdf()">
+                <i class="fas fa-download me-2"></i>Export PDF
+            </button>
+            <button class="btn btn-outline-success" onclick="exportToExcel()">
+                <i class="fas fa-file-excel me-2"></i>Export Excel
+            </button>
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print Report
+            </button>
+        </div>
+    </div>
+
+   <!-- Print-only title (visible only when printing) -->
+    <div class="print-only" style="display: none;">
+        <h1 class="text-center">Senior Citizens Report</h1>
+        <p class="text-center">Generated on: @DateTime.Now.ToString("MMMM dd, yyyy")</p>
+        <hr class="my-3">
+    </div> 
+
+    <!-- Summary Cards -->
+    <div class="row mb-4 page-break-inside-avoid">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Seniors
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalSeniors</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Active Seniors
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.ActiveSeniors</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Male
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.MaleCount</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-male fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Female
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.FemaleCount</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-female fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row page-break-inside-avoid">
+        <!-- Gender Distribution -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Gender Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="genderChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="mt-4 text-center small">
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-primary"></i> Male: @Model.MaleCount
+                        </span>
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-success"></i> Female: @Model.FemaleCount
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Age Group Distribution -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Age Group Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-bar">
+                        <canvas id="ageGroupChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row page-break-inside-avoid">
+        <!-- Barangay Distribution -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Distribution by Barangay</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-bar">
+                        <canvas id="barangayChart" width="400" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Health Conditions -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Health Conditions Overview</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-bar">
+                        <canvas id="healthChart" width="400" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Statistics -->
+    <div class="row page-break-inside-avoid">
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Disability Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="disabilityChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Report Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td><strong>Report Generated</strong></td>
+                                    <td>@Model.ReportDate.ToString("MMMM dd, yyyy hh:mm tt")</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Total Records</strong></td>
+                                    <td>@Model.TotalSeniors</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Active Records</strong></td>
+                                    <td>@Model.ActiveSeniors</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Gender Ratio (M:F)</strong></td>
+                                    <td>@Model.MaleCount : @Model.FemaleCount</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Most Populated Barangay</strong></td>
+                                    <td>@(Model.SeniorsByBarangay.OrderByDescending(x => x.Value).FirstOrDefault().Key ?? "N/A")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Footer -->
+    <div class="print-footer no-print">
+        <p>Senior Management System - Page 1 of 1</p>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Show print-only elements when printing
+        window.addEventListener('beforeprint', function() {
+            document.querySelectorAll('.print-only').forEach(el => {
+                el.style.display = 'block';
+            });
+        });
+
+        window.addEventListener('afterprint', function() {
+            document.querySelectorAll('.print-only').forEach(el => {
+                el.style.display = 'none';
+            });
+        });
+
+        // Initialize charts
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+        });
+
+        function initializeCharts() {
+            // Gender Distribution Chart
+            var genderCtx = document.getElementById('genderChart').getContext('2d');
+            var genderChart = new Chart(genderCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Male', 'Female'],
+                    datasets: [{
+                        data: [@Model.MaleCount, @Model.FemaleCount],
+                        backgroundColor: ['#4e73df', '#1cc88a'],
+                        hoverBackgroundColor: ['#2e59d9', '#17a673'],
+                        hoverBorderColor: "rgba(234, 236, 244, 1)",
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Age Group Distribution Chart
+            var ageGroupCtx = document.getElementById('ageGroupChart').getContext('2d');
+            var ageGroupChart = new Chart(ageGroupCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['60-69', '70-79', '80-89', '90+'],
+                    datasets: [{
+                        label: 'Number of Seniors',
+                        data: [
+                            @Model.SeniorsByAgeGroup["60-69"],
+                            @Model.SeniorsByAgeGroup["70-79"],
+                            @Model.SeniorsByAgeGroup["80-89"],
+                            @Model.SeniorsByAgeGroup["90+"]
+                        ],
+                        backgroundColor: '#4e73df',
+                        hoverBackgroundColor: '#2e59d9',
+                        borderColor: '#4e73df',
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Barangay Distribution Chart
+            var barangayCtx = document.getElementById('barangayChart').getContext('2d');
+            var barangayChart = new Chart(barangayCtx, {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.SeniorsByBarangay.Keys)),
+                    datasets: [{
+                        label: 'Number of Seniors',
+                        data: @Html.Raw(Json.Serialize(Model.SeniorsByBarangay.Values)),
+                        backgroundColor: '#1cc88a',
+                        hoverBackgroundColor: '#17a673',
+                        borderColor: '#1cc88a',
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Health Conditions Chart
+            var healthCtx = document.getElementById('healthChart').getContext('2d');
+            var healthChart = new Chart(healthCtx, {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.HealthConditions.Keys)),
+                    datasets: [{
+                        label: 'Number of Cases',
+                        data: @Html.Raw(Json.Serialize(Model.HealthConditions.Values)),
+                        backgroundColor: '#f6c23e',
+                        hoverBackgroundColor: '#dda20a',
+                        borderColor: '#f6c23e',
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Disability Chart
+            var disabilityCtx = document.getElementById('disabilityChart').getContext('2d');
+            var disabilityChart = new Chart(disabilityCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.Disabilities.Keys)),
+                    datasets: [{
+                        data: @Html.Raw(Json.Serialize(Model.Disabilities.Values)),
+                        backgroundColor: ['#e74a3b', '#36b9cc'],
+                        hoverBackgroundColor: ['#d52a1a', '#2c9faf'],
+                        hoverBorderColor: "rgba(234, 236, 244, 1)",
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportToPdf() {
+            // Implement PDF export
+            alert('PDF export feature coming soon!');
+        }
+
+        function exportToExcel() {
+            // Implement Excel export
+            alert('Excel export feature coming soon!');
+        }
+    </script>
+}
