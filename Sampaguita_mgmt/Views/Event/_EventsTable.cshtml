@@ -19,6 +19,10 @@
                 @foreach (var eventItem in Model)
                 {
                     var isFull = eventItem.MaxCapacity.HasValue && eventItem.AttendanceCount >= eventItem.MaxCapacity.Value;
+                    var attendancePercentage = eventItem.MaxCapacity.HasValue && eventItem.MaxCapacity.Value > 0
+                    ? (int)Math.Round((double)eventItem.AttendanceCount / eventItem.MaxCapacity.Value * 100)
+                    : 0;
+
                     <tr data-event-id="@eventItem.Id">
                         <td>
                             <div class="fw-bold text-primary">@eventItem.EventTitle</div>
@@ -26,11 +30,11 @@
                             <div><small class="text-muted">By: @eventItem.OrganizedBy</small></div>
                         </td>
                         <td>
-                            <span class="badge bg-primary">@eventItem.EventTypeDisplay</span>
+                            <span class="badge bg-primary">@eventItem.EventType</span>
                         </td>
                         <td>
                             <div class="fw-bold">@eventItem.EventDate.ToString("MMM dd, yyyy")</div>
-                            <small class="text-muted">@eventItem.DisplayTime</small>
+                            <small class="text-muted">@eventItem.TimeFormatted</small>
                         </td>
                         <td>@eventItem.EventLocation</td>
                         <td>
@@ -54,7 +58,7 @@
                                             <small class="text-muted">/@eventItem.MaxCapacity</small>
                                             <div class="capacity-progress" style="width: 60px;">
                                                 <div class="progress-bar" role="progressbar"
-                                                     style="width: @(eventItem.AttendancePercentage)%"></div>
+                                                     style="width: @(attendancePercentage)%"></div>
                                             </div>
                                         }
                                     </div>
@@ -71,7 +75,7 @@
                                 @if (eventItem.MaxCapacity.HasValue)
                                 {
                                     <small class="text-muted d-block mt-1">
-                                        @eventItem.AttendancePercentage% full
+                                        @attendancePercentage% full
                                         @if (isFull)
                                         {
                                             <span class="badge bg-danger ms-1">Full</span>
@@ -114,9 +118,6 @@
             </tbody>
         </table>
     </div>
-
-    <!-- Mobile Cards Container -->
-    <div class="event-card-mobile"></div>
 }
 else
 {
@@ -144,33 +145,3 @@ else
         };
     }
 }
-
-<style>
-    /* Additional inline styles for the partial view */
-    .attendance-counter {
-        min-width: 140px;
-    }
-
-    .attendance-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-    }
-
-    .capacity-progress {
-        height: 6px;
-        border-radius: 3px;
-        background-color: #e9ecef;
-        margin-top: 0.25rem;
-        overflow: hidden;
-    }
-
-        .capacity-progress .progress-bar {
-            background: linear-gradient(90deg, #17a2b8, #2dd4bf);
-            transition: width 0.5s ease;
-        }
-</style>

@@ -8,8 +8,8 @@
 <div id="alertContainer"></div>
 
 <div class="card">
-    <div class="card-header">
-        <h3><i class="fas fa-edit me-2"></i>Edit Senior</h3>
+    <div class="card-header bg-primary text-white">
+        <h3><i class="fas fa-edit me-2"></i>Edit Senior Record</h3>
     </div>
     <div class="card-body">
         <form asp-action="EditSenior" method="post" id="seniorForm">
@@ -19,13 +19,13 @@
             <input type="hidden" asp-for="Status" />
             <input type="hidden" asp-for="UpdatedAt" />
 
-            <h5 class="mb-3 text-primary">Personal Information</h5>
+            <h5 class="mb-3 text-primary"><i class="fas fa-user me-2"></i>Personal Information</h5>
 
             <div class="row">
                 <div class="col-md-4">
                     <div class="form-group mb-3">
                         <label asp-for="s_firstName" class="form-label">First Name *</label>
-                        <input asp-for="s_firstName" class="form-control" placeholder="Enter first name" />
+                        <input asp-for="s_firstName" class="form-control" placeholder="Enter first name" required />
                         <span asp-validation-for="s_firstName" class="text-danger"></span>
                     </div>
                 </div>
@@ -38,7 +38,7 @@
                 <div class="col-md-4">
                     <div class="form-group mb-3">
                         <label asp-for="s_lastName" class="form-label">Last Name *</label>
-                        <input asp-for="s_lastName" class="form-control" placeholder="Enter last name" />
+                        <input asp-for="s_lastName" class="form-control" placeholder="Enter last name" required />
                         <span asp-validation-for="s_lastName" class="text-danger"></span>
                     </div>
                 </div>
@@ -48,7 +48,7 @@
                 <div class="col-md-3">
                     <div class="form-group mb-3">
                         <label asp-for="s_sex" class="form-label">Sex *</label>
-                        <select asp-for="s_sex" class="form-select">
+                        <select asp-for="s_sex" class="form-select" required>
                             <option value="">-- Select Sex --</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
@@ -60,7 +60,7 @@
                 <div class="col-md-3">
                     <div class="form-group mb-3">
                         <label asp-for="s_dob" class="form-label">Date of Birth *</label>
-                        <input asp-for="s_dob" type="date" class="form-control" id="dobField" />
+                        <input asp-for="s_dob" type="date" class="form-control" id="dobField" required />
                         <span asp-validation-for="s_dob" class="text-danger"></span>
                     </div>
                 </div>
@@ -120,7 +120,7 @@
             </div>
 
             <!-- Health Information Section -->
-            <h5 class="mb-3 text-primary mt-4">Health Information</h5>
+            <h5 class="mb-3 text-primary mt-4"><i class="fas fa-heartbeat me-2"></i>Health Information</h5>
 
             <!-- Health Problems -->
             <div class="row mb-3">
@@ -156,7 +156,7 @@
                     <div class="form-group health-details" id="maintenance-details">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <label class="form-label">Medicines & Schedule</label>
-                            <button type="button" class="btn btn-sm btn-success" id="addMedicineBtn">
+                            <button type="button" class="btn btn-sm btn-primary" id="addMedicineBtn">
                                 <i class="fas fa-plus"></i> Add Medicine
                             </button>
                         </div>
@@ -168,6 +168,8 @@
                                 {
                                     <div class="medicine-item card mb-2">
                                         <div class="card-body">
+                                            <input type="hidden" name="MaintenanceMedicines[@i].Id" value="@Model.MaintenanceMedicines[i].Id" />
+                                            <input type="hidden" name="MaintenanceMedicines[@i].SeniorId" value="@Model.MaintenanceMedicines[i].SeniorId" />
                                             <div class="row">
                                                 <div class="col-md-3">
                                                     <div class="form-group">
@@ -321,7 +323,7 @@
             </div>
 
             <!-- Family Information Section -->
-            <h5 class="mb-3 text-primary mt-4">Family Information</h5>
+            <h5 class="mb-3 text-primary mt-4"><i class="fas fa-home me-2"></i>Family Information</h5>
 
             <div class="row">
                 <div class="col-md-6">
@@ -359,7 +361,7 @@
             <div class="form-group mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <label class="form-label">Children/Dependents Information</label>
-                    <button type="button" class="btn btn-sm btn-success" id="addChildBtn">
+                    <button type="button" class="btn btn-sm btn-primary" id="addChildBtn">
                         <i class="fas fa-plus"></i> Add Child/Dependent
                     </button>
                 </div>
@@ -371,6 +373,8 @@
                         {
                             <div class="child-item card mb-2">
                                 <div class="card-body">
+                                    <input type="hidden" name="ChildrenList[@i].Id" value="@Model.ChildrenList[i].Id" />
+                                    <input type="hidden" name="ChildrenList[@i].SeniorId" value="@Model.ChildrenList[i].SeniorId" />
                                     <div class="row">
                                         <div class="col-md-4">
                                             <div class="form-group">
@@ -386,7 +390,7 @@
                                                 <label class="form-label">Age</label>
                                                 <input type="number" class="form-control"
                                                        name="ChildrenList[@i].Age"
-                                                       value="@Model.ChildrenList[i].Age"
+                                                       value="@(Model.ChildrenList[i].Age.HasValue ? Model.ChildrenList[i].Age.Value.ToString() : "")"
                                                        placeholder="Age" min="0" max="120" />
                                             </div>
                                         </div>
@@ -426,15 +430,10 @@
                     }
                 </div>
 
-                <div class="mt-3">
-                    <label asp-for="s_children" class="form-label">Or enter children/dependents as text:</label>
-                    <textarea asp-for="s_children" class="form-control" rows="3" placeholder="List children/dependents names, ages, and relationships..."></textarea>
-                    <small class="text-muted">Format: Name, Age (Relationship) - separate with new lines</small>
-                </div>
-            </div>
+               
 
             <!-- Guardian/Emergency Contact Section -->
-            <h5 class="mb-3 text-primary mt-4">Guardian/Emergency Contact</h5>
+            <h5 class="mb-3 text-primary mt-4"><i class="fas fa-phone-alt me-2"></i>Guardian/Emergency Contact</h5>
 
             <div class="row">
                 <div class="col-md-6">
@@ -493,9 +492,9 @@
 
             <div class="form-group mt-4">
                 <button type="submit" class="btn btn-primary me-2">
-                    <i class="fas fa-save"></i> Update Senior
+                    <i class="fas fa-save"></i> Update Senior Record
                 </button>
-                <a href="@Url.Action("Index", "Senior")" class="btn btn-secondary">
+                <a asp-action="Index" class="btn btn-secondary">
                     <i class="fas fa-times"></i> Cancel
                 </a>
             </div>
@@ -530,6 +529,10 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
+            // Set max date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dobField').max = today;
+
             calculateAge();
             initializeHealthSections();
             initializeGuardianRelationship();
@@ -547,8 +550,16 @@
                 function toggleDetails() {
                     if (select.value === 'Yes') {
                         detailsDiv.style.display = 'block';
+                        // Make textarea required when shown
+                        const textarea = detailsDiv.querySelector('textarea');
+                        if (textarea) textarea.required = true;
                     } else {
                         detailsDiv.style.display = 'none';
+                        // Remove required when hidden
+                        const textarea = detailsDiv.querySelector('textarea');
+                        if (textarea) {
+                            textarea.required = false;
+                        }
                     }
                 }
 
@@ -565,8 +576,14 @@
             function toggleOtherRelationship() {
                 if (relationshipSelect.value === 'Other') {
                     otherContainer.style.display = 'block';
+                    const input = otherContainer.querySelector('input');
+                    if (input) input.required = true;
                 } else {
                     otherContainer.style.display = 'none';
+                    const input = otherContainer.querySelector('input');
+                    if (input) {
+                        input.required = false;
+                    }
                 }
             }
 
@@ -584,6 +601,12 @@
                 btn.addEventListener('click', function() {
                     this.closest('.medicine-item').remove();
                     updateMedicineIndexes();
+
+                    // Show "no medicines" message if all removed
+                    const container = document.getElementById('medicineListContainer');
+                    if (container.querySelectorAll('.medicine-item').length === 0) {
+                        container.innerHTML = '<div id="noMedicinesMessage" class="text-center p-3 border rounded"><p class="text-muted mb-0">No medicines added yet</p></div>';
+                    }
                 });
             });
         }
@@ -600,6 +623,8 @@
             newRow.className = 'medicine-item card mb-2';
             newRow.innerHTML = `
                 <div class="card-body">
+                    <input type="hidden" name="MaintenanceMedicines[${medicineCounter}].Id" value="0" />
+                    <input type="hidden" name="MaintenanceMedicines[${medicineCounter}].SeniorId" value="@Model.Id" />
                     <div class="row">
                         <div class="col-md-3">
                             <div class="form-group">
@@ -662,6 +687,11 @@
             newRow.querySelector('.remove-medicine').addEventListener('click', function() {
                 this.closest('.medicine-item').remove();
                 updateMedicineIndexes();
+
+                // Show "no medicines" message if all removed
+                if (container.querySelectorAll('.medicine-item').length === 0) {
+                    container.innerHTML = '<div id="noMedicinesMessage" class="text-center p-3 border rounded"><p class="text-muted mb-0">No medicines added yet</p></div>';
+                }
             });
 
             medicineCounter++;
@@ -692,6 +722,12 @@
                 btn.addEventListener('click', function() {
                     this.closest('.child-item').remove();
                     updateChildIndexes();
+
+                    // Show "no children" message if all removed
+                    const container = document.getElementById('childrenListContainer');
+                    if (container.querySelectorAll('.child-item').length === 0) {
+                        container.innerHTML = '<div id="noChildrenMessage" class="text-center p-3 border rounded"><p class="text-muted mb-0">No children/dependents added yet</p></div>';
+                    }
                 });
             });
         }
@@ -708,6 +744,8 @@
             newRow.className = 'child-item card mb-2';
             newRow.innerHTML = `
                 <div class="card-body">
+                    <input type="hidden" name="ChildrenList[${childCounter}].Id" value="0" />
+                    <input type="hidden" name="ChildrenList[${childCounter}].SeniorId" value="@Model.Id" />
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group">
@@ -758,6 +796,11 @@
             newRow.querySelector('.remove-child').addEventListener('click', function() {
                 this.closest('.child-item').remove();
                 updateChildIndexes();
+
+                // Show "no children" message if all removed
+                if (container.querySelectorAll('.child-item').length === 0) {
+                    container.innerHTML = '<div id="noChildrenMessage" class="text-center p-3 border rounded"><p class="text-muted mb-0">No children/dependents added yet</p></div>';
+                }
             });
 
             childCounter++;
@@ -862,51 +905,4 @@
             }
         }
     </script>
-
-    <style>
-        .health-details {
-            transition: all 0.3s ease;
-        }
-
-        .medicine-item, .child-item {
-            border-left: 4px solid #0d6efd;
-        }
-
-        .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
-            color: white;
-            padding: 8px 16px;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            border-color: #6c757d;
-            color: white;
-            padding: 8px 16px;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-success {
-            background-color: #198754;
-            border-color: #198754;
-        }
-
-        .btn-danger {
-            background-color: #dc3545;
-            border-color: #dc3545;
-        }
-
-        .input-validation-error {
-            border-color: #dc3545;
-        }
-
-        .field-validation-error {
-            color: #dc3545;
-            font-size: 0.875em;
-        }
-    </style>
 }

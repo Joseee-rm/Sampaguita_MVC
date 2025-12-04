@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
 using SeniorManagement.Helpers;
 using SeniorManagement.Hubs;
 using SeniorManagement.Models;
@@ -21,6 +21,7 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
     options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.Name = ".SeniorManagement.Session"; // Add a specific name
 });
 
 // Add authentication
@@ -35,22 +36,30 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.Cookie.SameSite = SameSiteMode.Strict;
+        options.Cookie.Name = ".SeniorManagement.Auth"; // Add a specific name
     });
 
 // Add authorization
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("Administrator"));
+});
 
 // Register your services - IMPORTANT: Register ActivityLogController here
 builder.Services.AddScoped<DatabaseHelper>();
 builder.Services.AddScoped<AuthHelper>();
 builder.Services.AddScoped<ActivityHelper>();
-builder.Services.AddScoped<SeniorManagement.Controllers.ActivityLogController>(); // Add this line
+builder.Services.AddScoped<SeniorManagement.Controllers.ActivityLogController>();
 
 // Add HTTP context accessor - Make sure this is before other services that need it
 builder.Services.AddHttpContextAccessor();
 
-// Add logging - Remove this line as it's already added by default
-// builder.Services.AddLogging(); // This is redundant
+// Add logging configuration
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
 var app = builder.Build();
 
@@ -83,12 +92,30 @@ app.Use(async (context, next) =>
 {
     // Ensure session is available before processing
     await context.Session.LoadAsync();
+
+    // Set security headers
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+
     await next();
 });
 
+// Map controllers
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Account}/{action=Login}/{id?}"); // Changed to start at Login page
+    pattern: "{controller=Account}/{action=Login}/{id?}");
+
+// Add additional routes for common pages
+app.MapControllerRoute(
+    name: "dashboard",
+    pattern: "Dashboard",
+    defaults: new { controller = "Home", action = "Index" });
+
+app.MapControllerRoute(
+    name: "adminDashboard",
+    pattern: "Admin/Dashboard",
+    defaults: new { controller = "Admin", action = "Dashboard" });
 
 // Add SignalR hub endpoint
 app.MapHub<ActivityHub>("/activityHub");
@@ -129,6 +156,39 @@ app.MapGet("/test-activity-controller", async (context) =>
     {
         await context.Response.WriteAsync($"Error: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}");
     }
+});
+
+// Add health check endpoint
+app.MapGet("/health", async (context) =>
+{
+    var serviceProvider = context.RequestServices;
+    try
+    {
+        // Test database connection
+        var dbHelper = serviceProvider.GetRequiredService<DatabaseHelper>();
+        using (var connection = dbHelper.GetConnection())
+        {
+            await connection.OpenAsync();
+            await connection.CloseAsync();
+        }
+
+        context.Response.StatusCode = 200;
+        await context.Response.WriteAsync("Healthy");
+    }
+    catch (Exception ex)
+    {
+        context.Response.StatusCode = 500;
+        await context.Response.WriteAsync($"Unhealthy: {ex.Message}");
+    }
+});
+
+// Add middleware to handle SignalR CORS if needed
+app.UseCors(policy =>
+{
+    policy.WithOrigins("https://localhost:5001", "http://localhost:5000")
+          .AllowAnyHeader()
+          .AllowAnyMethod()
+          .AllowCredentials();
 });
 
 app.Run();

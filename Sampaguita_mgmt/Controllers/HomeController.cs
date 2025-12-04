@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MySql.Data.MySqlClient;
@@ -25,23 +23,29 @@ namespace SeniorManagement.Controllers
 
         public IActionResult Index()
         {
-            ViewBag.Name = HttpContext.Session.GetString("UserName") ?? "User";
-            ViewBag.UserRole = HttpContext.Session.GetString("UserRole") ?? "User";
-            ViewBag.IsAdmin = ViewBag.UserRole == "Administrator";
+            try
+            {
+                ViewBag.Name = HttpContext.Session.GetString("UserName") ?? "User";
+                ViewBag.UserRole = HttpContext.Session.GetString("UserRole") ?? "User";
+                ViewBag.IsAdmin = ViewBag.UserRole == "Administrator";
+                ViewBag.UserId = HttpContext.Session.GetString("UserId");
 
-            // Get dashboard statistics
-            var dashboardStats = GetDashboardStatistics();
-            ViewBag.DashboardStats = dashboardStats;
+                // Get dashboard statistics
+                var dashboardStats = GetDashboardStatistics();
+                ViewBag.DashboardStats = dashboardStats;
 
-            // Get recent announcements
-            var announcements = GetRecentAnnouncements();
-            ViewBag.RecentAnnouncements = announcements;
+                // Get recent activities
+                var activities = GetRecentActivities();
+                ViewBag.RecentActivities = activities;
 
-            // Get recent activities
-            var activities = GetRecentActivities();
-            ViewBag.RecentActivities = activities;
-
-            return View();
+                return View();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Home/Index: {ex.Message}");
+                TempData["ErrorMessage"] = "Error loading dashboard data.";
+                return View();
+            }
         }
 
         [HttpGet]
@@ -58,6 +62,377 @@ namespace SeniorManagement.Controllers
             }
         }
 
+        [HttpGet]
+        public JsonResult GetRecentActivitiesAjax()
+        {
+            try
+            {
+                var activities = GetRecentActivities();
+                return Json(new { success = true, activities = activities });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public JsonResult GetNotifications()
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("UserId");
+                var userRole = HttpContext.Session.GetString("UserRole") ?? "Staff";
+
+                var notifications = GetUserNotifications(userId, userRole);
+                var unreadCount = notifications.Count(n => !n.IsRead);
+
+                return Json(new
+                {
+                    success = true,
+                    notifications = notifications,
+                    unreadCount = unreadCount
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public JsonResult MarkNotificationAsRead([FromBody] NotificationRequest request)
+        {
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    string query = "UPDATE notifications SET IsRead = TRUE WHERE Id = @Id";
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", request.Id);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public JsonResult MarkAllNotificationsAsRead()
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("UserId");
+
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    string query = "UPDATE notifications SET IsRead = TRUE WHERE UserId = @UserId";
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@UserId", userId);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public JsonResult DeleteNotification([FromBody] NotificationRequest request)
+        {
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    string query = "DELETE FROM notifications WHERE Id = @Id";
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", request.Id);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public JsonResult GetSystemStatus()
+        {
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    var status = new
+                    {
+                        Database = "Connected",
+                        ServerTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                        Uptime = "24h",
+                        MemoryUsage = "Normal",
+                        ActiveConnections = GetCount(connection, "SELECT COUNT(*) FROM information_schema.processlist")
+                    };
+
+                    return Json(new { success = true, data = status });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        public IActionResult Profile()
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("UserId");
+                if (string.IsNullOrEmpty(userId))
+                {
+                    TempData["ErrorMessage"] = "User not found.";
+                    return RedirectToAction("Index");
+                }
+
+                var user = GetUserProfile(userId);
+                if (user == null)
+                {
+                    TempData["ErrorMessage"] = "User profile not found.";
+                    return RedirectToAction("Index");
+                }
+
+                return View(user);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Error loading profile: {ex.Message}";
+                return RedirectToAction("Index");
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateProfile(UserProfile model)
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("UserId");
+                if (string.IsNullOrEmpty(userId))
+                {
+                    TempData["ErrorMessage"] = "User not found.";
+                    return RedirectToAction("Profile");
+                }
+
+                // Basic validation
+                if (string.IsNullOrEmpty(model.Name) || string.IsNullOrEmpty(model.Email))
+                {
+                    TempData["ErrorMessage"] = "Name and Email are required.";
+                    return View("Profile", model);
+                }
+
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // Check if email already exists (excluding current user)
+                    string checkQuery = "SELECT COUNT(*) FROM users WHERE Email = @Email AND Id != @Id";
+                    using (var checkCmd = new MySqlCommand(checkQuery, connection))
+                    {
+                        checkCmd.Parameters.AddWithValue("@Email", model.Email);
+                        checkCmd.Parameters.AddWithValue("@Id", userId);
+                        int emailCount = Convert.ToInt32(checkCmd.ExecuteScalar());
+
+                        if (emailCount > 0)
+                        {
+                            TempData["ErrorMessage"] = "Email already exists. Please choose a different email.";
+                            return View("Profile", model);
+                        }
+                    }
+
+                    // Update profile
+                    string updateQuery = @"UPDATE users 
+                                         SET Name = @Name, 
+                                             Email = @Email,
+                                             Phone = @Phone,
+                                             UpdatedAt = @UpdatedAt
+                                         WHERE Id = @Id";
+
+                    using (var cmd = new MySqlCommand(updateQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Name", model.Name);
+                        cmd.Parameters.AddWithValue("@Email", model.Email);
+                        cmd.Parameters.AddWithValue("@Phone", model.Phone ?? "");
+                        cmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
+                        cmd.Parameters.AddWithValue("@Id", userId);
+
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            // Update session
+                            HttpContext.Session.SetString("UserName", model.Name);
+
+                            // Log the activity
+                            await _activityHelper.LogActivityAsync(
+                                "Update Profile",
+                                $"Updated profile information"
+                            );
+
+                            TempData["SuccessMessage"] = "Profile updated successfully!";
+                            return RedirectToAction("Profile");
+                        }
+                        else
+                        {
+                            TempData["ErrorMessage"] = "Error updating profile.";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await _activityHelper.LogActivityAsync("Error", $"Update Profile: {ex.Message}");
+                TempData["ErrorMessage"] = $"Error updating profile: {ex.Message}";
+            }
+
+            return View("Profile", model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ChangePassword(ChangePasswordModel model)
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("UserId");
+                if (string.IsNullOrEmpty(userId))
+                {
+                    TempData["ErrorMessage"] = "User not found.";
+                    return RedirectToAction("Profile");
+                }
+
+                // Validate passwords
+                if (string.IsNullOrEmpty(model.CurrentPassword) ||
+                    string.IsNullOrEmpty(model.NewPassword) ||
+                    string.IsNullOrEmpty(model.ConfirmPassword))
+                {
+                    TempData["ErrorMessage"] = "All password fields are required.";
+                    return RedirectToAction("Profile");
+                }
+
+                if (model.NewPassword != model.ConfirmPassword)
+                {
+                    TempData["ErrorMessage"] = "New password and confirmation do not match.";
+                    return RedirectToAction("Profile");
+                }
+
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // Get current password
+                    string getQuery = "SELECT Password FROM users WHERE Id = @Id";
+                    string currentHashedPassword = "";
+
+                    using (var getCmd = new MySqlCommand(getQuery, connection))
+                    {
+                        getCmd.Parameters.AddWithValue("@Id", userId);
+                        var result = getCmd.ExecuteScalar();
+                        if (result != null)
+                        {
+                            currentHashedPassword = result.ToString();
+                        }
+                    }
+
+                    // Verify current password
+                    if (!AuthHelper.VerifyPassword(model.CurrentPassword, currentHashedPassword))
+                    {
+                        TempData["ErrorMessage"] = "Current password is incorrect.";
+                        return RedirectToAction("Profile");
+                    }
+
+                    // Hash new password
+                    string newHashedPassword = AuthHelper.HashPassword(model.NewPassword);
+
+                    // Update password
+                    string updateQuery = "UPDATE users SET Password = @Password, UpdatedAt = @UpdatedAt WHERE Id = @Id";
+                    using (var cmd = new MySqlCommand(updateQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Password", newHashedPassword);
+                        cmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
+                        cmd.Parameters.AddWithValue("@Id", userId);
+
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            // Log the activity
+                            await _activityHelper.LogActivityAsync(
+                                "Change Password",
+                                "Changed account password"
+                            );
+
+                            TempData["SuccessMessage"] = "Password changed successfully!";
+                        }
+                        else
+                        {
+                            TempData["ErrorMessage"] = "Error changing password.";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await _activityHelper.LogActivityAsync("Error", $"Change Password: {ex.Message}");
+                TempData["ErrorMessage"] = $"Error changing password: {ex.Message}";
+            }
+
+            return RedirectToAction("Profile");
+        }
+
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel
+            {
+                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+            });
+        }
+
+        public IActionResult Privacy()
+        {
+            return View();
+        }
+
+        public IActionResult About()
+        {
+            return View();
+        }
+
+        public IActionResult Contact()
+        {
+            return View();
+        }
+
+        // Helper Methods
+
         private DashboardStatistics GetDashboardStatistics()
         {
             var stats = new DashboardStatistics();
@@ -68,87 +443,93 @@ namespace SeniorManagement.Controllers
                 {
                     connection.Open();
 
-                    // 1. Total Seniors and Active Seniors - Modified query to include IsDeleted check
-                    string seniorQuery = @"
-                        SELECT 
-                            COUNT(CASE WHEN IsDeleted = 0 THEN 1 END) as TotalSeniors,
-                            COUNT(CASE WHEN Status = 'Active' AND IsDeleted = 0 THEN 1 END) as ActiveSeniors,
-                            COUNT(CASE WHEN s_sex = 'Male' AND IsDeleted = 0 THEN 1 END) as MaleCount,
-                            COUNT(CASE WHEN s_sex = 'Female' AND IsDeleted = 0 THEN 1 END) as FemaleCount
-                        FROM seniors";
-
-                    using (var cmd = new MySqlCommand(seniorQuery, connection))
+                    // 1. Total Seniors (excluding deleted)
+                    string totalSeniorsQuery = "SELECT COUNT(*) FROM seniors WHERE IsDeleted = 0";
+                    using (var cmd = new MySqlCommand(totalSeniorsQuery, connection))
                     {
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                stats.TotalSeniors = reader.GetInt32("TotalSeniors");
-                                stats.ActiveSeniors = reader.GetInt32("ActiveSeniors");
-                                stats.MaleCount = reader.GetInt32("MaleCount");
-                                stats.FemaleCount = reader.GetInt32("FemaleCount");
-                            }
-                        }
+                        stats.TotalSeniors = Convert.ToInt32(cmd.ExecuteScalar());
                     }
 
-                    // 2. Recent registrations (last 7 days)
+                    // 2. Active Seniors (active status and not deleted)
+                    string activeQuery = "SELECT COUNT(*) FROM seniors WHERE Status = 'Active' AND IsDeleted = 0";
+                    using (var cmd = new MySqlCommand(activeQuery, connection))
+                    {
+                        stats.ActiveSeniors = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+
+                    // 3. Male Count (not deleted)
+                    string maleQuery = "SELECT COUNT(*) FROM seniors WHERE s_sex = 'Male' AND IsDeleted = 0";
+                    using (var cmd = new MySqlCommand(maleQuery, connection))
+                    {
+                        stats.MaleCount = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+
+                    // 4. Female Count (not deleted)
+                    string femaleQuery = "SELECT COUNT(*) FROM seniors WHERE s_sex = 'Female' AND IsDeleted = 0";
+                    using (var cmd = new MySqlCommand(femaleQuery, connection))
+                    {
+                        stats.FemaleCount = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+
+                    // 5. Recent registrations (last 7 days, not deleted)
                     string recentRegQuery = @"
-                        SELECT COUNT(*) as RecentCount 
+                        SELECT COUNT(*) 
                         FROM seniors 
                         WHERE CreatedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY) 
                         AND IsDeleted = 0";
-
                     using (var cmd = new MySqlCommand(recentRegQuery, connection))
                     {
                         var result = cmd.ExecuteScalar();
                         stats.RecentRegistrations = result != null ? Convert.ToInt32(result) : 0;
                     }
 
-                    // 3. Total Users and Active Users
-                    string userQuery = @"
-                        SELECT 
-                            COUNT(*) as TotalUsers,
-                            COUNT(CASE WHEN IsActive = 1 THEN 1 END) as ActiveUsers
-                        FROM users";
-
-                    using (var cmd = new MySqlCommand(userQuery, connection))
+                    // 6. Total Users
+                    string usersQuery = "SELECT COUNT(*) FROM users";
+                    using (var cmd = new MySqlCommand(usersQuery, connection))
                     {
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                stats.TotalUsers = reader.GetInt32("TotalUsers");
-                                stats.ActiveUsers = reader.GetInt32("ActiveUsers");
-                            }
-                        }
+                        stats.TotalUsers = Convert.ToInt32(cmd.ExecuteScalar());
                     }
 
-                    // 4. Upcoming Events (next 30 days)
+                    // 7. Active Users
+                    string activeUsersQuery = "SELECT COUNT(*) FROM users WHERE IsActive = TRUE";
+                    using (var cmd = new MySqlCommand(activeUsersQuery, connection))
+                    {
+                        stats.ActiveUsers = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+
+                    // 8. Upcoming Events (next 30 days, not deleted)
                     string eventsQuery = @"
-                        SELECT COUNT(*) as UpcomingEvents 
+                        SELECT COUNT(*) 
                         FROM events 
                         WHERE EventDate >= CURDATE() 
                         AND EventDate <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
                         AND IsDeleted = 0";
-
                     using (var cmd = new MySqlCommand(eventsQuery, connection))
                     {
                         var result = cmd.ExecuteScalar();
                         stats.UpcomingEvents = result != null ? Convert.ToInt32(result) : 0;
                     }
+
+                    // 9. Pending Actions
+                    stats.PendingActions = GetPendingActionsCount(connection);
+
+                    // 10. Today's date for display
+                    stats.CurrentDate = DateTime.Now.ToString("dddd, MMMM dd, yyyy");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error getting dashboard statistics: {ex.Message}");
+                Debug.WriteLine($"DEBUG - Error: {ex.Message}");
+                Debug.WriteLine($"DEBUG - Stack trace: {ex.StackTrace}");
             }
 
             return stats;
         }
 
-        private List<Announcement> GetRecentAnnouncements()
+        private List<Models.ActivityLog> GetRecentActivities()
         {
-            var announcements = new List<Announcement>();
+            var activities = new List<Models.ActivityLog>();
 
             try
             {
@@ -156,68 +537,7 @@ namespace SeniorManagement.Controllers
                 {
                     connection.Open();
 
-                    // Updated query to include Type for badge colors and icons
-                    string query = @"
-                        SELECT 
-                            Id, Title, Message, Type, CreatedBy, CreatedAt,
-                            CASE 
-                                WHEN Type = 'Important' THEN 'bg-danger'
-                                WHEN Type = 'Warning' THEN 'bg-warning'
-                                WHEN Type = 'Info' THEN 'bg-info'
-                                WHEN Type = 'Success' THEN 'bg-success'
-                                ELSE 'bg-secondary'
-                            END as BadgeColor,
-                            CASE 
-                                WHEN Type = 'Important' THEN 'fa-exclamation-triangle'
-                                WHEN Type = 'Warning' THEN 'fa-exclamation-circle'
-                                WHEN Type = 'Info' THEN 'fa-info-circle'
-                                WHEN Type = 'Success' THEN 'fa-check-circle'
-                                ELSE 'fa-bullhorn'
-                            END as Icon
-                        FROM announcements 
-                        ORDER BY CreatedAt DESC 
-                        LIMIT 5";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            announcements.Add(new Announcement
-                            {
-                                Id = reader.GetInt32("Id"),
-                                Title = reader.GetString("Title"),
-                                Message = reader.GetString("Message"),
-                                Type = reader.GetString("Type"),
-                                CreatedBy = reader.GetString("CreatedBy"),
-                                CreatedAt = reader.GetDateTime("CreatedAt"),
-                                BadgeColor = reader.GetString("BadgeColor"),
-                                Icon = reader.GetString("Icon"),
-                                TimeAgo = GetTimeAgo(reader.GetDateTime("CreatedAt"))
-                            });
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error getting announcements: {ex.Message}");
-            }
-
-            return announcements;
-        }
-
-        private List<ActivityLog> GetRecentActivities()
-        {
-            var activities = new List<ActivityLog>();
-
-            try
-            {
-                using (var connection = _dbHelper.GetConnection())
-                {
-                    connection.Open();
-
-                    string query = @"SELECT Id, UserName, UserRole, Action, Details, CreatedAt
+                    string query = @"SELECT Id, UserName, UserRole, Action, Details, IpAddress, CreatedAt
                                    FROM activity_logs 
                                    ORDER BY CreatedAt DESC 
                                    LIMIT 10";
@@ -227,13 +547,14 @@ namespace SeniorManagement.Controllers
                     {
                         while (reader.Read())
                         {
-                            activities.Add(new ActivityLog
+                            activities.Add(new Models.ActivityLog
                             {
                                 Id = reader.GetInt32("Id"),
                                 UserName = reader.GetString("UserName"),
                                 UserRole = reader.GetString("UserRole"),
                                 Action = reader.GetString("Action"),
                                 Details = reader.IsDBNull(reader.GetOrdinal("Details")) ? "" : reader.GetString("Details"),
+                                IpAddress = reader.IsDBNull(reader.GetOrdinal("IpAddress")) ? "" : reader.GetString("IpAddress"),
                                 CreatedAt = reader.GetDateTime("CreatedAt")
                             });
                         }
@@ -243,132 +564,174 @@ namespace SeniorManagement.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Error getting activities: {ex.Message}");
+                Debug.WriteLine($"DEBUG - Activities Error: {ex.Message}");
             }
 
             return activities;
         }
 
-        private async Task<List<ActivityLog>> GetRecentActivitiesForDashboard()
+        private List<Notification> GetUserNotifications(string userId, string userRole)
         {
-            var activities = new List<ActivityLog>();
+            var notifications = new List<Notification>();
 
             try
             {
                 using (var connection = _dbHelper.GetConnection())
                 {
-                    await connection.OpenAsync();
+                    connection.Open();
 
-                    string query = @"SELECT Id, UserName, UserRole, Action, Details, CreatedAt
-                           FROM activity_logs 
-                           ORDER BY CreatedAt DESC 
-                           LIMIT 10";
+                    // Get notifications for this user OR notifications for all users (if user is staff/admin)
+                    string query = @"
+                        SELECT Id, UserId, UserName, UserRole, Type, Title, Message, Url, IsRead, CreatedAt
+                        FROM notifications 
+                        WHERE (UserId = @UserId OR UserId = 'all')
+                        ORDER BY CreatedAt DESC 
+                        LIMIT 20";
 
                     using (var cmd = new MySqlCommand(query, connection))
-                    using (var reader = await cmd.ExecuteReaderAsync())
                     {
-                        while (await reader.ReadAsync())
+                        cmd.Parameters.AddWithValue("@UserId", userId);
+
+                        using (var reader = cmd.ExecuteReader())
                         {
-                            activities.Add(new ActivityLog
+                            while (reader.Read())
                             {
-                                Id = reader.GetInt32("Id"),
-                                UserName = reader.GetString("UserName"),
-                                UserRole = reader.GetString("UserRole"),
-                                Action = reader.GetString("Action"),
-                                Details = reader.IsDBNull(reader.GetOrdinal("Details")) ? "" : reader.GetString("Details"),
-                                CreatedAt = reader.GetDateTime("CreatedAt")
-                            });
+                                notifications.Add(new Notification
+                                {
+                                    Id = reader.GetInt32("Id"),
+                                    UserId = reader.GetString("UserId"),
+                                    UserName = reader.GetString("UserName"),
+                                    UserRole = reader.GetString("UserRole"),
+                                    Type = reader.GetString("Type"),
+                                    Title = reader.GetString("Title"),
+                                    Message = reader.GetString("Message"),
+                                    Url = reader.IsDBNull(reader.GetOrdinal("Url")) ? "" : reader.GetString("Url"),
+                                    IsRead = reader.GetBoolean("IsRead"),
+                                    CreatedAt = reader.GetDateTime("CreatedAt")
+                                });
+                            }
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error getting activities for dashboard: {ex.Message}");
+                Console.WriteLine($"Error getting notifications: {ex.Message}");
             }
 
-            return activities;
+            return notifications;
         }
 
-        // API endpoint for dashboard to get real-time activities
-        [HttpGet]
-        public async Task<IActionResult> GetDashboardActivities()
+        private UserProfile GetUserProfile(string userId)
         {
             try
             {
-                var activities = await GetRecentActivitiesForDashboard();
-                return Json(new { success = true, data = activities });
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+                    string query = "SELECT Id, Name, Username, Email, Phone, Role, IsAdmin, IsActive, CreatedAt FROM users WHERE Id = @Id";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", userId);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                return new UserProfile
+                                {
+                                    Id = reader.GetInt32("Id"),
+                                    Name = reader.GetString("Name"),
+                                    Username = reader.GetString("Username"),
+                                    Email = reader.GetString("Email"),
+                                    Phone = reader.IsDBNull(reader.GetOrdinal("Phone")) ? "" : reader.GetString("Phone"),
+                                    Role = reader.GetString("Role"),
+                                    IsAdmin = reader.GetBoolean("IsAdmin"),
+                                    IsActive = reader.GetBoolean("IsActive"),
+                                    CreatedAt = reader.GetDateTime("CreatedAt")
+                                };
+                            }
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                await _activityHelper.LogErrorAsync(ex.Message, "Get Dashboard Activities");
-                return Json(new { success = false, message = ex.Message });
+                Console.WriteLine($"Error getting user profile: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        private int GetPendingActionsCount(MySqlConnection connection)
+        {
+            string query = @"
+                SELECT (
+                    (SELECT COUNT(*) FROM seniors WHERE NeedsReview = 1 AND IsDeleted = 0) +
+                    (SELECT COUNT(*) FROM events WHERE NeedsReview = 1 AND IsDeleted = 0)
+                ) as PendingCount";
+
+            using (var cmd = new MySqlCommand(query, connection))
+            {
+                var result = cmd.ExecuteScalar();
+                return result != null ? Convert.ToInt32(result) : 0;
             }
         }
 
-        // Helper method to calculate time ago
-        private string GetTimeAgo(DateTime date)
+        private int GetCount(MySqlConnection connection, string query)
         {
-            var timeSpan = DateTime.Now.Subtract(date);
-
-            if (timeSpan <= TimeSpan.FromSeconds(60))
-                return $"{timeSpan.Seconds} seconds ago";
-
-            if (timeSpan <= TimeSpan.FromMinutes(60))
-                return timeSpan.Minutes > 1 ? $"{timeSpan.Minutes} minutes ago" : "a minute ago";
-
-            if (timeSpan <= TimeSpan.FromHours(24))
-                return timeSpan.Hours > 1 ? $"{timeSpan.Hours} hours ago" : "an hour ago";
-
-            if (timeSpan <= TimeSpan.FromDays(30))
-                return timeSpan.Days > 1 ? $"{timeSpan.Days} days ago" : "yesterday";
-
-            if (timeSpan <= TimeSpan.FromDays(365))
+            using (var cmd = new MySqlCommand(query, connection))
             {
-                var months = Convert.ToInt32(Math.Floor(timeSpan.Days / 30.0));
-                return months > 1 ? $"{months} months ago" : "a month ago";
+                var result = cmd.ExecuteScalar();
+                return result != null ? Convert.ToInt32(result) : 0;
             }
-
-            var years = Convert.ToInt32(Math.Floor(timeSpan.Days / 365.0));
-            return years > 1 ? $"{years} years ago" : "a year ago";
         }
     }
 
+    // Helper Classes
     public class DashboardStatistics
     {
         public int TotalSeniors { get; set; }
         public int ActiveSeniors { get; set; }
         public int MaleCount { get; set; }
         public int FemaleCount { get; set; }
-        public int TotalEvents { get; set; }
-        public int UpcomingEvents { get; set; }
-        public string CurrentDate { get; set; }
         public int RecentRegistrations { get; set; }
         public int TotalUsers { get; set; }
         public int ActiveUsers { get; set; }
+        public int UpcomingEvents { get; set; }
+        public int PendingActions { get; set; }
+        public string CurrentDate { get; set; }
     }
 
-    // Make sure these model classes match what's in your view
-    public class Announcement
+    public class NotificationRequest
     {
         public int Id { get; set; }
-        public string Title { get; set; }
-        public string Message { get; set; }
-        public string Type { get; set; }
-        public string CreatedBy { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public string BadgeColor { get; set; }
-        public string Icon { get; set; }
-        public string TimeAgo { get; set; }
     }
 
-    public class ActivityLog
+    public class UserProfile
     {
         public int Id { get; set; }
-        public string UserName { get; set; }
-        public string UserRole { get; set; }
-        public string Action { get; set; }
-        public string Details { get; set; }
-        public string IpAddress { get; set; }
+        public string Name { get; set; }
+        public string Username { get; set; }
+        public string Email { get; set; }
+        public string Phone { get; set; }
+        public string Role { get; set; }
+        public bool IsAdmin { get; set; }
+        public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
+    }
+
+    public class ChangePasswordModel
+    {
+        public string CurrentPassword { get; set; }
+        public string NewPassword { get; set; }
+        public string ConfirmPassword { get; set; }
+    }
+
+    public class ErrorViewModel
+    {
+        public string RequestId { get; set; }
+        public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
     }
 }

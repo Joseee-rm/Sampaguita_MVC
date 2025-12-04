@@ -10,7 +10,6 @@ namespace SeniorManagement.Controllers
 {
     [Authorize]
     public class AdminController : BaseController
-
     {
         private readonly DatabaseHelper _dbHelper;
         private readonly AuthHelper _authHelper;
@@ -154,7 +153,7 @@ namespace SeniorManagement.Controllers
             }
             catch (Exception ex)
             {
-                await _activityHelper.LogErrorAsync(ex.Message, "Toggle User Status");
+                await _activityHelper.LogActivityAsync("Error", ex.Message);
                 Debug.WriteLine($"Error toggling user status: {ex.Message}");
                 TempData["ErrorMessage"] = "Error updating user status.";
             }
@@ -282,7 +281,7 @@ namespace SeniorManagement.Controllers
             }
             catch (Exception ex)
             {
-                await _activityHelper.LogErrorAsync(ex.Message, "Edit User");
+                await _activityHelper.LogActivityAsync("Error", $"Edit User: {ex.Message}");
                 Debug.WriteLine($"Error in EditUser POST: {ex.Message}");
                 Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
                 TempData["ErrorMessage"] = $"Error updating user: {ex.Message}";
@@ -290,10 +289,117 @@ namespace SeniorManagement.Controllers
             }
         }
 
-        // Reset User Password
+        // Reset User Password - GET (Manual password entry form)
+        [HttpGet]
+        public IActionResult ResetPassword(int id)
+        {
+            // Check if user is admin
+            if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
+            {
+                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            var user = GetUserById(id);
+            if (user == null)
+            {
+                TempData["ErrorMessage"] = "User not found.";
+                return RedirectToAction("ManageUsers");
+            }
+
+            var viewModel = new ResetPasswordViewModel
+            {
+                UserId = user.Id,
+                Username = user.Username,
+                Name = user.Name
+            };
+
+            return View(viewModel);
+        }
+
+        // Reset User Password - POST (Process manual password entry)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ResetPassword(int id)
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            try
+            {
+                // Check if user is admin
+                if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
+                {
+                    TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
+                    return RedirectToAction("Index", "Home");
+                }
+
+                // Validate input
+                if (string.IsNullOrEmpty(model.NewPassword))
+                {
+                    ModelState.AddModelError("NewPassword", "New password is required.");
+                    return View(model);
+                }
+
+                if (model.NewPassword != model.ConfirmPassword)
+                {
+                    ModelState.AddModelError("ConfirmPassword", "Passwords do not match.");
+                    return View(model);
+                }
+
+                // Optional: Add password strength validation
+                if (model.NewPassword.Length < 6)
+                {
+                    ModelState.AddModelError("NewPassword", "Password must be at least 6 characters long.");
+                    return View(model);
+                }
+
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // Hash the new password
+                    string hashedPassword = AuthHelper.HashPassword(model.NewPassword);
+
+                    string query = "UPDATE users SET Password = @Password WHERE Id = @Id";
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Password", hashedPassword);
+                        cmd.Parameters.AddWithValue("@Id", model.UserId);
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            var user = GetUserById(model.UserId);
+                            if (user != null)
+                            {
+                                await _activityHelper.LogActivityAsync(
+                                    "Reset Password",
+                                    $"Password manually reset for user '{user.Name}' ({user.Username}) by administrator"
+                                );
+                            }
+
+                            TempData["SuccessMessage"] = "Password reset successfully!";
+                            return RedirectToAction("ManageUsers");
+                        }
+                        else
+                        {
+                            TempData["ErrorMessage"] = "Error resetting password. User not found.";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await _activityHelper.LogActivityAsync("Error", $"Reset Password: {ex.Message}");
+                Debug.WriteLine($"Error resetting password: {ex.Message}");
+                TempData["ErrorMessage"] = $"Error resetting password: {ex.Message}";
+            }
+
+            return View(model);
+        }
+
+        // Quick Reset User Password (Sets to default password)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> QuickResetPassword(int id)
         {
             try
             {
@@ -324,12 +430,12 @@ namespace SeniorManagement.Controllers
                             if (user != null)
                             {
                                 await _activityHelper.LogActivityAsync(
-                                    "Reset Password",
-                                    $"Password reset for user '{user.Name}' ({user.Username})"
+                                    "Quick Reset Password",
+                                    $"Password quickly reset to default for user '{user.Name}' ({user.Username})"
                                 );
                             }
 
-                            TempData["SuccessMessage"] = "Password reset successfully! Default password: password123";
+                            TempData["SuccessMessage"] = "Password reset to default successfully! Default password: password123";
                         }
                         else
                         {
@@ -340,7 +446,7 @@ namespace SeniorManagement.Controllers
             }
             catch (Exception ex)
             {
-                await _activityHelper.LogErrorAsync(ex.Message, "Reset Password");
+                await _activityHelper.LogActivityAsync("Error", $"Quick Reset Password: {ex.Message}");
                 Debug.WriteLine($"Error resetting password: {ex.Message}");
                 TempData["ErrorMessage"] = "Error resetting password.";
             }
@@ -448,7 +554,7 @@ namespace SeniorManagement.Controllers
                         ActiveUsers = GetCount(connection, "SELECT COUNT(*) FROM users WHERE IsActive = TRUE"),
                         AdminUsers = GetCount(connection, "SELECT COUNT(*) FROM users WHERE IsAdmin = TRUE"),
                         StaffUsers = GetCount(connection, "SELECT COUNT(*) FROM users WHERE IsAdmin = FALSE"),
-                        TotalSeniors = GetCount(connection, "SELECT COUNT(*) FROM seniors"),
+                        TotalSeniors = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE IsDeleted = 0"),
                         RecentRegistrations = GetCount(connection, "SELECT COUNT(*) FROM users WHERE CreatedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY)"),
                         SystemStatus = "Operational",
                         LastBackup = DateTime.Now.AddDays(-1).ToString("MMM dd, yyyy")
@@ -483,9 +589,9 @@ namespace SeniorManagement.Controllers
             }
         }
 
-        private List<ActivityLog> GetRecentAdminActivities()
+        private List<Models.ActivityLog> GetRecentAdminActivities()
         {
-            var activities = new List<ActivityLog>();
+            var activities = new List<Models.ActivityLog>();
 
             try
             {
@@ -493,7 +599,7 @@ namespace SeniorManagement.Controllers
                 {
                     connection.Open();
 
-                    string query = @"SELECT Id, UserName, UserRole, Action, Details, CreatedAt
+                    string query = @"SELECT Id, UserName, UserRole, Action, Details, IpAddress, CreatedAt
                            FROM activity_logs 
                            ORDER BY CreatedAt DESC 
                            LIMIT 10";
@@ -503,13 +609,14 @@ namespace SeniorManagement.Controllers
                     {
                         while (reader.Read())
                         {
-                            activities.Add(new ActivityLog
+                            activities.Add(new Models.ActivityLog
                             {
                                 Id = reader.GetInt32("Id"),
                                 UserName = reader.GetString("UserName"),
                                 UserRole = reader.GetString("UserRole"),
                                 Action = reader.GetString("Action"),
                                 Details = reader.IsDBNull(reader.GetOrdinal("Details")) ? "" : reader.GetString("Details"),
+                                IpAddress = reader.IsDBNull(reader.GetOrdinal("IpAddress")) ? "" : reader.GetString("IpAddress"),
                                 CreatedAt = reader.GetDateTime("CreatedAt")
                             });
                         }
@@ -647,12 +754,40 @@ namespace SeniorManagement.Controllers
             }
             catch (Exception ex)
             {
-                await _activityHelper.LogErrorAsync(ex.Message, "Add User");
+                await _activityHelper.LogActivityAsync("Error", $"Add User: {ex.Message}");
                 Debug.WriteLine($"Error adding user: {ex.Message}");
                 TempData["ErrorMessage"] = $"Error adding user: {ex.Message}";
             }
 
             return View(model);
+        }
+
+        // Method to get system health status
+        [HttpGet]
+        public JsonResult GetSystemHealth()
+        {
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    var healthStatus = new
+                    {
+                        Database = "Connected",
+                        Users = GetCount(connection, "SELECT COUNT(*) FROM users"),
+                        ActiveSessions = 1, // You can implement session tracking
+                        ServerTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                        Uptime = "24h" // You can implement uptime tracking
+                    };
+
+                    return Json(new { success = true, data = healthStatus });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
     }
 }

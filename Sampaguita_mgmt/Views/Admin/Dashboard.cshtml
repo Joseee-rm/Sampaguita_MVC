@@ -168,51 +168,51 @@
             </div>
         </div>
 
-        <!-- Recent Activities -->
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Recent Activities</h6>
+        <!-- Recent Activities Card -->
+        <div class="col-xl-6 col-lg-12 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-history me-2"></i>Recent Activities
+                    </h6>
+                    <div class="d-flex align-items-center">
+                        <div class="form-check form-switch me-3">
+                            <input class="form-check-input" type="checkbox" id="activityLiveUpdate" checked>
+                            <label class="form-check-label small" for="activityLiveUpdate">Live Updates</label>
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="loadRecentActivities()">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div class="list-group list-group-flush">
-                        @if (activities != null && activities.Any())
-                        {
-                            foreach (var activity in activities.Take(6))
-                            {
-                                <div class="list-group-item px-0">
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <div class="d-flex align-items-center">
-                                            <div class="icon-circle bg-primary mr-3">
-                                                <i class="fas fa-user text-white"></i>
-                                            </div>
-                                            <div>
-                                                <div class="small text-gray-500">@activity.CreatedAt.ToString("MMM dd, hh:mm tt")</div>
-                                                <span class="font-weight-bold">@activity.UserName</span>
-                                                <span class="text-muted">@activity.Action</span>
-                                            </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="recentActivitiesTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentActivitiesBody">
+                                <!-- Activities will be loaded here -->
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
                                         </div>
-                                        <span class="badge @(activity.UserRole == "Administrator" ? "badge-danger" : "badge-info")">
-                                            @activity.UserRole
-                                        </span>
-                                    </div>
-                                    @if (!string.IsNullOrEmpty(activity.Details))
-                                    {
-                                        <div class="mt-2 small text-muted pl-5">
-                                            <i class="fas fa-info-circle mr-1"></i>@activity.Details
-                                        </div>
-                                    }
-                                </div>
-                            }
-                        }
-                        else
-                        {
-                            <div class="text-center py-4 text-muted">
-                                <i class="fas fa-info-circle fa-2x mb-3"></i>
-                                <p>No recent activities</p>
-                            </div>
-                        }
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+                </div>
+                <div class="card-footer bg-transparent border-top-0">
+                    <a href="@Url.Action("Index", "ActivityLog")" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="fas fa-external-link-alt me-1"></i> View All Activities
+                    </a>
                 </div>
             </div>
         </div>
@@ -229,13 +229,40 @@
             align-items: center;
             justify-content: center;
         }
+
+        .new-activity {
+            animation: highlight 2s ease-out;
+        }
+
+        @@keyframes highlight {
+            0% {
+                background-color: rgba(33, 150, 243, 0.3);
+            }
+
+            100% {
+                background-color: rgba(33, 150, 243, 0.1);
+            }
+        }
+
+        .x-small {
+            font-size: 0.7rem;
+        }
+
+        .text-truncate {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
     </style>
 }
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        // Refresh button functionality 
-        document.getElementById('refreshBtn').addEventListener('click', function() {
+        // Refresh button functionality
+        document.getElementById('refreshBtn')?.addEventListener('click', function() {
             const btn = this;
             const originalHTML = btn.innerHTML;
 
@@ -245,6 +272,321 @@
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
+        });
+
+        let activityHubConnection = null;
+        let isActivityLive = true;
+
+        // Initialize SignalR for dashboard
+        async function initializeActivityHub() {
+            try {
+                activityHubConnection = new signalR.HubConnectionBuilder()
+                    .withUrl("/activityHub")
+                    .withAutomaticReconnect({
+                        nextRetryDelayInMilliseconds: retryContext => {
+                            // Exponential backoff with max 30 seconds
+                            return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 30000);
+                        }
+                    })
+                    .build();
+
+                // Listen for new activities
+                activityHubConnection.on("ReceiveNewActivity", function (activity) {
+                    console.log("New activity on dashboard:", activity);
+
+                    if (isActivityLive) {
+                        addActivityToDashboard(activity);
+                        showActivityNotification(activity);
+                    }
+                });
+
+                // Listen for log clearance
+                activityHubConnection.on("LogsCleared", function (count) {
+                    showToast(`Cleared ${count} activity logs`, "info");
+                    if (isActivityLive) {
+                        loadRecentActivities();
+                    }
+                });
+
+                // Listen for connection events
+                activityHubConnection.onreconnecting(error => {
+                    console.log('Activity Hub reconnecting...', error);
+                    showToast('Reconnecting to activity feed...', 'warning');
+                });
+
+                activityHubConnection.onreconnected(connectionId => {
+                    console.log('Activity Hub reconnected. Connection ID:', connectionId);
+                    showToast('Activity feed reconnected', 'success');
+                    if (isActivityLive) {
+                        loadRecentActivities();
+                    }
+                });
+
+                await activityHubConnection.start();
+                console.log("Activity Hub connected for dashboard.");
+
+                // Join activity group
+                await activityHubConnection.invoke("JoinActivityGroup");
+
+                // Request initial data
+                await activityHubConnection.invoke("RequestInitialData");
+
+            } catch (err) {
+                console.error("Activity Hub connection error:", err);
+                // Fallback to polling if SignalR fails
+                setupActivityPolling();
+            }
+        }
+
+        // Load recent activities
+        async function loadRecentActivities() {
+            try {
+                const response = await fetch('/ActivityLog/GetLatestActivities?count=10');
+                const data = await response.json();
+
+                if (data.success) {
+                    updateActivitiesTable(data.data);
+                }
+            } catch (error) {
+                console.error("Error loading recent activities:", error);
+            }
+        }
+
+        // Update activities table
+        function updateActivitiesTable(activities) {
+            const tbody = $('#recentActivitiesBody');
+            tbody.empty();
+
+            if (activities.length === 0) {
+                tbody.html(`
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No recent activities
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            activities.forEach(activity => {
+                const timeAgo = getTimeAgo(activity.createdAt);
+                const row = `
+                    <tr>
+                        <td>
+                            <div class="small text-muted">${timeAgo}</div>
+                            <div class="x-small">${formatTime(activity.createdAt)}</div>
+                        </td>
+                        <td>
+                            <div class="fw-bold small">${escapeHtml(activity.userName)}</div>
+                            <span class="badge bg-secondary x-small">${activity.userRole}</span>
+                        </td>
+                        <td>
+                            <span class="badge ${getActionBadgeClass(activity.action)}">
+                                ${escapeHtml(activity.action)}
+                            </span>
+                        </td>
+                        <td class="small">
+                            <div class="text-truncate" style="max-width: 200px;" title="${escapeHtml(activity.details)}">
+                                ${escapeHtml(activity.details || 'N/A')}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        }
+
+        // Add new activity to dashboard
+        function addActivityToDashboard(activity) {
+            const tbody = $('#recentActivitiesBody');
+
+            // Remove "no activities" message if present
+            if (tbody.find('td[colspan]').length > 0) {
+                tbody.empty();
+            }
+
+            const timeAgo = getTimeAgo(activity.createdAt);
+            const row = `
+                <tr class="table-primary new-activity">
+                    <td>
+                        <div class="small text-muted">${timeAgo}</div>
+                        <div class="x-small">${formatTime(activity.createdAt)}</div>
+                    </td>
+                    <td>
+                        <div class="fw-bold small">${escapeHtml(activity.userName)}</div>
+                        <span class="badge bg-secondary x-small">${activity.userRole}</span>
+                    </td>
+                    <td>
+                        <span class="badge ${getActionBadgeClass(activity.action)}">
+                            ${escapeHtml(activity.action)}
+                        </span>
+                    </td>
+                    <td class="small">
+                        <div class="text-truncate" style="max-width: 200px;" title="${escapeHtml(activity.details)}">
+                            ${escapeHtml(activity.details || 'N/A')}
+                        </div>
+                    </td>
+                </tr>
+            `;
+
+            // Add to top
+            tbody.prepend(row);
+
+            // Remove highlight after 2 seconds
+            setTimeout(() => {
+                $('.new-activity').removeClass('table-primary');
+            }, 2000);
+
+            // Keep only 10 rows
+            if (tbody.children().length > 10) {
+                tbody.children().last().remove();
+            }
+        }
+
+        // Show activity notification
+        function showActivityNotification(activity) {
+            const notification = `
+                <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
+                    <div class="toast-header">
+                        <i class="fas fa-bell text-primary me-2"></i>
+                        <strong class="me-auto">New Activity</strong>
+                        <small class="text-muted">just now</small>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">${escapeHtml(activity.userName)}</div>
+                                <div class="small">${escapeHtml(activity.action)}</div>
+                                <div class="text-muted x-small mt-1">${escapeHtml(activity.details)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add to notification container
+            $('#notificationContainer').append(notification);
+
+            // Auto remove after delay
+            setTimeout(() => {
+                $('.toast').toast('hide');
+                setTimeout(() => {
+                    $('.toast').remove();
+                }, 150);
+            }, 5000);
+        }
+
+        // Setup polling fallback
+        function setupActivityPolling() {
+            // Load activities initially
+            loadRecentActivities();
+
+            // Poll every 30 seconds if SignalR not available
+            setInterval(() => {
+                if (isActivityLive) {
+                    loadRecentActivities();
+                }
+            }, 30000);
+        }
+
+        // Helper functions
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function getTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHour = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHour / 24);
+
+            if (diffDay > 0) return `${diffDay}d ago`;
+            if (diffHour > 0) return `${diffHour}h ago`;
+            if (diffMin > 0) return `${diffMin}m ago`;
+            return 'Just now';
+        }
+
+        function getActionBadgeClass(action) {
+            if (action.includes('Error') || action.includes('Failed')) return 'bg-danger';
+            if (action.includes('Success') || action.includes('Added')) return 'bg-success';
+            if (action.includes('Warning') || action.includes('Updated')) return 'bg-warning';
+            if (action.includes('Delete') || action.includes('Remove')) return 'bg-danger';
+            if (action.includes('Login') || action.includes('Logout')) return 'bg-info';
+            return 'bg-primary';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showToast(message, type = 'info') {
+            // Create a simple toast notification
+            const toastHtml = `
+                <div class="toast show align-items-center text-bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+
+            const container = document.getElementById('notificationContainer');
+            if (container) {
+                container.insertAdjacentHTML('beforeend', toastHtml);
+
+                // Auto remove after 3 seconds
+                setTimeout(() => {
+                    const toast = container.lastElementChild;
+                    if (toast) {
+                        toast.remove();
+                    }
+                }, 3000);
+            }
+        }
+
+        // Initialize when page loads
+        $(document).ready(function() {
+            // Initialize refresh button
+            $('#refreshBtn').click(function() {
+                const btn = $(this);
+                const originalHTML = btn.html();
+
+                btn.html('<i class="fas fa-spinner fa-spin"></i>');
+                btn.prop('disabled', true);
+
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            });
+
+            initializeActivityHub();
+            loadRecentActivities();
+
+            // Toggle live updates
+            $('#activityLiveUpdate').change(function() {
+                isActivityLive = this.checked;
+                if (isActivityLive) {
+                    loadRecentActivities();
+                }
+            });
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (activityHubConnection) {
+                activityHubConnection.stop();
+            }
         });
     </script>
 }

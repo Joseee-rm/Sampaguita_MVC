@@ -18,6 +18,23 @@ namespace SeniorManagement.Helpers
             return _dbHelper.GetConnection();
         }
 
+        // Add this static method for password verification
+        public static bool VerifyPassword(string plainPassword, string hashedPassword)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(plainPassword) || string.IsNullOrEmpty(hashedPassword))
+                    return false;
+
+                return BCrypt.Net.BCrypt.Verify(plainPassword, hashedPassword);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"VerifyPassword error: {ex.Message}");
+                return false;
+            }
+        }
+
         public User AuthenticateUser(string username, string password)
         {
             try

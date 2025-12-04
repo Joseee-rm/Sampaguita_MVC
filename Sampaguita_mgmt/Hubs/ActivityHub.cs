@@ -76,9 +76,11 @@ namespace SeniorManagement.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task SendNotification(string message, string type = "info")
+        // Add these methods to ActivityHub.cs
+
+        public async Task SendNotificationToUser(string userId, string message, string type = "info")
         {
-            await Clients.Caller.SendAsync("ReceiveNotification", new
+            await Clients.User(userId).SendAsync("ReceiveNotification", new
             {
                 message,
                 type,
@@ -86,9 +88,24 @@ namespace SeniorManagement.Hubs
             });
         }
 
-        public async Task Ping()
+        public async Task SendNotificationToRole(string role, string message, string type = "info")
         {
-            await Clients.Caller.SendAsync("Pong", DateTime.Now);
+            await Clients.Group(role).SendAsync("ReceiveNotification", new
+            {
+                message,
+                type,
+                timestamp = DateTime.Now
+            });
+        }
+
+        public async Task SendNotificationToAll(string message, string type = "info")
+        {
+            await Clients.All.SendAsync("ReceiveNotification", new
+            {
+                message,
+                type,
+                timestamp = DateTime.Now
+            });
         }
     }
 }

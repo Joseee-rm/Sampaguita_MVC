@@ -1,6 +1,6 @@
 ﻿@model List<SeniorManagement.Models.User>
 @{
-    ViewData["Title"] = "Manage Users";
+    ViewData["Title"] = "";
 }
 
 <style>
@@ -288,15 +288,21 @@
                                             <i class="fas fa-edit"></i> Edit
                                         </a>
 
-                                        <!-- Password Reset Button -->
-                                        <form method="post" action="@Url.Action("ResetPassword", "Admin")" class="d-inline">
+                                        <!-- NEW: Password Reset Button (Manual Entry) -->
+                                        <!-- Password Reset Button - Now goes to GET action -->
+                                        <a href="@Url.Action("ResetPassword", "Admin", new { id = user.Id })" class="btn-primary btn-reset btn-sm">
+                                            <i class="fas fa-key"></i> Reset PW
+                                        </a>
+
+                                        <!-- OPTIONAL: Quick Reset to Default (if you want to keep this option) -->
+                                        @* <form method="post" action="@Url.Action("QuickResetPassword", "Admin")" class="d-inline">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@user.Id" />
                                             <button type="submit" class="btn-primary btn-reset btn-sm"
-                                                    onclick="return confirm('Are you sure you want to reset this user\\'s password? Default password will be: password123')">
-                                                <i class="fas fa-key"></i> Reset PW
+                                                    onclick="return confirm('Reset password to default (password123)?')">
+                                                <i class="fas fa-bolt"></i> Quick Reset
                                             </button>
-                                        </form>
+                                        </form> *@
 
                                         <!-- Activate/Deactivate Button -->
                                         <form method="post" action="@Url.Action("ToggleUserStatus", "Admin")" class="d-inline">

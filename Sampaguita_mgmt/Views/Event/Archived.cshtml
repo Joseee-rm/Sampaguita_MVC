@@ -1,7 +1,7 @@
 ﻿@model List<SeniorManagement.Models.Event>
 
 @{
-    ViewData["Title"] = "Archived Events";
+    ViewData["Title"] = "";
 }
 
 <div class="card card-blue shadow-lg">
@@ -44,7 +44,7 @@
                                     <small class="text-muted">@(eventItem.EventDescription?.Length > 50 ? eventItem.EventDescription.Substring(0, 50) + "..." : eventItem.EventDescription)</small>
                                 </td>
                                 <td>
-                                    <span class="badge badge-admin">@eventItem.EventTypeDisplay</span>
+                                    <span class="badge badge-admin">@eventItem.EventType</span>
                                 </td>
                                 <td>@eventItem.EventDate.ToString("MMM dd, yyyy")</td>
                                 <td>
@@ -80,7 +80,7 @@
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@eventItem.Id" />
                                             <button type="button" class="btn btn-action-blue btn-restore-blue"
-                                                    onclick="confirmRestore(@eventItem.Id, '@eventItem.EventTitle')"
+                                                    onclick="confirmRestore(@eventItem.Id, '@eventItem.EventTitle.Replace("'", "\\'")')"
                                                     title="Restore Event">
                                                 <i class="fas fa-undo"></i>
                                             </button>
@@ -105,9 +105,9 @@
                                                         <h5 class="mb-3" style="color: #0D47A1;">@eventItem.EventTitle</h5>
                                                         <div class="row">
                                                             <div class="col-md-6">
-                                                                <p><strong>Type:</strong> @eventItem.EventTypeDisplay</p>
+                                                                <p><strong>Type:</strong> @eventItem.EventType</p>
                                                                 <p><strong>Date:</strong> @eventItem.EventDate.ToString("MMM dd, yyyy")</p>
-                                                                <p><strong>Time:</strong> @eventItem.DisplayTime</p>
+                                                                <p><strong>Time:</strong> @eventItem.TimeFormatted</p>
                                                                 <p><strong>Location:</strong> @eventItem.EventLocation</p>
                                                             </div>
                                                             <div class="col-md-6">
@@ -149,13 +149,6 @@
                         }
                     </tbody>
                 </table>
-            </div>
-
-            <div class="text-center mt-4">
-                <div class="alert alert-blue">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    Archived events are not shown in the main events list. You can restore them here if needed.
-                </div>
             </div>
         }
         else
@@ -202,36 +195,36 @@
             // Show success/error messages from TempData
             @if (TempData["SuccessMessage"] != null)
             {
-                    <text>
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: '@TempData["SuccessMessage"]',
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000,
-                        timerProgressBar: true,
-                        background: '#E3F2FD',
-                        color: '#0D47A1'
-                    });
-                    </text>
+                        <text>
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: '@TempData["SuccessMessage"]',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true,
+                            background: '#E3F2FD',
+                            color: '#0D47A1'
+                        });
+                        </text>
             }
 
             @if (TempData["ErrorMessage"] != null)
             {
-                    <text>
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: '@TempData["ErrorMessage"]',
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000,
-                        timerProgressBar: true
-                    });
-                    </text>
+                        <text>
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: '@TempData["ErrorMessage"]',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true
+                        });
+                        </text>
             }
         });
     </script>

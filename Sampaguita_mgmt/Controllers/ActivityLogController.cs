@@ -476,7 +476,7 @@ namespace SeniorManagement.Controllers
             return activities;
         }
 
-        // Method to log activities (can be called from anywhere) - FIXED VERSION
+        // Method to log activities (can be called from anywhere) - FIXED REAL-TIME VERSION
         public async Task LogActivityAsync(string action, string details)
         {
             try
@@ -488,13 +488,17 @@ namespace SeniorManagement.Controllers
 
                 _logger.LogInformation("Logging activity: {Action} by {User}", action, userName);
 
+                int newId = 0;
+
                 using (var connection = _dbHelper.GetConnection())
                 {
                     await connection.OpenAsync();
 
+                    // Get the inserted ID for the real-time update
                     string query = @"INSERT INTO activity_logs 
                                    (UserName, UserRole, Action, Details, IpAddress, CreatedAt) 
-                                   VALUES (@UserName, @UserRole, @Action, @Details, @IpAddress, @CreatedAt)";
+                                   VALUES (@UserName, @UserRole, @Action, @Details, @IpAddress, @CreatedAt);
+                                   SELECT LAST_INSERT_ID();";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
@@ -505,14 +509,17 @@ namespace SeniorManagement.Controllers
                         cmd.Parameters.AddWithValue("@IpAddress", ipAddress);
                         cmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
 
-                        await cmd.ExecuteNonQueryAsync();
-                        _logger.LogInformation("Activity logged successfully: {Action}", action);
+                        // Get the inserted ID
+                        var result = await cmd.ExecuteScalarAsync();
+                        newId = result != null ? Convert.ToInt32(result) : 0;
+                        _logger.LogInformation("Activity logged successfully with ID: {Id}", newId);
                     }
                 }
 
-                // Create activity log object for real-time update
+                // Create activity log object for real-time update with proper ID
                 var newLog = new ActivityLog
                 {
+                    Id = newId,
                     UserName = userName,
                     UserRole = userRole,
                     Action = action,
@@ -525,7 +532,7 @@ namespace SeniorManagement.Controllers
                 if (_hubContext != null)
                 {
                     await _hubContext.Clients.All.SendAsync("ReceiveNewActivity", newLog);
-                    _logger.LogInformation("SignalR notification sent for activity: {Action}", action);
+                    _logger.LogInformation("SignalR notification sent for activity: {Action} with ID: {Id}", action, newId);
                 }
             }
             catch (Exception ex)
@@ -550,6 +557,55 @@ namespace SeniorManagement.Controllers
             {
                 var logger = serviceProvider.GetRequiredService<ILogger<ActivityLogController>>();
                 logger.LogError(ex, "Error in static LogActivity");
+            }
+        }
+
+        // Method to get latest activities for dashboard
+        [HttpGet]
+        public async Task<IActionResult> GetLatestActivities(int count = 10)
+        {
+            try
+            {
+                var activities = new List<ActivityLog>();
+
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    await connection.OpenAsync();
+                    string query = @"SELECT Id, UserName, UserRole, Action, Details, 
+                                   IpAddress, CreatedAt
+                                   FROM activity_logs 
+                                   ORDER BY CreatedAt DESC 
+                                   LIMIT @Count";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Count", count);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                activities.Add(new ActivityLog
+                                {
+                                    Id = reader.GetInt32("Id"),
+                                    UserName = reader.GetString("UserName"),
+                                    UserRole = reader.GetString("UserRole"),
+                                    Action = reader.GetString("Action"),
+                                    Details = reader.IsDBNull(reader.GetOrdinal("Details")) ? "" : reader.GetString("Details"),
+                                    IpAddress = reader.IsDBNull(reader.GetOrdinal("IpAddress")) ? "" : reader.GetString("IpAddress"),
+                                    CreatedAt = reader.GetDateTime("CreatedAt")
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return Json(new { success = true, data = activities });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting latest activities");
+                return Json(new { success = false, message = "Error loading latest activities" });
             }
         }
     }

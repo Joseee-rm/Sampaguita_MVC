@@ -1,19 +1,68 @@
 ﻿@{
-    ViewData["Title"] = "Dashboard";
-    var stats = ViewBag.DashboardStats as SeniorManagement.Models.DashboardStatistics;
-    var announcements = ViewBag.RecentAnnouncements as List<SeniorManagement.Models.Announcement>;
+    ViewData["Title"] = "";
+    var stats = ViewBag.DashboardStats as SeniorManagement.Controllers.DashboardStatistics;
     var activities = ViewBag.RecentActivities as List<SeniorManagement.Models.ActivityLog>;
+    var isAdmin = ViewBag.IsAdmin as bool? ?? false;
 }
 
 <div class="container-fluid px-0">
-    <!-- Welcome Header -->
+    <!-- Welcome Header with Notification Bell -->
     <div class="row mx-0 mb-4">
         <div class="col-12 px-3">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h3>
-                <button id="refreshBtn" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-sync-alt me-1"></i> Refresh
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Notification Bell -->
+                    <div class="dropdown">
+                        <button class="btn btn-light position-relative dropdown-toggle" type="button"
+                                id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-bell"></i>
+                            <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">
+                                0
+                            </span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end p-0" aria-labelledby="notificationDropdown" style="min-width: 350px; max-width: 400px;">
+                            <div class="card border-0">
+                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0"><i class="fas fa-bell me-2"></i>Notifications</h6>
+                                    <div class="d-flex gap-2">
+                                        <button id="markAllAsRead" class="btn btn-sm btn-light" title="Mark all as read">
+                                            <i class="fas fa-check-double"></i>
+                                        </button>
+                                        <button id="refreshNotifications" class="btn btn-sm btn-light" title="Refresh">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                                    <div id="notificationsList" class="list-group list-group-flush">
+                                        <!-- Notifications will be loaded here -->
+                                        <div class="list-group-item text-center py-4 text-muted">
+                                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <p class="mt-2 mb-0">Loading notifications...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-top-0 text-center">
+                                    <a href="#" id="viewAllNotifications" class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="fas fa-external-link-alt me-1"></i> View All Notifications
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="refreshBtn" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-sync-alt me-1"></i> Refresh
+                    </button>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="autoRefreshToggle" checked>
+                        <label class="form-check-label small" for="autoRefreshToggle">Auto-refresh</label>
+                    </div>
+                </div>
             </div>
 
             <div class="alert alert-info mb-0">
@@ -24,190 +73,38 @@
                         </h5>
                         <p class="mb-0 small">
                             Logged in as <strong>@ViewBag.UserRole</strong>
-                            @if (ViewBag.IsAdmin)
+                            @if (isAdmin)
                             {
                                 <span class="badge bg-danger ms-2">Administrator</span>
                             }
                         </p>
                     </div>
-                    <div>
-                        <small class="text-muted">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</small>
+                    <div class="text-end">
+                        <div id="currentTime" class="small text-muted">@DateTime.Now.ToString("dddd, MMMM dd, yyyy HH:mm:ss")</div>
+                        <div id="systemStatus" class="badge bg-success small">Online</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Statistics Cards - Stack on mobile -->
+    <!-- Statistics Cards -->
     <div class="row mx-0">
-        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
-            <div class="card border-left-primary shadow h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <div class="text-muted small mb-1">Total Seniors</div>
-                            <div class="h4 mb-0 font-weight-bold" id="totalSeniors">@stats?.TotalSeniors</div>
-                            <small class="text-muted" id="recentRegistrations">+@stats?.RecentRegistrations this week</small>
-                        </div>
-                        <div class="ms-3">
-                            <i class="fas fa-users fa-2x text-primary"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
-            <div class="card border-left-success shadow h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <div class="text-muted small mb-1">Active Seniors</div>
-                            <div class="h4 mb-0 font-weight-bold" id="activeSeniors">@stats?.ActiveSeniors</div>
-                            <small class="text-muted">Currently active</small>
-                        </div>
-                        <div class="ms-3">
-                            <i class="fas fa-user-check fa-2x text-success"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
-            <div class="card border-left-info shadow h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <div class="text-muted small mb-1">Male</div>
-                            <div class="h4 mb-0 font-weight-bold" id="maleCount">@stats?.MaleCount</div>
-                            <small class="text-muted" id="malePercentage">
-                                @if (stats?.TotalSeniors > 0)
-                                {
-                                    @Math.Round((double)stats.MaleCount / stats.TotalSeniors * 100, 1)
-                                
-                                    <text>%</text>
-                                }
-                                else
-                                {
-                                    @:0%
-                                }
-                            </small>
-                        </div>
-                        <div class="ms-3">
-                            <i class="fas fa-male fa-2x text-info"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
-            <div class="card border-left-warning shadow h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <div class="text-muted small mb-1">Female</div>
-                            <div class="h4 mb-0 font-weight-bold" id="femaleCount">@stats?.FemaleCount</div>
-                            <small class="text-muted" id="femalePercentage">
-                                @if (stats?.TotalSeniors > 0)
-                                {
-                                    @Math.Round((double)stats.FemaleCount / stats.TotalSeniors * 100, 1)
-                                
-                                    <text>%</text>
-                                }
-                                else
-                                {
-                                    @:0%
-                                }
-                            </small>
-                        </div>
-                        <div class="ms-3">
-                            <i class="fas fa-female fa-2x text-warning"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- ... (keep your existing stat cards) ... -->
     </div>
 
     <!-- Second Row of Stats -->
     <div class="row mx-0">
-        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
-            <div class="card border-left-secondary shadow h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <div class="text-muted small mb-1">Total Users</div>
-                            <div class="h4 mb-0 font-weight-bold" id="totalUsers">@stats?.TotalUsers</div>
-                            <small class="text-muted">System users</small>
-                        </div>
-                        <div class="ms-3">
-                            <i class="fas fa-user-friends fa-2x text-secondary"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
-            <div class="card border-left-danger shadow h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <div class="text-muted small mb-1">Active Users</div>
-                            <div class="h4 mb-0 font-weight-bold" id="activeUsers">@stats?.ActiveUsers</div>
-                            <small class="text-muted">Currently active</small>
-                        </div>
-                        <div class="ms-3">
-                            <i class="fas fa-user-check fa-2x text-danger"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
-            <div class="card border-left-dark shadow h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <div class="text-muted small mb-1">Upcoming Events</div>
-                            <div class="h4 mb-0 font-weight-bold" id="upcomingEvents">@stats?.UpcomingEvents</div>
-                            <small class="text-muted">Scheduled events</small>
-                        </div>
-                        <div class="ms-3">
-                            <i class="fas fa-calendar-alt fa-2x text-dark"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-lg-3 px-2 mb-3">
-            <div class="card border-left-purple shadow h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <div class="text-muted small mb-1">System Status</div>
-                            <div class="h4 mb-0 font-weight-bold text-success">Online</div>
-                            <small class="text-muted">All systems operational</small>
-                        </div>
-                        <div class="ms-3">
-                            <i class="fas fa-server fa-2x text-purple"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- ... (keep your existing stat cards) ... -->
     </div>
 
-    <!-- Charts and Quick Actions - Stack on mobile -->
+    <!-- Charts and Quick Actions -->
     <div class="row mx-0">
-        <div class="col-12 col-lg-6 px-2 mb-3">
+        <div class="col-12 col-lg-8 px-2 mb-3">
             <div class="card shadow">
-                <div class="card-header py-2">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
                     <h6 class="m-0 font-weight-bold text-primary">Gender Distribution</h6>
+                    <div class="small text-muted" id="lastUpdated">Updated: Just now</div>
                 </div>
                 <div class="card-body">
                     <div class="chart-pie">
@@ -217,19 +114,25 @@
             </div>
         </div>
 
-        <div class="col-12 col-lg-6 px-2 mb-3">
+        <div class="col-12 col-lg-4 px-2 mb-3">
             <div class="card shadow">
                 <div class="card-header py-2">
                     <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
                 </div>
                 <div class="card-body">
                     <div class="row g-2">
-                        @if (ViewBag.IsAdmin)
+                        @if (isAdmin)
                         {
                             <div class="col-6">
                                 <a href="@Url.Action("ManageUsers", "Admin")" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center p-2">
                                     <i class="fas fa-users-cog fa-2x mb-2"></i>
                                     <span class="small text-center">Manage Users</span>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="@Url.Action("Dashboard", "Admin")" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center p-2">
+                                    <i class="fas fa-tachometer-alt fa-2x mb-2"></i>
+                                    <span class="small text-center">Admin Dashboard</span>
                                 </a>
                             </div>
                         }
@@ -267,88 +170,26 @@
         </div>
     </div>
 
-    <!-- Recent Activities & Announcements - Stack on mobile -->
+    <!-- Recent Activities Full Width -->
     <div class="row mx-0">
-        <div class="col-12 col-lg-6 px-2 mb-3">
+        <div class="col-12 px-2 mb-3">
             <div class="card shadow">
                 <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-primary">Recent Activities</h6>
-                    <a href="@Url.Action("Index", "ActivityLog")" class="btn btn-sm btn-primary">View All</a>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        @if (activities != null && activities.Any())
-                        {
-                            foreach (var activity in activities.Take(5))
-                            {
-                                <div class="list-group-item">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center mb-1">
-                                                <span class="badge @(activity.UserRole == "Administrator" ? "bg-danger" : "bg-info") me-2">
-                                                    @activity.UserName
-                                                </span>
-                                                <small class="text-muted">@activity.Action</small>
-                                            </div>
-                                            @if (!string.IsNullOrEmpty(activity.Details))
-                                            {
-                                                <small class="text-muted d-block text-truncate" style="max-width: 200px;">
-                                                    @activity.Details
-                                                </small>
-                                            }
-                                        </div>
-                                        <small class="text-muted">@activity.CreatedAt.ToString("hh:mm tt")</small>
-                                    </div>
-                                </div>
-                            }
-                        }
-                        else
-                        {
-                            <div class="list-group-item text-center text-muted py-3">
-                                <i class="fas fa-info-circle me-2"></i>No recent activities
-                            </div>
-                        }
+                    <div>
+                        <h6 class="m-0 font-weight-bold text-primary">Recent Activities</h6>
+                        <small class="text-muted">Live updates enabled</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="activitiesLiveUpdate" checked>
+                            <label class="form-check-label small" for="activitiesLiveUpdate">Live</label>
+                        </div>
+                        <a href="@Url.Action("Index", "ActivityLog")" class="btn btn-sm btn-primary">View All</a>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-lg-6 px-2 mb-3">
-            <div class="card shadow">
-                <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-primary">Recent Announcements</h6>
-                    <a href="@Url.Action("Index", "Announcement")" class="btn btn-sm btn-primary">View All</a>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        @if (announcements != null && announcements.Any())
-                        {
-                            foreach (var announcement in announcements.Take(5))
-                            {
-                                <div class="list-group-item">
-                                    <div class="d-flex">
-                                        <div class="me-3">
-                                            <div class="rounded-circle @announcement.BadgeColor p-2" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                                                <i class="fas @announcement.Icon text-white"></i>
-                                            </div>
-                                        </div>
-                                        <div class="flex-grow-1">
-                                            <h6 class="mb-1 small">@announcement.Title</h6>
-                                            <p class="mb-1 small text-muted text-truncate" style="max-width: 250px;">
-                                                @announcement.Message
-                                            </p>
-                                            <small class="text-muted">@announcement.TimeAgo • By @announcement.CreatedBy</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        }
-                        else
-                        {
-                            <div class="list-group-item text-center text-muted py-3">
-                                <i class="fas fa-bullhorn me-2"></i>No announcements
-                            </div>
-                        }
+                <div class="card-body p-0" id="recentActivitiesContainer">
+                    <div class="list-group list-group-flush" id="recentActivitiesList">
+                        <!-- Activities will be populated via JavaScript -->
                     </div>
                 </div>
             </div>
@@ -356,35 +197,508 @@
     </div>
 </div>
 
+@section Styles {
+    <style>
+        .notification-item {
+            border-left: 4px solid;
+            transition: all 0.2s;
+        }
+
+            .notification-item.unread {
+                background-color: rgba(13, 110, 253, 0.05);
+                border-left-color: #0d6efd;
+            }
+
+            .notification-item.read {
+                background-color: transparent;
+                border-left-color: transparent;
+            }
+
+            .notification-item:hover {
+                background-color: rgba(0, 0, 0, 0.02);
+            }
+
+            .notification-item.info {
+                border-left-color: #0dcaf0;
+            }
+
+            .notification-item.success {
+                border-left-color: #198754;
+            }
+
+            .notification-item.warning {
+                border-left-color: #ffc107;
+            }
+
+            .notification-item.danger {
+                border-left-color: #dc3545;
+            }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 0.7rem;
+            min-width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notification-time {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+
+        .notification-dropdown {
+            min-width: 350px;
+            max-width: 400px;
+        }
+    </style>
+}
+
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Gender Distribution Chart
+        // Global variables
+        let activityHubConnection = null;
+        let isActivitiesLive = true;
+        let isAutoRefresh = true;
         let genderChart = null;
+        let autoRefreshTimer = null;
+        let notificationRefreshTimer = null;
 
+        // Notification System Functions
+        async function loadNotifications() {
+            try {
+                const response = await fetch('@Url.Action("GetNotifications", "Home")');
+                const data = await response.json();
+
+                if (data.success) {
+                    updateNotificationsUI(data.notifications, data.unreadCount);
+                }
+            } catch (error) {
+                console.error("Error loading notifications:", error);
+            }
+        }
+
+        function updateNotificationsUI(notifications, unreadCount) {
+            const container = $('#notificationsList');
+            const badge = $('#notificationBadge');
+
+            // Update badge
+            if (unreadCount > 0) {
+                badge.text(unreadCount).show();
+            } else {
+                badge.hide();
+            }
+
+            // Update notifications list
+            container.empty();
+
+            if (!notifications || notifications.length === 0) {
+                container.html(`
+                    <div class="list-group-item text-center py-4 text-muted">
+                        <i class="fas fa-bell-slash fa-2x mb-3"></i>
+                        <p class="mb-0">No notifications yet</p>
+                    </div>
+                `);
+                return;
+            }
+
+            notifications.forEach(notification => {
+                const notificationClass = notification.isRead ? 'read' : 'unread';
+                const notificationHtml = `
+                    <div class="list-group-item notification-item ${notificationClass} ${notification.type}" data-id="${notification.id}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1 me-2">
+                                <div class="d-flex align-items-center mb-1">
+                                    <i class="fas fa-bell me-2 text-${notification.type}"></i>
+                                    <strong class="text-truncate">${notification.title}</strong>
+                                </div>
+                                <p class="small mb-1 text-truncate">${notification.message}</p>
+                                <small class="notification-time">${notification.timeAgo}</small>
+                            </div>
+                            <div class="d-flex flex-column gap-1">
+                                ${!notification.isRead ? `
+                                    <button class="btn btn-sm btn-outline-success mark-as-read" title="Mark as read">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-sm btn-outline-danger delete-notification" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        ${notification.url ? `
+                            <div class="mt-2">
+                                <a href="${notification.url}" class="btn btn-sm btn-outline-primary w-100">
+                                    <i class="fas fa-external-link-alt me-1"></i> View Details
+                                </a>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                container.append(notificationHtml);
+            });
+
+            // Add event listeners to new notification buttons
+            $('.mark-as-read').click(function(e) {
+                e.stopPropagation();
+                const notificationId = $(this).closest('.notification-item').data('id');
+                markNotificationAsRead(notificationId);
+            });
+
+            $('.delete-notification').click(function(e) {
+                e.stopPropagation();
+                const notificationId = $(this).closest('.notification-item').data('id');
+                deleteNotification(notificationId);
+            });
+
+            // Make notification items clickable
+            $('.notification-item').click(function(e) {
+                if (!$(e.target).closest('button').length) {
+                    const notificationId = $(this).data('id');
+                    markNotificationAsRead(notificationId);
+
+                    // Navigate to URL if exists
+                    const url = $(this).find('a').attr('href');
+                    if (url) {
+                        window.location.href = url;
+                    }
+                }
+            });
+        }
+
+        async function markNotificationAsRead(id) {
+            try {
+                const response = await fetch('@Url.Action("MarkNotificationAsRead", "Home")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ id: id })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    loadNotifications(); // Reload notifications
+                }
+            } catch (error) {
+                console.error("Error marking notification as read:", error);
+            }
+        }
+
+        async function markAllNotificationsAsRead() {
+            try {
+                const response = await fetch('@Url.Action("MarkAllNotificationsAsRead", "Home")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    loadNotifications(); // Reload notifications
+                    showNotification('All notifications marked as read', 'success');
+                }
+            } catch (error) {
+                console.error("Error marking all notifications as read:", error);
+            }
+        }
+
+        async function deleteNotification(id) {
+            if (!confirm('Are you sure you want to delete this notification?')) return;
+
+            try {
+                const response = await fetch('@Url.Action("DeleteNotification", "Home")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ id: id })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    loadNotifications(); // Reload notifications
+                    showNotification('Notification deleted', 'success');
+                }
+            } catch (error) {
+                console.error("Error deleting notification:", error);
+            }
+        }
+
+        // Initialize SignalR for real-time updates
+        async function initializeSignalR() {
+            try {
+                activityHubConnection = new signalR.HubConnectionBuilder()
+                    .withUrl("/activityHub")
+                    .withAutomaticReconnect({
+                        nextRetryDelayInMilliseconds: retryContext => {
+                            return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 30000);
+                        }
+                    })
+                    .build();
+
+                // Listen for new activities
+                activityHubConnection.on("ReceiveNewActivity", function (activity) {
+                    console.log("New activity received:", activity);
+                    if (isActivitiesLive) {
+                        addActivityToList(activity);
+                        updateLastUpdated();
+                    }
+                });
+
+                // Listen for new notifications
+                activityHubConnection.on("ReceiveNotification", function (notification) {
+                    console.log("New notification received:", notification);
+                    // Reload notifications when new one arrives
+                    loadNotifications();
+                    showToastNotification(notification.message, notification.type);
+                });
+
+                // Listen for connection events
+                activityHubConnection.onreconnecting(error => {
+                    console.log('SignalR reconnecting...', error);
+                    updateSystemStatus('Reconnecting...', 'warning');
+                });
+
+                activityHubConnection.onreconnected(connectionId => {
+                    console.log('SignalR reconnected. Connection ID:', connectionId);
+                    updateSystemStatus('Online', 'success');
+                    loadDashboardData();
+                    loadNotifications();
+                });
+
+                await activityHubConnection.start();
+                console.log("SignalR connected for dashboard.");
+
+                // Join activity group
+                await activityHubConnection.invoke("JoinActivityGroup");
+
+                // Request initial data
+                await activityHubConnection.invoke("RequestInitialData");
+
+            } catch (err) {
+                console.error("SignalR connection error:", err);
+                updateSystemStatus('Offline (Polling)', 'warning');
+                // Fallback to polling
+                setupPolling();
+            }
+        }
+
+        // Show toast notification
+        function showToastNotification(message, type = 'info') {
+            // Remove any existing toast
+            $('.toast-notification').remove();
+
+            const icon = {
+                'info': 'fa-info-circle',
+                'success': 'fa-check-circle',
+                'warning': 'fa-exclamation-triangle',
+                'danger': 'fa-exclamation-circle'
+            }[type] || 'fa-info-circle';
+
+            const toast = $(`
+                <div class="toast-notification toast show align-items-center text-bg-${type} border-0 position-fixed"
+                     role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas ${icon} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `);
+
+            toast.css({
+                top: '20px',
+                right: '20px',
+                zIndex: '9999'
+            });
+
+            $('body').append(toast);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.fadeOut(300, () => toast.remove());
+            }, 5000);
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                // Load statistics
+                const statsResponse = await fetch('@Url.Action("GetDashboardStats", "Home")');
+                const statsData = await statsResponse.json();
+
+                if (statsData.success) {
+                    updateDashboardStats(statsData.stats);
+                }
+
+                // Load recent activities
+                await loadRecentActivities();
+
+                // Update system status
+                updateSystemStatus('Online', 'success');
+                updateLastUpdated();
+
+            } catch (error) {
+                console.error("Error loading dashboard data:", error);
+                updateSystemStatus('Error loading data', 'danger');
+            }
+        }
+
+        // Update dashboard statistics
+        function updateDashboardStats(stats) {
+            // Update all stat cards
+            $('#totalSeniors').text(stats.totalSeniors);
+            $('#activeSeniors').text(stats.activeSeniors);
+            $('#maleCount').text(stats.maleCount);
+            $('#femaleCount').text(stats.femaleCount);
+            $('#recentRegistrations').text(`+${stats.recentRegistrations} this week`);
+            $('#upcomingEvents').text(stats.upcomingEvents);
+            $('#totalUsers').text(stats.totalUsers);
+            $('#activeUsers').text(stats.activeUsers);
+            $('#pendingActions').text(stats.pendingActions || 0);
+
+            // Update percentages
+            const totalSeniors = stats.totalSeniors;
+            const malePercentage = totalSeniors > 0 ? Math.round((stats.maleCount / totalSeniors) * 100 * 10) / 10 : 0;
+            const femalePercentage = totalSeniors > 0 ? Math.round((stats.femaleCount / totalSeniors) * 100 * 10) / 10 : 0;
+
+            $('#malePercentage').text(`${malePercentage}%`);
+            $('#femalePercentage').text(`${femalePercentage}%`);
+
+            // Update chart
+            updateGenderChart(stats.maleCount, stats.femaleCount);
+        }
+
+        // Load recent activities
+        async function loadRecentActivities() {
+            try {
+                const response = await fetch('@Url.Action("GetRecentActivitiesAjax", "Home")');
+                const data = await response.json();
+
+                if (data.success) {
+                    updateActivitiesList(data.activities);
+                }
+            } catch (error) {
+                console.error("Error loading activities:", error);
+            }
+        }
+
+        // Update activities list
+        function updateActivitiesList(activities) {
+            const container = $('#recentActivitiesList');
+            container.empty();
+
+            if (!activities || activities.length === 0) {
+                container.html(`
+                    <div class="list-group-item text-center text-muted py-4">
+                        <i class="fas fa-info-circle me-2"></i>No recent activities
+                    </div>
+                `);
+                return;
+            }
+
+            activities.forEach(activity => {
+                const timeAgo = getTimeAgo(activity.createdAt);
+                const activityHtml = `
+                    <div class="list-group-item activity-item" data-id="${activity.id}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="badge ${activity.userRole === 'Administrator' ? 'bg-danger' : 'bg-info'} me-2">
+                                        ${activity.userName}
+                                    </span>
+                                    <small class="text-muted">${activity.action}</small>
+                                </div>
+                                ${activity.details ? `
+                                    <small class="text-muted d-block">
+                                        ${activity.details}
+                                    </small>
+                                ` : ''}
+                            </div>
+                            <small class="text-muted">${timeAgo}</small>
+                        </div>
+                    </div>
+                `;
+                container.append(activityHtml);
+            });
+        }
+
+        // Add new activity to list
+        function addActivityToList(activity) {
+            const container = $('#recentActivitiesList');
+
+            // Remove "no activities" message if present
+            if (container.find('.text-center').length > 0) {
+                container.empty();
+            }
+
+            const timeAgo = getTimeAgo(activity.createdAt);
+            const activityHtml = `
+                <div class="list-group-item activity-item new-activity" data-id="${activity.id}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-1">
+                                <span class="badge ${activity.userRole === 'Administrator' ? 'bg-danger' : 'bg-info'} me-2">
+                                    ${activity.userName}
+                                </span>
+                                <small class="text-muted">${activity.action}</small>
+                            </div>
+                            ${activity.details ? `
+                                <small class="text-muted d-block">
+                                    ${activity.details}
+                                </small>
+                            ` : ''}
+                        </div>
+                        <small class="text-muted">Just now</small>
+                    </div>
+                </div>
+            `;
+
+            // Add to top
+            container.prepend(activityHtml);
+
+            // Add highlight animation
+            setTimeout(() => {
+                $('.new-activity').removeClass('new-activity');
+            }, 2000);
+
+            // Keep only 10 items
+            if (container.children().length > 10) {
+                container.children().last().remove();
+            }
+        }
+
+        // Gender Distribution Chart
         function initChart(maleCount, femaleCount) {
             var genderCtx = document.getElementById('genderChart').getContext('2d');
 
-            if (genderChart) {
-                genderChart.destroy();
-            }
-
             genderChart = new Chart(genderCtx, {
-                type: 'pie',
+                type: 'doughnut',
                 data: {
                     labels: ['Male', 'Female'],
                     datasets: [{
                         data: [maleCount, femaleCount],
                         backgroundColor: ['#4e73df', '#1cc88a'],
                         hoverBackgroundColor: ['#2e59d9', '#17a673'],
-                        borderWidth: 0,
-                        hoverBorderWidth: 2,
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
                         hoverBorderColor: '#ffffff'
                     }]
                 },
                 options: {
                     maintainAspectRatio: false,
                     responsive: true,
+                    cutout: '70%',
                     plugins: {
                         legend: {
                             position: 'bottom',
@@ -414,6 +728,15 @@
             adjustChartSize();
         }
 
+        function updateGenderChart(maleCount, femaleCount) {
+            if (genderChart) {
+                genderChart.data.datasets[0].data = [maleCount, femaleCount];
+                genderChart.update();
+            } else {
+                initChart(maleCount, femaleCount);
+            }
+        }
+
         function adjustChartSize() {
             if (window.innerWidth < 768) {
                 document.getElementById('genderChart').parentNode.style.height = '250px';
@@ -425,112 +748,191 @@
             }
         }
 
-        // Refresh dashboard data
-        document.getElementById('refreshBtn').addEventListener('click', function() {
-            const btn = this;
-            const originalHTML = btn.innerHTML;
+        // Setup polling fallback
+        function setupPolling() {
+            // Load data initially
+            loadDashboardData();
+            loadNotifications();
 
-            // Show loading state
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Refreshing...';
-            btn.disabled = true;
+            // Poll every 30 seconds if auto-refresh is enabled
+            autoRefreshTimer = setInterval(() => {
+                if (isAutoRefresh) {
+                    loadDashboardData();
+                }
+            }, 30000);
 
-            fetch('@Url.Action("GetDashboardStats", "Home")')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Update statistics
-                        document.getElementById('totalSeniors').textContent = data.stats.totalSeniors;
-                        document.getElementById('activeSeniors').textContent = data.stats.activeSeniors;
-                        document.getElementById('maleCount').textContent = data.stats.maleCount;
-                        document.getElementById('femaleCount').textContent = data.stats.femaleCount;
-                        document.getElementById('recentRegistrations').textContent = `+${data.stats.recentRegistrations} this week`;
-                        document.getElementById('upcomingEvents').textContent = data.stats.upcomingEvents;
-                        document.getElementById('totalUsers').textContent = data.stats.totalUsers;
-                        document.getElementById('activeUsers').textContent = data.stats.activeUsers;
+            // Poll notifications every minute
+            notificationRefreshTimer = setInterval(() => {
+                loadNotifications();
+            }, 60000);
+        }
 
-                        // Update percentages
-                        const totalSeniors = data.stats.totalSeniors;
-                        const malePercentage = totalSeniors > 0 ? Math.round((data.stats.maleCount / totalSeniors) * 100 * 10) / 10 : 0;
-                        const femalePercentage = totalSeniors > 0 ? Math.round((data.stats.femaleCount / totalSeniors) * 100 * 10) / 10 : 0;
+        // Update system status
+        function updateSystemStatus(status, type) {
+            const element = $('#systemStatus');
+            element.text(status);
+            element.removeClass('bg-success bg-warning bg-danger');
+            element.addClass(`bg-${type}`);
+        }
 
-                        document.getElementById('malePercentage').textContent = `${malePercentage}%`;
-                        document.getElementById('femalePercentage').textContent = `${femalePercentage}%`;
+        // Update last updated time
+        function updateLastUpdated() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            $('#lastUpdated').text(`Updated: ${timeString}`);
+        }
 
-                        // Update chart
-                        initChart(data.stats.maleCount, data.stats.femaleCount);
+        // Update current time
+        function updateCurrentTime() {
+            const now = new Date();
+            const dateString = now.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            $('#currentTime').text(`${dateString} ${timeString}`);
+        }
 
-                        // Show success message
-                        showNotification('Dashboard refreshed successfully!', 'success');
-                    } else {
-                        showNotification('Error refreshing data: ' + data.message, 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showNotification('Error refreshing data. Please try again.', 'error');
-                })
-                .finally(() => {
-                    // Restore button state
-                    btn.innerHTML = originalHTML;
-                    btn.disabled = false;
-                });
-        });
+        // Helper functions
+        function getTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHour = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHour / 24);
 
-        // Notification function
-        function showNotification(message, type) {
+            if (diffDay > 0) return `${diffDay}d ago`;
+            if (diffHour > 0) return `${diffHour}h ago`;
+            if (diffMin > 0) return `${diffMin}m ago`;
+            if (diffSec > 0) return `${diffSec}s ago`;
+            return 'Just now';
+        }
+
+        function showNotification(message, type = 'info') {
             // Remove any existing notification
-            const existingNotification = document.querySelector('.notification-toast');
-            if (existingNotification) {
-                existingNotification.remove();
-            }
+            $('.notification-toast').remove();
 
-            const notification = document.createElement('div');
-            notification.className = `notification-toast alert alert-${type} position-fixed`;
-            notification.style.cssText = `
-                top: 20px;
-                right: 20px;
-                z-index: 9999;
-                min-width: 300px;
-                animation: slideIn 0.3s ease-out;
-            `;
-            notification.innerHTML = `
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-                    <div>${message}</div>
-                    <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+            const notification = $(`
+                <div class="notification-toast alert alert-${type} position-fixed">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                        <div>${message}</div>
+                        <button type="button" class="btn-close ms-auto" onclick="$(this).parent().parent().remove()"></button>
+                    </div>
                 </div>
-            `;
+            `);
 
-            document.body.appendChild(notification);
+            notification.css({
+                top: '20px',
+                right: '20px',
+                zIndex: '9999',
+                minWidth: '300px'
+            });
+
+            $('body').append(notification);
 
             // Auto remove after 3 seconds
             setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.style.animation = 'slideOut 0.3s ease-in';
-                    setTimeout(() => notification.remove(), 300);
-                }
+                notification.fadeOut(300, function() {
+                    $(this).remove();
+                });
             }, 3000);
         }
 
-               // Add animation styles
-        const style = document.createElement('style');
-        style.textContent = `
-            @@keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-            @@keyframes slideOut {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(100%); opacity: 0; }
-            }
-        `;
-        document.head.appendChild(style);
-        // Initialize chart on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            initChart(@stats?.MaleCount ?? 0, @stats?.FemaleCount ?? 0);
+        // Initialize when page loads
+        $(document).ready(function() {
+            // Initialize SignalR
+            initializeSignalR();
 
-            // Adjust chart on window resize
-            window.addEventListener('resize', adjustChartSize);
+            // Load initial data
+            loadDashboardData();
+            loadNotifications();
+
+            // Initialize chart
+            updateGenderChart(@stats?.MaleCount ?? 0, @stats?.FemaleCount ?? 0);
+
+            // Update current time every second
+            setInterval(updateCurrentTime, 1000);
+            updateCurrentTime();
+
+            // Update chart on window resize
+            $(window).resize(adjustChartSize);
+
+            // Refresh button
+            $('#refreshBtn').click(function() {
+                const btn = $(this);
+                const originalHTML = btn.html();
+
+                btn.html('<i class="fas fa-spinner fa-spin me-1"></i> Refreshing...');
+                btn.prop('disabled', true);
+
+                loadDashboardData().finally(() => {
+                    setTimeout(() => {
+                        btn.html(originalHTML);
+                        btn.prop('disabled', false);
+                        showNotification('Dashboard refreshed successfully!', 'success');
+                    }, 500);
+                });
+            });
+
+            // Refresh notifications button
+            $('#refreshNotifications').click(function(e) {
+                e.stopPropagation();
+                loadNotifications();
+                showNotification('Notifications refreshed', 'success');
+            });
+
+            // Mark all as read button
+            $('#markAllAsRead').click(function(e) {
+                e.stopPropagation();
+                markAllNotificationsAsRead();
+            });
+
+            // View all notifications
+            $('#viewAllNotifications').click(function(e) {
+                e.preventDefault();
+                // You can implement a full notifications page here
+                alert('Full notifications page would open here');
+            });
+
+            // Toggle auto-refresh
+            $('#autoRefreshToggle').change(function() {
+                isAutoRefresh = this.checked;
+                if (isAutoRefresh && !activityHubConnection) {
+                    setupPolling();
+                } else if (!isAutoRefresh) {
+                    if (autoRefreshTimer) {
+                        clearInterval(autoRefreshTimer);
+                        autoRefreshTimer = null;
+                    }
+                    if (notificationRefreshTimer) {
+                        clearInterval(notificationRefreshTimer);
+                        notificationRefreshTimer = null;
+                    }
+                }
+            });
+
+            // Toggle activities live updates
+            $('#activitiesLiveUpdate').change(function() {
+                isActivitiesLive = this.checked;
+            });
+        });
+
+        // Cleanup on page unload
+        $(window).on('beforeunload', function() {
+            if (activityHubConnection) {
+                activityHubConnection.stop();
+            }
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+            }
+            if (notificationRefreshTimer) {
+                clearInterval(notificationRefreshTimer);
+            }
         });
     </script>
 }

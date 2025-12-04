@@ -63,6 +63,12 @@ namespace SeniorManagement.Controllers
                 senior.s_hearing_option ??= "No";
                 senior.s_emotional_option ??= "No";
 
+                // Process children list to text format
+                if (senior.ChildrenList != null && senior.ChildrenList.Any(c => !string.IsNullOrWhiteSpace(c.Name)))
+                {
+                    senior.s_children = FormatChildrenText(senior.ChildrenList);
+                }
+
                 int newSeniorId = InsertSeniorIntoDatabase(senior);
 
                 if (newSeniorId > 0)
@@ -111,6 +117,12 @@ namespace SeniorManagement.Controllers
             // Load maintenance medicines for this senior
             senior.MaintenanceMedicines = GetMaintenanceMedicines(id);
 
+            // Parse children from text field
+            if (!string.IsNullOrEmpty(senior.s_children))
+            {
+                senior.ChildrenList = ParseChildrenFromText(senior.s_children);
+            }
+
             return View(senior);
         }
 
@@ -138,6 +150,12 @@ namespace SeniorManagement.Controllers
                 senior.s_visual_option ??= "No";
                 senior.s_hearing_option ??= "No";
                 senior.s_emotional_option ??= "No";
+
+                // Process children list to text format
+                if (senior.ChildrenList != null && senior.ChildrenList.Any(c => !string.IsNullOrWhiteSpace(c.Name)))
+                {
+                    senior.s_children = FormatChildrenText(senior.ChildrenList);
+                }
 
                 if (UpdateSeniorInDatabase(senior))
                 {
@@ -542,8 +560,8 @@ namespace SeniorManagement.Controllers
                                     Id = reader.GetInt32("Id"),
                                     SeniorId = reader.GetInt32("SeniorId"),
                                     MedicineName = reader.GetString("MedicineName"),
-                                    Dosage = reader.GetString("Dosage"),
-                                    Schedule = reader.GetString("Schedule"),
+                                    Dosage = reader.IsDBNull(reader.GetOrdinal("Dosage")) ? "" : reader.GetString("Dosage"),
+                                    Schedule = reader.IsDBNull(reader.GetOrdinal("Schedule")) ? "" : reader.GetString("Schedule"),
                                     Instructions = reader.IsDBNull(reader.GetOrdinal("Instructions")) ? "" : reader.GetString("Instructions"),
                                 });
                             }
@@ -577,7 +595,7 @@ namespace SeniorManagement.Controllers
                     }
 
                     // Then insert new ones if any
-                    if (medicines != null && medicines.Any())
+                    if (medicines != null && medicines.Any(m => !string.IsNullOrWhiteSpace(m.MedicineName)))
                     {
                         foreach (var medicine in medicines.Where(m => !string.IsNullOrWhiteSpace(m.MedicineName)))
                         {
@@ -670,27 +688,28 @@ namespace SeniorManagement.Controllers
                     connection.Open();
 
                     string query = @"UPDATE seniors 
-                   SET s_firstName = @FirstName, s_middleName = @MiddleName, s_lastName = @LastName, 
-                       s_sex = @Sex, s_dob = @Dob, s_age = @Age, s_contact = @Contact,
-                       s_barangay = @Barangay, s_guardian_zone = @GuardianZone, s_religion = @Religion, 
-                       s_bloodtype = @BloodType,
-                       s_health_problems_option = @HealthProblemsOption, s_health_problems = @HealthProblems,
-                       s_maintenance_option = @MaintenanceOption, s_maintenance = @Maintenance,
-                       s_disability_option = @DisabilityOption, s_disability = @Disability,
-                       s_visual_option = @VisualOption, s_visual = @Visual,
-                       s_hearing_option = @HearingOption, s_hearing = @Hearing,
-                       s_emotional_option = @EmotionalOption, s_emotional = @Emotional,
-                       s_spouse = @Spouse, s_spouse_age = @SpouseAge, s_spouse_occupation = @SpouseOccupation,
-                       s_spouse_contact = @SpouseContact, s_children = @Children,
-                       s_guardian_name = @GuardianName, s_guardian_relationship = @GuardianRelationship,
-                       s_guardian_relationship_other = @GuardianRelationshipOther, s_guardian_contact = @GuardianContact,
-                       s_guardian_address = @GuardianAddress,
-                       UpdatedAt = @UpdatedAt
-                   WHERE Id = @Id";
+                                   SET s_firstName = @FirstName, s_middleName = @MiddleName, s_lastName = @LastName, 
+                                       s_sex = @Sex, s_dob = @Dob, s_age = @Age, s_contact = @Contact,
+                                       s_barangay = @Barangay, s_guardian_zone = @GuardianZone, s_religion = @Religion, 
+                                       s_bloodtype = @BloodType,
+                                       s_health_problems_option = @HealthProblemsOption, s_health_problems = @HealthProblems,
+                                       s_maintenance_option = @MaintenanceOption, s_maintenance = @Maintenance,
+                                       s_disability_option = @DisabilityOption, s_disability = @Disability,
+                                       s_visual_option = @VisualOption, s_visual = @Visual,
+                                       s_hearing_option = @HearingOption, s_hearing = @Hearing,
+                                       s_emotional_option = @EmotionalOption, s_emotional = @Emotional,
+                                       s_spouse = @Spouse, s_spouse_age = @SpouseAge, s_spouse_occupation = @SpouseOccupation,
+                                       s_spouse_contact = @SpouseContact, s_children = @Children,
+                                       s_guardian_name = @GuardianName, s_guardian_relationship = @GuardianRelationship,
+                                       s_guardian_relationship_other = @GuardianRelationshipOther, s_guardian_contact = @GuardianContact,
+                                       s_guardian_address = @GuardianAddress,
+                                       UpdatedAt = @UpdatedAt
+                                   WHERE Id = @Id";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
                         // Personal Information
+                        cmd.Parameters.AddWithValue("@Id", senior.Id);
                         cmd.Parameters.AddWithValue("@FirstName", senior.s_firstName ?? "");
                         cmd.Parameters.AddWithValue("@MiddleName", string.IsNullOrEmpty(senior.s_middleName) ? DBNull.Value : senior.s_middleName);
                         cmd.Parameters.AddWithValue("@LastName", senior.s_lastName ?? "");
@@ -702,9 +721,8 @@ namespace SeniorManagement.Controllers
                         cmd.Parameters.AddWithValue("@GuardianZone", string.IsNullOrEmpty(senior.s_guardian_zone) ? DBNull.Value : senior.s_guardian_zone);
                         cmd.Parameters.AddWithValue("@Religion", string.IsNullOrEmpty(senior.s_religion) ? DBNull.Value : senior.s_religion);
                         cmd.Parameters.AddWithValue("@BloodType", string.IsNullOrEmpty(senior.s_bloodtype) ? DBNull.Value : senior.s_bloodtype);
-                        cmd.Parameters.AddWithValue("@Id", senior.Id);
 
-                        // Health Information - ensure default values
+                        // Health Information
                         cmd.Parameters.AddWithValue("@HealthProblemsOption", senior.s_health_problems_option ?? "No");
                         cmd.Parameters.AddWithValue("@HealthProblems", string.IsNullOrEmpty(senior.s_health_problems) ? DBNull.Value : senior.s_health_problems);
                         cmd.Parameters.AddWithValue("@MaintenanceOption", senior.s_maintenance_option ?? "No");
@@ -754,6 +772,50 @@ namespace SeniorManagement.Controllers
             var age = today.Year - dob.Year;
             if (dob.Date > today.AddYears(-age)) age--;
             return age;
+        }
+
+        // Parse children from text format
+        private List<Child> ParseChildrenFromText(string childrenText)
+        {
+            var children = new List<Child>();
+
+            if (string.IsNullOrEmpty(childrenText))
+                return children;
+
+            var lines = childrenText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines)
+            {
+                var child = new Child();
+                // Simple parsing - you can enhance this based on your format
+                child.Name = line.Trim();
+                children.Add(child);
+            }
+
+            return children;
+        }
+
+        // Format children list to text
+        private string FormatChildrenText(List<Child> children)
+        {
+            if (children == null || !children.Any())
+                return null;
+
+            var lines = new List<string>();
+            foreach (var child in children.Where(c => !string.IsNullOrWhiteSpace(c.Name)))
+            {
+                var parts = new List<string> { child.Name };
+
+                if (child.Age.HasValue)
+                    parts.Add($"Age: {child.Age}");
+
+                if (!string.IsNullOrWhiteSpace(child.Relationship))
+                    parts.Add($"({child.Relationship})");
+
+                lines.Add(string.Join(" ", parts));
+            }
+
+            return string.Join("\n", lines);
         }
     }
 }
