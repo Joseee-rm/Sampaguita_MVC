@@ -1,514 +1,206 @@
 ﻿@model SeniorManagement.Models.Event
-
 @{
     ViewData["Title"] = "";
+    bool isAdmin = ViewBag.IsAdmin as bool? ?? false;
+    bool isStaff = ViewBag.IsStaff as bool? ?? false;
+    string userName = ViewBag.UserName as string;
+    string defaultOrganizer = ViewBag.DefaultOrganizer as string;
+    string defaultDate = ViewBag.DefaultDate as string;
+    string defaultTime = ViewBag.DefaultTime as string;
 }
 
-<style>
-    /* Event Form Styling */
-    .card-blue {
-        border: none;
-        border-radius: 12px;
-        overflow: hidden;
-    }
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Create New Event</h3>
+        </div>
+        <div class="card-body">
+            <form asp-action="Create" method="post" id="eventForm">
+                @Html.AntiForgeryToken()
 
-    .card-header-blue {
-        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-        color: white;
-        border-bottom: none;
-        padding: 1.5rem 2rem;
-    }
-
-        .card-header-blue h3 {
-            font-weight: 600;
-            font-size: 1.5rem;
-        }
-
-        .card-header-blue .fas {
-            font-size: 1.2rem;
-        }
-
-    .card-body {
-        background-color: #f8fafc;
-    }
-
-    /* Form Controls */
-    .form-control-blue,
-    .form-select-blue {
-        border: 2px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        font-size: 0.95rem;
-        transition: all 0.3s ease;
-        background-color: white;
-    }
-
-        .form-control-blue:focus,
-        .form-select-blue:focus {
-            border-color: #2196F3;
-            box-shadow: 0 0 0 0.25rem rgba(33, 150, 243, 0.15);
-            outline: none;
-        }
-
-        .form-control-blue::placeholder {
-            color: #94a3b8;
-            opacity: 0.8;
-        }
-
-    /* Labels */
-    .form-label {
-        color: #334155;
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
-        display: block;
-    }
-
-        .form-label.fw-bold {
-            font-weight: 600 !important;
-        }
-
-    /* Buttons */
-    .btn-primary-blue {
-        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-        border: none;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        color: white;
-        font-size: 1rem;
-    }
-
-        .btn-primary-blue:hover {
-            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
-        }
-
-    .btn-outline-blue {
-        border: 2px solid #2196F3;
-        border-radius: 8px;
-        color: #2196F3;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        background: transparent;
-        font-size: 1rem;
-    }
-
-        .btn-outline-blue:hover {
-            background-color: #2196F3;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
-        }
-
-    /* Form spacing */
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-
-        .form-group:last-child {
-            margin-bottom: 0;
-        }
-
-    /* Validation styles */
-    .text-danger {
-        font-size: 0.85rem;
-        margin-top: 0.25rem;
-    }
-
-    .field-validation-error {
-        display: block;
-    }
-
-    /* Small text helpers */
-    .text-muted {
-        font-size: 0.8rem;
-        margin-top: 0.25rem;
-        color: #64748b !important;
-    }
-
-    /* Responsive adjustments */
-    @@media (max-width: 768px) {
-        .card-header-blue {
-            padding: 1.25rem 1.5rem;
-        }
-
-            .card-header-blue h3 {
-                font-size: 1.3rem;
-            }
-
-        .btn-primary-blue,
-        .btn-outline-blue {
-            width: 100%;
-            margin-bottom: 0.5rem;
-        }
-
-            .btn-primary-blue + .btn-outline-blue {
-                margin-left: 0 !important;
-            }
-    }
-
-    /* Form section styling */
-    .row {
-        margin-left: -0.75rem;
-        margin-right: -0.75rem;
-    }
-
-        .row > [class*="col-"] {
-            padding-left: 0.75rem;
-            padding-right: 0.75rem;
-        }
-
-    /* Shadow for depth */
-    .shadow-lg {
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
-    }
-
-    /* Textarea specific styling */
-    textarea.form-control-blue {
-        resize: vertical;
-        min-height: 120px;
-    }
-
-    /* Required field indicator */
-    .form-label.fw-bold:after {
-        content: " *";
-        color: #ef4444;
-    }
-
-    /* Smooth transitions */
-    .form-control-blue,
-    .form-select-blue,
-    .btn-primary-blue,
-    .btn-outline-blue {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-        /* Focus states for accessibility */
-        .form-control-blue:focus-visible,
-        .form-select-blue:focus-visible {
-            outline: 2px solid #2196F3;
-            outline-offset: 2px;
-        }
-
-        /* Disabled state */
-        .form-control-blue:disabled,
-        .form-select-blue:disabled {
-            background-color: #f1f5f9;
-            border-color: #cbd5e1;
-            color: #94a3b8;
-            cursor: not-allowed;
-        }
-
-    /* Optional: Add some global form styling */
-    body {
-        background-color: #f8fafc;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    /* Container styling for the form page */
-    .container {
-        max-width: 1200px;
-        padding: 2rem 1rem;
-    }
-
-    /* Header spacing */
-    .card-header-blue h3 i {
-        vertical-align: middle;
-    }
-
-    /* Form row spacing */
-    .row.mb-4 {
-        margin-bottom: 1.5rem !important;
-    }
-
-    /* Success/Error message styling */
-    .alert {
-        border-radius: 8px;
-        border: none;
-        padding: 1rem 1.5rem;
-    }
-
-    .alert-success {
-        background-color: #d1fae5;
-        color: #065f46;
-    }
-
-    .alert-danger {
-        background-color: #fee2e2;
-        color: #991b1b;
-    }
-
-    /* Loading state */
-    .btn-loading {
-        position: relative;
-    }
-
-        .btn-loading:after {
-            content: '';
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            margin: auto;
-            border: 2px solid transparent;
-            border-top-color: white;
-            border-radius: 50%;
-            animation: button-loading-spinner 1s ease infinite;
-        }
-
-    @@keyframes button-loading-spinner {
-        from {
-            transform: rotate(0turn);
-        }
-
-        to {
-            transform: rotate(1turn);
-        }
-    }
-
-    /* Fix for the duplicate fields issue */
-    #MaxCapacity {
-        margin-bottom: 0;
-    }
-
-    /* Better spacing for form sections */
-    .mt-5 {
-        margin-top: 3rem !important;
-    }
-
-    .me-2 {
-        margin-right: 0.5rem !important;
-    }
-
-    .ms-2 {
-        margin-left: 0.5rem !important;
-    }
-
-    /* Improve form group margins */
-    .mb-4 {
-        margin-bottom: 1.5rem !important;
-    }
-
-    .mb-3 {
-        margin-bottom: 1rem !important;
-    }
-</style>
-
-<div class="card card-blue shadow-lg">
-    <div class="card-header card-header-blue">
-        <h3 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Create New Event</h3>
-    </div>
-    <div class="card-body p-4">
-        <form asp-action="Create" method="post" id="eventForm">
-            @Html.AntiForgeryToken()
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="EventTitle" class="form-label fw-bold">Event Title *</label>
-                        <input asp-for="EventTitle" class="form-control form-control-blue" placeholder="Enter event title" />
-                        <span asp-validation-for="EventTitle" class="text-danger small"></span>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="EventTitle" class="form-label fw-bold">Event Title *</label>
+                            <input asp-for="EventTitle" class="form-control" placeholder="Enter event title" />
+                            <span asp-validation-for="EventTitle" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="EventType" class="form-label fw-bold">Event Type *</label>
+                            <select asp-for="EventType" class="form-select">
+                                <option value="">-- Select Event Type --</option>
+                                <option value="Medical Mission">Medical Mission</option>
+                                <option value="Assistance Program">Assistance Program</option>
+                                <option value="Wellness Activity">Wellness Activity</option>
+                                <option value="Community Gathering">Community Gathering</option>
+                                <option value="Educational">Educational</option>
+                                <option value="Social">Social</option>
+                            </select>
+                            <span asp-validation-for="EventType" class="text-danger small"></span>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="EventType" class="form-label fw-bold">Event Type *</label>
-                        <select asp-for="EventType" class="form-select form-select-blue">
-                            <option value="">-- Select Event Type --</option>
-                            <option value="Medical Mission">Medical Mission</option>
-                            <option value="Assistance Program">Assistance Program</option>
-                            <option value="Wellness Activity">Wellness Activity</option>
-                            <option value="Community Gathering">Community Gathering</option>
-                        </select>
-                        <span asp-validation-for="EventType" class="text-danger small"></span>
-                    </div>
-                </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="EventDate" class="form-label fw-bold">Event Date *</label>
-                        <input asp-for="EventDate" type="date" class="form-control form-control-blue" />
-                        <span asp-validation-for="EventDate" class="text-danger small"></span>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="EventDate" class="form-label fw-bold">Event Date *</label>
+                            <input asp-for="EventDate" type="date" class="form-control"
+                                   value="@defaultDate" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            <span asp-validation-for="EventDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="EventTime" class="form-label fw-bold">Event Time *</label>
+                            <input asp-for="EventTime" type="time" class="form-control"
+                                   value="@defaultTime" step="300" />
+                            <span asp-validation-for="EventTime" class="text-danger small"></span>
+                            <small class="text-muted">Use 24-hour format (e.g., 14:30 for 2:30 PM)</small>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="EventTime" class="form-label fw-bold">Event Time *</label>
-                        <input asp-for="EventTime" type="time" class="form-control form-control-blue" />
-                        <span asp-validation-for="EventTime" class="text-danger small"></span>
-                    </div>
-                </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="EventLocation" class="form-label fw-bold">Event Location *</label>
-                        <input asp-for="EventLocation" class="form-control form-control-blue" placeholder="Enter event location" />
-                        <span asp-validation-for="EventLocation" class="text-danger small"></span>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="EventLocation" class="form-label fw-bold">Event Location *</label>
+                            <input asp-for="EventLocation" class="form-control" placeholder="Enter event location" />
+                            <span asp-validation-for="EventLocation" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="OrganizedBy" class="form-label fw-bold">Organized By *</label>
+                            <input asp-for="OrganizedBy" class="form-control"
+                                   placeholder="Enter organizer name"
+                                   value="@defaultOrganizer" />
+                            <span asp-validation-for="OrganizedBy" class="text-danger small"></span>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="OrganizedBy" class="form-label fw-bold">Organized By *</label>
-                        <input asp-for="OrganizedBy" class="form-control form-control-blue" placeholder="Enter organizer name" />
-                        <span asp-validation-for="OrganizedBy" class="text-danger small"></span>
-                    </div>
-                </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="MaxCapacity" class="form-label">Max Capacity (Optional)</label>
-                        <input asp-for="MaxCapacity" type="number" min="0" class="form-control form-control-blue" placeholder="Leave empty for unlimited" />
-                        <span asp-validation-for="MaxCapacity" class="text-danger small"></span>
-                        <small class="text-muted">Maximum number of attendees allowed</small>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="MaxCapacity" class="form-label">Maximum Capacity (Optional)</label>
+                            <input asp-for="MaxCapacity" type="number" min="0" class="form-control"
+                                   placeholder="Leave empty for unlimited capacity" />
+                            <span asp-validation-for="MaxCapacity" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="Status" class="form-label fw-bold">Status</label>
+                            <select asp-for="Status" class="form-select">
+                                <option value="Scheduled">Scheduled</option>
+                                <option value="Ongoing">Ongoing</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="AttendanceCount" class="form-label">Initial Attendance Count</label>
-                        <input asp-for="AttendanceCount" type="number" min="0" class="form-control form-control-blue" value="0" />
-                        <span asp-validation-for="AttendanceCount" class="text-danger small"></span>
-                        <small class="text-muted">Current number of attendees</small>
-                    </div>
+
+                <div class="form-group mb-3">
+                    <label asp-for="EventDescription" class="form-label fw-bold">Event Description *</label>
+                    <textarea asp-for="EventDescription" class="form-control" rows="4"
+                              placeholder="Enter event description..."></textarea>
+                    <span asp-validation-for="EventDescription" class="text-danger small"></span>
                 </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="Status" class="form-label fw-bold">Status</label>
-                        <select asp-for="Status" class="form-select form-select-blue">
-                            <option value="Scheduled">Scheduled</option>
-                            <option value="Ongoing">Ongoing</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Cancelled">Cancelled</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i> Create Event
+                    </button>
+                    <a href="@Url.Action("Index", "Event")" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i> Cancel
+                    </a>
                 </div>
-            </div>
-
-            <div class="form-group mb-4">
-                <label asp-for="EventDescription" class="form-label fw-bold">Event Description *</label>
-                <textarea asp-for="EventDescription" class="form-control form-control-blue" rows="4" placeholder="Enter event description..."></textarea>
-                <span asp-validation-for="EventDescription" class="text-danger small"></span>
-            </div>
-
-            <div class="form-group mt-5">
-                <button type="submit" class="btn btn-primary-blue px-5 py-3">
-                    <i class="fas fa-save me-2"></i> Create Event
-                </button>
-                <a href="@Url.Action("Index", "Event")" class="btn btn-outline-blue px-5 py-3 ms-2">
-                    <i class="fas fa-times me-2"></i> Cancel
-                </a>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('eventForm');
 
             form.addEventListener('submit', function(e) {
-                const eventDate = new Date(document.getElementById('EventDate').value);
+                // Validate date
+                const eventDateInput = document.getElementById('EventDate');
+                const eventDate = new Date(eventDateInput.value);
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
 
                 if (eventDate < today) {
                     e.preventDefault();
                     Swal.fire({
-                        icon: 'warning',
+                        icon: 'error',
                         title: 'Invalid Date',
                         text: 'Event date cannot be in the past.',
-                        confirmButtonColor: '#2196F3'
+                        confirmButtonColor: '#3085d6'
                     });
                     return false;
                 }
 
-                // Validate attendance count vs max capacity
-                const maxCapacity = document.getElementById('MaxCapacity').value;
-                const attendanceCount = document.getElementById('AttendanceCount').value;
+                // Validate required fields
+                const eventTitle = document.getElementById('EventTitle').value;
+                const eventType = document.getElementById('EventType').value;
+                const eventTime = document.getElementById('EventTime').value;
+                const eventLocation = document.getElementById('EventLocation').value;
+                const organizedBy = document.getElementById('OrganizedBy').value;
+                const eventDescription = document.getElementById('EventDescription').value;
 
-                if (maxCapacity && attendanceCount && parseInt(attendanceCount) > parseInt(maxCapacity)) {
+                if (!eventTitle || !eventType || !eventTime || !eventLocation || !organizedBy || !eventDescription) {
+                    e.preventDefault();
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Missing Information',
+                        text: 'Please fill in all required fields.',
+                        confirmButtonColor: '#3085d6'
+                    });
+                    return false;
+                }
+
+                // Validate capacity vs attendance
+                const maxCapacity = document.getElementById('MaxCapacity').value;
+                if (maxCapacity && parseInt(maxCapacity) < 0) {
                     e.preventDefault();
                     Swal.fire({
                         icon: 'error',
-                        title: 'Invalid Attendance',
-                        text: 'Attendance count cannot exceed maximum capacity.',
-                        confirmButtonColor: '#2196F3'
+                        title: 'Invalid Capacity',
+                        text: 'Maximum capacity cannot be negative.',
+                        confirmButtonColor: '#3085d6'
                     });
                     return false;
                 }
 
-                // Show loading state on submit
+                // Show loading
                 const submitBtn = form.querySelector('button[type="submit"]');
-                submitBtn.classList.add('btn-loading');
-                submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Creating...';
+                submitBtn.disabled = true;
             });
 
-            // Set minimum date to today
-            const today = new Date().toISOString().split('T')[0];
+            // Set today's date as default if empty
             const dateInput = document.getElementById('EventDate');
-            if (dateInput) {
-                dateInput.min = today;
-
-                // Set default date to today
-                if (!dateInput.value) {
-                    dateInput.value = today;
-                }
+            if (dateInput && !dateInput.value) {
+                const today = new Date().toISOString().split('T')[0];
+                dateInput.value = today;
             }
 
-            // Set default time to next hour
+            // Set default time if empty
             const timeInput = document.getElementById('EventTime');
             if (timeInput && !timeInput.value) {
                 const now = new Date();
                 const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
                 const hours = nextHour.getHours().toString().padStart(2, '0');
-                const minutes = nextHour.getMinutes().toString().padStart(2, '0');
+                const minutes = '00';
                 timeInput.value = `${hours}:${minutes}`;
-            }
-
-            // Real-time validation for attendance vs capacity
-            const maxCapacityInput = document.getElementById('MaxCapacity');
-            const attendanceInput = document.getElementById('AttendanceCount');
-
-            if (maxCapacityInput && attendanceInput) {
-                attendanceInput.addEventListener('input', function() {
-                    const maxCapacity = maxCapacityInput.value;
-                    const attendance = this.value;
-
-                    if (maxCapacity && attendance && parseInt(attendance) > parseInt(maxCapacity)) {
-                        this.setCustomValidity('Attendance cannot exceed maximum capacity');
-                        this.classList.add('is-invalid');
-                    } else {
-                        this.setCustomValidity('');
-                        this.classList.remove('is-invalid');
-                    }
-                });
-
-                maxCapacityInput.addEventListener('input', function() {
-                    const maxCapacity = this.value;
-                    const attendance = attendanceInput.value;
-
-                    if (maxCapacity && attendance && parseInt(attendance) > parseInt(maxCapacity)) {
-                        attendanceInput.setCustomValidity('Attendance cannot exceed maximum capacity');
-                        attendanceInput.classList.add('is-invalid');
-                    } else {
-                        attendanceInput.setCustomValidity('');
-                        attendanceInput.classList.remove('is-invalid');
-                    }
-                });
             }
         });
     </script>

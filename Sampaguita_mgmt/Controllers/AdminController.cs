@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// Complete updated AdminController with RecentRegistrations fix
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using SeniorManagement.Models;
 using SeniorManagement.Helpers;
 using MySql.Data.MySqlClient;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace SeniorManagement.Controllers
 {
@@ -22,7 +24,6 @@ namespace SeniorManagement.Controllers
             _activityHelper = activityHelper;
         }
 
-        // Test connection endpoint
         [HttpGet]
         public IActionResult TestConnection()
         {
@@ -42,10 +43,8 @@ namespace SeniorManagement.Controllers
             }
         }
 
-        // Manage Users Page
         public IActionResult ManageUsers()
         {
-            // Check if user is admin
             if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
             {
                 TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
@@ -56,7 +55,6 @@ namespace SeniorManagement.Controllers
             return View(users);
         }
 
-        // Get all users from database
         private List<User> GetAllUsers()
         {
             var users = new List<User>();
@@ -97,14 +95,12 @@ namespace SeniorManagement.Controllers
             return users;
         }
 
-        // Toggle user active status
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleUserStatus(int id)
         {
             try
             {
-                // Check if user is admin
                 if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
                 {
                     TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
@@ -115,7 +111,6 @@ namespace SeniorManagement.Controllers
                 {
                     connection.Open();
 
-                    // Get current status
                     string getQuery = "SELECT IsActive FROM users WHERE Id = @Id";
                     bool currentStatus = false;
 
@@ -129,7 +124,6 @@ namespace SeniorManagement.Controllers
                         }
                     }
 
-                    // Toggle status
                     string updateQuery = "UPDATE users SET IsActive = @IsActive WHERE Id = @Id";
                     using (var updateCmd = new MySqlCommand(updateQuery, connection))
                     {
@@ -138,7 +132,6 @@ namespace SeniorManagement.Controllers
                         updateCmd.ExecuteNonQuery();
                     }
 
-                    // Log the activity
                     var user = GetUserById(id);
                     if (user != null)
                     {
@@ -161,11 +154,9 @@ namespace SeniorManagement.Controllers
             return RedirectToAction("ManageUsers");
         }
 
-        // Edit User - GET
         [HttpGet]
         public IActionResult EditUser(int id)
         {
-            // Check if user is admin
             if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
             {
                 TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
@@ -182,23 +173,19 @@ namespace SeniorManagement.Controllers
             return View(user);
         }
 
-        // Edit User - POST (Fixed Version)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditUser(User model)
         {
             Debug.WriteLine($"EditUser POST called with ID: {model.Id}");
-            Debug.WriteLine($"Name: {model.Name}, Username: {model.Username}, Role: {model.Role}, IsAdmin: {model.IsAdmin}");
 
-            // Check if user is admin
             if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
             {
                 TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
                 return RedirectToAction("Index", "Home");
             }
 
-            // Basic validation
-            if (string.IsNullOrEmpty(model.Name) || string.IsNullOrEmpty(model.Username) || string.IsNullOrEmpty(model.Role))
+            if (string.IsNullOrEmpty(model.Name) || string.IsNullOrEmpty(model.Username))
             {
                 TempData["ErrorMessage"] = "All required fields must be filled.";
                 return View(model);
@@ -211,7 +198,6 @@ namespace SeniorManagement.Controllers
                     connection.Open();
                     Debug.WriteLine("Database connection opened");
 
-                    // Check for duplicate username (excluding current user)
                     string checkQuery = "SELECT COUNT(*) FROM users WHERE Username = @Username AND Id != @Id";
                     using (var checkCmd = new MySqlCommand(checkQuery, connection))
                     {
@@ -227,22 +213,9 @@ namespace SeniorManagement.Controllers
                         }
                     }
 
-                    // Ensure Role and IsAdmin are in sync
-                    if (model.Role == "Administrator")
-                    {
-                        model.IsAdmin = true;
-                    }
-                    else if (model.Role == "Staff")
-                    {
-                        model.IsAdmin = false;
-                    }
-
-                    // Update user
                     string updateQuery = @"UPDATE users 
                                          SET Name = @Name, 
-                                             Username = @Username, 
-                                             Role = @Role, 
-                                             IsAdmin = @IsAdmin
+                                             Username = @Username
                                          WHERE Id = @Id";
 
                     Debug.WriteLine($"Executing update query: {updateQuery}");
@@ -251,21 +224,18 @@ namespace SeniorManagement.Controllers
                     {
                         cmd.Parameters.AddWithValue("@Name", model.Name);
                         cmd.Parameters.AddWithValue("@Username", model.Username);
-                        cmd.Parameters.AddWithValue("@Role", model.Role);
-                        cmd.Parameters.AddWithValue("@IsAdmin", model.IsAdmin);
                         cmd.Parameters.AddWithValue("@Id", model.Id);
 
-                        Debug.WriteLine($"Parameters set - Name: {model.Name}, Username: {model.Username}, Role: {model.Role}, IsAdmin: {model.IsAdmin}, Id: {model.Id}");
+                        Debug.WriteLine($"Parameters set - Name: {model.Name}, Username: {model.Username}, Id: {model.Id}");
 
                         int rowsAffected = cmd.ExecuteNonQuery();
                         Debug.WriteLine($"Rows affected: {rowsAffected}");
 
                         if (rowsAffected > 0)
                         {
-                            // Log the activity
                             await _activityHelper.LogActivityAsync(
                                 "Edit User",
-                                $"Updated user '{model.Name}' ({model.Username}) - Role: {model.Role}, Admin: {model.IsAdmin}"
+                                $"Updated user '{model.Name}' ({model.Username})"
                             );
 
                             TempData["SuccessMessage"] = "User updated successfully!";
@@ -289,11 +259,9 @@ namespace SeniorManagement.Controllers
             }
         }
 
-        // Reset User Password - GET (Manual password entry form)
         [HttpGet]
         public IActionResult ResetPassword(int id)
         {
-            // Check if user is admin
             if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
             {
                 TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
@@ -317,21 +285,18 @@ namespace SeniorManagement.Controllers
             return View(viewModel);
         }
 
-        // Reset User Password - POST (Process manual password entry)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
         {
             try
             {
-                // Check if user is admin
                 if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
                 {
                     TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
                     return RedirectToAction("Index", "Home");
                 }
 
-                // Validate input
                 if (string.IsNullOrEmpty(model.NewPassword))
                 {
                     ModelState.AddModelError("NewPassword", "New password is required.");
@@ -344,7 +309,6 @@ namespace SeniorManagement.Controllers
                     return View(model);
                 }
 
-                // Optional: Add password strength validation
                 if (model.NewPassword.Length < 6)
                 {
                     ModelState.AddModelError("NewPassword", "Password must be at least 6 characters long.");
@@ -355,7 +319,6 @@ namespace SeniorManagement.Controllers
                 {
                     connection.Open();
 
-                    // Hash the new password
                     string hashedPassword = AuthHelper.HashPassword(model.NewPassword);
 
                     string query = "UPDATE users SET Password = @Password WHERE Id = @Id";
@@ -396,14 +359,12 @@ namespace SeniorManagement.Controllers
             return View(model);
         }
 
-        // Quick Reset User Password (Sets to default password)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> QuickResetPassword(int id)
         {
             try
             {
-                // Check if user is admin
                 if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
                 {
                     TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
@@ -414,28 +375,31 @@ namespace SeniorManagement.Controllers
                 {
                     connection.Open();
 
-                    // Default password: "password123"
-                    string defaultPassword = AuthHelper.HashPassword("password123");
+                    var user = GetUserById(id);
+                    if (user == null)
+                    {
+                        TempData["ErrorMessage"] = "User not found.";
+                        return RedirectToAction("ManageUsers");
+                    }
+
+                    string generatedPassword = GeneratePasswordFromName(user.Name);
+                    string hashedPassword = AuthHelper.HashPassword(generatedPassword);
 
                     string query = "UPDATE users SET Password = @Password WHERE Id = @Id";
                     using (var cmd = new MySqlCommand(query, connection))
                     {
-                        cmd.Parameters.AddWithValue("@Password", defaultPassword);
+                        cmd.Parameters.AddWithValue("@Password", hashedPassword);
                         cmd.Parameters.AddWithValue("@Id", id);
                         int rowsAffected = cmd.ExecuteNonQuery();
 
                         if (rowsAffected > 0)
                         {
-                            var user = GetUserById(id);
-                            if (user != null)
-                            {
-                                await _activityHelper.LogActivityAsync(
-                                    "Quick Reset Password",
-                                    $"Password quickly reset to default for user '{user.Name}' ({user.Username})"
-                                );
-                            }
+                            await _activityHelper.LogActivityAsync(
+                                "Quick Reset Password",
+                                $"Password quickly reset for user '{user.Name}' ({user.Username})"
+                            );
 
-                            TempData["SuccessMessage"] = "Password reset to default successfully! Default password: password123";
+                            TempData["SuccessMessage"] = $"Password reset successfully! New password: <strong>{generatedPassword}</strong>";
                         }
                         else
                         {
@@ -454,7 +418,6 @@ namespace SeniorManagement.Controllers
             return RedirectToAction("ManageUsers");
         }
 
-        // Get user by ID
         private User GetUserById(int id)
         {
             try
@@ -495,11 +458,9 @@ namespace SeniorManagement.Controllers
             return null;
         }
 
-        // Add New User - GET
         [HttpGet]
         public IActionResult AddUser()
         {
-            // Check if user is admin
             if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
             {
                 TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
@@ -514,84 +475,235 @@ namespace SeniorManagement.Controllers
             });
         }
 
-        // Dashboard Action - Add this method to AdminController
         [Authorize(Roles = "Administrator")]
         public IActionResult Dashboard()
         {
-            // Check if user is admin
             if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
             {
                 TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
                 return RedirectToAction("Index", "Home");
             }
 
-            // Get dashboard statistics
-            var stats = GetAdminDashboardStats();
-            ViewBag.DashboardStats = stats;
+            try
+            {
+                var viewModel = new DashboardViewModel
+                {
+                    SeniorStats = GetSeniorStats(),
+                    EventStats = GetEventStatsData(),
+                    RecentActivities = GetRecentActivities()
+                };
 
-            // Get recent activities
-            var activities = GetRecentAdminActivities();
-            ViewBag.RecentActivities = activities;
-
-            // Get recent users
-            var recentUsers = GetRecentUsers();
-            ViewBag.RecentUsers = recentUsers;
-
-            return View();
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in Dashboard: {ex.Message}");
+                TempData["ErrorMessage"] = "Error loading dashboard data.";
+                return View(new DashboardViewModel());
+            }
         }
 
-        private dynamic GetAdminDashboardStats()
+        private SeniorStats GetSeniorStats()
         {
+            var stats = new SeniorStats();
+
             try
             {
                 using (var connection = _dbHelper.GetConnection())
                 {
                     connection.Open();
 
-                    var stats = new
-                    {
-                        TotalUsers = GetCount(connection, "SELECT COUNT(*) FROM users"),
-                        ActiveUsers = GetCount(connection, "SELECT COUNT(*) FROM users WHERE IsActive = TRUE"),
-                        AdminUsers = GetCount(connection, "SELECT COUNT(*) FROM users WHERE IsAdmin = TRUE"),
-                        StaffUsers = GetCount(connection, "SELECT COUNT(*) FROM users WHERE IsAdmin = FALSE"),
-                        TotalSeniors = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE IsDeleted = 0"),
-                        RecentRegistrations = GetCount(connection, "SELECT COUNT(*) FROM users WHERE CreatedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY)"),
-                        SystemStatus = "Operational",
-                        LastBackup = DateTime.Now.AddDays(-1).ToString("MMM dd, yyyy")
-                    };
+                    // Simple queries without IsDeleted filter (since column doesn't exist)
+                    stats.TotalSeniors = GetCount(connection, "SELECT COUNT(*) FROM seniors");
+                    stats.ActiveSeniors = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE Status = 'Active'");
+                    stats.ArchivedSeniors = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE Status = 'Archived'");
 
-                    return stats;
+                    // Age groups
+                    stats.Age60_69 = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE Age >= 60 AND Age <= 69");
+                    stats.Age70_79 = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE Age >= 70 AND Age <= 79");
+                    stats.Age80_89 = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE Age >= 80 AND Age <= 89");
+                    stats.Age90plus = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE Age >= 90");
+
+                    // Gender
+                    stats.MaleCount = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE Gender = 'Male'");
+                    stats.FemaleCount = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE Gender = 'Female'");
+
+                    // Zone distribution
+                    for (int i = 1; i <= 7; i++)
+                    {
+                        stats.ZoneDistribution[i] = GetCount(connection,
+                            $"SELECT COUNT(*) FROM seniors WHERE Zone = {i}");
+                    }
+
+                    // Civil Status
+                    stats.CivilStatusSingle = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE CivilStatus = 'Single'");
+                    stats.CivilStatusMarried = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE CivilStatus = 'Married'");
+                    stats.CivilStatusWidowed = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE CivilStatus = 'Widowed'");
+                    stats.CivilStatusSeparated = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE CivilStatus = 'Separated'");
+                    stats.CivilStatusDivorced = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE CivilStatus = 'Divorced'");
+
+                    // Contact Information
+                    stats.WithContact = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE ContactNumber IS NOT NULL AND ContactNumber != ''");
+                    stats.WithoutContact = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE ContactNumber IS NULL OR ContactNumber = ''");
+
+                    // Recent registrations (last 7 days) - FIXED
+                    stats.RecentRegistrations = GetCount(connection,
+                        "SELECT COUNT(*) FROM seniors WHERE CreatedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY)");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error getting admin stats: {ex.Message}");
-                return new
+                Debug.WriteLine($"Error getting senior stats: {ex.Message}");
+                Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+
+                // For debugging
+                try
                 {
-                    TotalUsers = 0,
-                    ActiveUsers = 0,
-                    AdminUsers = 0,
-                    StaffUsers = 0,
-                    TotalSeniors = 0,
-                    RecentRegistrations = 0,
-                    SystemStatus = "Error",
-                    LastBackup = "N/A"
-                };
+                    using (var connection = _dbHelper.GetConnection())
+                    {
+                        connection.Open();
+
+                        var cmd = new MySqlCommand("SELECT COUNT(*) FROM seniors", connection);
+                        var count = cmd.ExecuteScalar();
+                        Debug.WriteLine($"DEBUG: Raw count from seniors table: {count}");
+                    }
+                }
+                catch (Exception debugEx)
+                {
+                    Debug.WriteLine($"DEBUG Error: {debugEx.Message}");
+                }
             }
+
+            return stats;
         }
 
-        private int GetCount(MySqlConnection connection, string query)
+        private EventStats GetEventStatsData()
         {
-            using (var cmd = new MySqlCommand(query, connection))
+            var stats = new EventStats();
+
+            try
             {
-                var result = cmd.ExecuteScalar();
-                return result != null ? Convert.ToInt32(result) : 0;
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // Check if IsDeleted column exists in events table
+                    bool hasIsDeletedColumn = CheckColumnExists(connection, "events", "IsDeleted");
+
+                    string baseQuery = hasIsDeletedColumn ?
+                        "SELECT COUNT(*) FROM events WHERE IsDeleted = 0" :
+                        "SELECT COUNT(*) FROM events";
+
+                    stats.TotalEvents = GetCount(connection, baseQuery);
+
+                    string upcomingQuery = "SELECT COUNT(*) FROM events WHERE EventDate >= CURDATE()";
+                    string todayQuery = "SELECT COUNT(*) FROM events WHERE DATE(EventDate) = CURDATE()";
+
+                    if (hasIsDeletedColumn)
+                    {
+                        upcomingQuery += " AND IsDeleted = 0";
+                        todayQuery += " AND IsDeleted = 0";
+                    }
+
+                    stats.UpcomingEvents = GetCount(connection, upcomingQuery);
+                    stats.TodayEvents = GetCount(connection, todayQuery);
+
+                    // Event status counts
+                    string statusBase = "SELECT COUNT(*) FROM events WHERE Status = '{0}'";
+                    if (hasIsDeletedColumn)
+                    {
+                        statusBase += " AND IsDeleted = 0";
+                    }
+
+                    stats.ScheduledEvents = GetCount(connection, string.Format(statusBase, "Scheduled"));
+                    stats.OngoingEvents = GetCount(connection, string.Format(statusBase, "Ongoing"));
+                    stats.CompletedEvents = GetCount(connection, string.Format(statusBase, "Completed"));
+                    stats.CancelledEvents = GetCount(connection, string.Format(statusBase, "Cancelled"));
+
+                    // Event types
+                    string typeBase = "SELECT COUNT(*) FROM events WHERE EventType = '{0}'";
+                    if (hasIsDeletedColumn)
+                    {
+                        typeBase += " AND IsDeleted = 0";
+                    }
+
+                    stats.MedicalCount = GetCount(connection, string.Format(typeBase, "Medical Mission"));
+                    stats.AssistanceCount = GetCount(connection, string.Format(typeBase, "Assistance Program"));
+                    stats.CommunityCount = GetCount(connection, string.Format(typeBase, "Community Gathering"));
+                    stats.WellnessCount = GetCount(connection, string.Format(typeBase, "Wellness Activity"));
+                    stats.EducationalCount = GetCount(connection, string.Format(typeBase, "Educational"));
+                    stats.SocialCount = GetCount(connection, string.Format(typeBase, "Social"));
+
+                    // Attendance
+                    string attendanceQuery = "SELECT SUM(AttendanceCount) FROM events";
+                    string capacityQuery = "SELECT SUM(MaxCapacity) FROM events";
+
+                    if (hasIsDeletedColumn)
+                    {
+                        attendanceQuery += " WHERE IsDeleted = 0";
+                        capacityQuery += " WHERE IsDeleted = 0";
+                    }
+
+                    stats.TotalAttendance = SafeGetInt(connection, attendanceQuery);
+                    stats.TotalCapacity = SafeGetInt(connection, capacityQuery);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting event stats: {ex.Message}");
+            }
+
+            return stats;
+        }
+
+        // Helper method to check if a column exists
+        private bool CheckColumnExists(MySqlConnection connection, string tableName, string columnName)
+        {
+            try
+            {
+                string query = $@"
+                    SELECT COUNT(*) 
+                    FROM information_schema.columns 
+                    WHERE table_name = '{tableName}' 
+                    AND column_name = '{columnName}'
+                    AND table_schema = DATABASE()";
+
+                using (var cmd = new MySqlCommand(query, connection))
+                {
+                    var result = cmd.ExecuteScalar();
+                    return Convert.ToInt32(result) > 0;
+                }
+            }
+            catch
+            {
+                return false;
             }
         }
 
-        private List<Models.ActivityLog> GetRecentAdminActivities()
+        // New helper method to safely get integer values
+        private int SafeGetInt(MySqlConnection connection, string query)
         {
-            var activities = new List<Models.ActivityLog>();
+            try
+            {
+                using (var cmd = new MySqlCommand(query, connection))
+                {
+                    var result = cmd.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        return Convert.ToInt32(result);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in SafeGetInt for query: {query} - {ex.Message}");
+            }
+            return 0;
+        }
+
+        private List<ActivityLog> GetRecentActivities()
+        {
+            var activities = new List<ActivityLog>();
 
             try
             {
@@ -600,16 +712,16 @@ namespace SeniorManagement.Controllers
                     connection.Open();
 
                     string query = @"SELECT Id, UserName, UserRole, Action, Details, IpAddress, CreatedAt
-                           FROM activity_logs 
-                           ORDER BY CreatedAt DESC 
-                           LIMIT 10";
+                   FROM activity_logs 
+                   ORDER BY CreatedAt DESC 
+                   LIMIT 10";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            activities.Add(new Models.ActivityLog
+                            activities.Add(new ActivityLog
                             {
                                 Id = reader.GetInt32("Id"),
                                 UserName = reader.GetString("UserName"),
@@ -631,65 +743,97 @@ namespace SeniorManagement.Controllers
             return activities;
         }
 
-        private List<User> GetRecentUsers()
+        private int GetCount(MySqlConnection connection, string query)
         {
-            var users = new List<User>();
-
             try
             {
-                using (var connection = _dbHelper.GetConnection())
+                using (var cmd = new MySqlCommand(query, connection))
                 {
-                    connection.Open();
+                    var result = cmd.ExecuteScalar();
+                    return result != null ? Convert.ToInt32(result) : 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in GetCount for query: {query} - {ex.Message}");
+                return 0;
+            }
+        }
 
-                    string query = @"SELECT Id, Name, Username, Role, IsAdmin, IsActive, CreatedAt
-                           FROM users 
-                           ORDER BY CreatedAt DESC 
-                           LIMIT 5";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    using (var reader = cmd.ExecuteReader())
+        private int GetSum(MySqlConnection connection, string query)
+        {
+            try
+            {
+                using (var cmd = new MySqlCommand(query, connection))
+                {
+                    var result = cmd.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
                     {
-                        while (reader.Read())
-                        {
-                            users.Add(new User
-                            {
-                                Id = reader.GetInt32("Id"),
-                                Name = reader.GetString("Name"),
-                                Username = reader.GetString("Username"),
-                                Role = reader.GetString("Role"),
-                                IsAdmin = reader.GetBoolean("IsAdmin"),
-                                IsActive = reader.GetBoolean("IsActive"),
-                                CreatedAt = reader.GetDateTime("CreatedAt")
-                            });
-                        }
+                        return Convert.ToInt32(result);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error getting recent users: {ex.Message}");
+                Debug.WriteLine($"Error getting sum: {ex.Message}");
             }
-
-            return users;
+            return 0;
         }
 
-        // Add New User - POST
+        private string GeneratePasswordFromName(string fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName))
+                return "password123";
+
+            try
+            {
+                string cleanedName = Regex.Replace(fullName, @"[^a-zA-Z\s]", "", RegexOptions.None, TimeSpan.FromMilliseconds(100));
+                var nameParts = cleanedName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                if (nameParts.Length == 0)
+                    return "password123";
+
+                string basePassword;
+
+                if (nameParts.Length == 1)
+                {
+                    basePassword = nameParts[0].ToLower();
+                }
+                else
+                {
+                    string firstName = nameParts[0].ToLower();
+                    string lastName = nameParts[nameParts.Length - 1].ToLower();
+                    basePassword = firstName + lastName;
+                }
+
+                string password = basePassword + "123";
+
+                if (password.Length < 8)
+                {
+                    password = password.PadRight(8, '1');
+                }
+
+                return password;
+            }
+            catch (Exception)
+            {
+                return "password123";
+            }
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddUser(User model)
         {
-            // Check if user is admin
             if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
             {
                 TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
                 return RedirectToAction("Index", "Home");
             }
 
-            // Force new users to be Staff only
             model.Role = "Staff";
             model.IsAdmin = false;
 
-            // Basic validation
             if (string.IsNullOrEmpty(model.Name) || string.IsNullOrEmpty(model.Username))
             {
                 TempData["ErrorMessage"] = "Name and Username are required.";
@@ -702,7 +846,6 @@ namespace SeniorManagement.Controllers
                 {
                     connection.Open();
 
-                    // Check if username already exists
                     string checkQuery = "SELECT COUNT(*) FROM users WHERE Username = @Username";
                     using (var checkCmd = new MySqlCommand(checkQuery, connection))
                     {
@@ -716,8 +859,8 @@ namespace SeniorManagement.Controllers
                         }
                     }
 
-                    // Default password: "password123"
-                    string hashedPassword = AuthHelper.HashPassword("password123");
+                    string generatedPassword = GeneratePasswordFromName(model.Name);
+                    string hashedPassword = AuthHelper.HashPassword(generatedPassword);
 
                     string insertQuery = @"INSERT INTO users (Name, Username, Password, Role, IsAdmin, IsActive, CreatedAt) 
                                          VALUES (@Name, @Username, @Password, @Role, @IsAdmin, @IsActive, @CreatedAt)";
@@ -736,13 +879,12 @@ namespace SeniorManagement.Controllers
 
                         if (rowsAffected > 0)
                         {
-                            // Log the activity
                             await _activityHelper.LogActivityAsync(
                                 "Add User",
                                 $"Added new user '{model.Name}' ({model.Username}) as {model.Role}"
                             );
 
-                            TempData["SuccessMessage"] = "User added successfully! Default password: password123";
+                            TempData["SuccessMessage"] = $"User added successfully! Generated password: <strong>{generatedPassword}</strong>";
                             return RedirectToAction("ManageUsers");
                         }
                         else
@@ -762,7 +904,6 @@ namespace SeniorManagement.Controllers
             return View(model);
         }
 
-        // Method to get system health status
         [HttpGet]
         public JsonResult GetSystemHealth()
         {
@@ -776,9 +917,9 @@ namespace SeniorManagement.Controllers
                     {
                         Database = "Connected",
                         Users = GetCount(connection, "SELECT COUNT(*) FROM users"),
-                        ActiveSessions = 1, // You can implement session tracking
+                        ActiveSessions = 1,
                         ServerTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                        Uptime = "24h" // You can implement uptime tracking
+                        Uptime = "24h"
                     };
 
                     return Json(new { success = true, data = healthStatus });
@@ -787,6 +928,81 @@ namespace SeniorManagement.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public JsonResult GetEventStats()
+        {
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    var eventStats = new
+                    {
+                        TotalEvents = SafeGetInt(connection, "SELECT COUNT(*) FROM events WHERE IsDeleted = 0"),
+                        UpcomingEvents = SafeGetInt(connection, "SELECT COUNT(*) FROM events WHERE IsDeleted = 0 AND EventDate >= CURDATE()"),
+                        TodayEvents = SafeGetInt(connection, "SELECT COUNT(*) FROM events WHERE IsDeleted = 0 AND DATE(EventDate) = CURDATE()"),
+
+                        ScheduledEvents = SafeGetInt(connection, "SELECT COUNT(*) FROM events WHERE IsDeleted = 0 AND Status = 'Scheduled'"),
+                        OngoingEvents = SafeGetInt(connection, "SELECT COUNT(*) FROM events WHERE IsDeleted = 0 AND Status = 'Ongoing'"),
+                        CompletedEvents = SafeGetInt(connection, "SELECT COUNT(*) FROM events WHERE IsDeleted = 0 AND Status = 'Completed'"),
+                        CancelledEvents = SafeGetInt(connection, "SELECT COUNT(*) FROM events WHERE IsDeleted = 0 AND Status = 'Cancelled'"),
+
+                        MedicalCount = SafeGetInt(connection, "SELECT COUNT(*) FROM events WHERE IsDeleted = 0 AND EventType = 'Medical Mission'"),
+                        AssistanceCount = SafeGetInt(connection, "SELECT COUNT(*) FROM events WHERE IsDeleted = 0 AND EventType = 'Assistance Program'"),
+                        CommunityCount = SafeGetInt(connection, "SELECT COUNT(*) FROM events WHERE IsDeleted = 0 AND EventType = 'Community Gathering'"),
+
+                        TotalAttendance = SafeGetInt(connection, "SELECT SUM(AttendanceCount) FROM events WHERE IsDeleted = 0"),
+                        TotalCapacity = SafeGetInt(connection, "SELECT SUM(MaxCapacity) FROM events WHERE IsDeleted = 0 AND MaxCapacity IS NOT NULL"),
+
+                        RecentEvents = SafeGetInt(connection, "SELECT COUNT(*) FROM events WHERE IsDeleted = 0 AND CreatedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY)")
+                    };
+
+                    return Json(new { success = true, data = eventStats });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public IActionResult CheckSeniorsData()
+        {
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    var cmd = new MySqlCommand("SELECT COUNT(*) FROM seniors", connection);
+                    var total = cmd.ExecuteScalar();
+
+                    var activeCmd = new MySqlCommand("SELECT COUNT(*) FROM seniors WHERE Status = 'Active'", connection);
+                    var active = activeCmd.ExecuteScalar();
+
+                    var archivedCmd = new MySqlCommand("SELECT COUNT(*) FROM seniors WHERE Status = 'Archived'", connection);
+                    var archived = archivedCmd.ExecuteScalar();
+
+                    var maleCmd = new MySqlCommand("SELECT COUNT(*) FROM seniors WHERE Gender = 'Male'", connection);
+                    var male = maleCmd.ExecuteScalar();
+
+                    var femaleCmd = new MySqlCommand("SELECT COUNT(*) FROM seniors WHERE Gender = 'Female'", connection);
+                    var female = femaleCmd.ExecuteScalar();
+
+                    var recentCmd = new MySqlCommand("SELECT COUNT(*) FROM seniors WHERE CreatedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY)", connection);
+                    var recent = recentCmd.ExecuteScalar();
+
+                    return Content($"Total: {total}, Active: {active}, Archived: {archived}, Male: {male}, Female: {female}, Recent (7 days): {recent}");
+                }
+            }
+            catch (Exception ex)
+            {
+                return Content($"Error: {ex.Message}\n\nStack Trace: {ex.StackTrace}");
             }
         }
     }

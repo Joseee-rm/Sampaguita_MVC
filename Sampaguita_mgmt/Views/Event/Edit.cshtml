@@ -1,210 +1,271 @@
 ﻿@model SeniorManagement.Models.Event
-
 @{
     ViewData["Title"] = "";
+    bool isAdmin = ViewBag.IsAdmin as bool? ?? false;
+    bool isStaff = ViewBag.IsStaff as bool? ?? false;
+
+    // Helper function to format time
+    string FormatTime(TimeSpan timeSpan)
+    {
+        try
+        {
+            var time = DateTime.Today.Add(timeSpan);
+            return time.ToString("h:mm tt");
+        }
+        catch
+        {
+            return timeSpan.ToString(@"hh\:mm");
+        }
+    }
 }
 
-<div class="card shadow-lg border-0">
-    <div class="card-header bg-gradient-primary text-white py-3">
-        <h3 class="mb-0"><i class="fas fa-edit me-2"></i>Edit Event</h3>
-    </div>
-    <div class="card-body p-4">
-        <form asp-action="Edit" method="post" id="eventForm">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="Id" />
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-warning text-white">
+            <h3 class="mb-0"><i class="fas fa-edit me-2"></i>Edit Event</h3>
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit" method="post" id="eventForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="EventTitle" class="form-label fw-bold">Event Title *</label>
-                        <input asp-for="EventTitle" class="form-control form-control-lg" placeholder="Enter event title" />
-                        <span asp-validation-for="EventTitle" class="text-danger small"></span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="EventType" class="form-label fw-bold">Event Type *</label>
-                        <select asp-for="EventType" class="form-select form-select-lg">
-                            <option value="">-- Select Event Type --</option>
-                            <option value="Medical Mission">Medical Mission</option>
-                            <option value="Assistance Program">Assistance Program</option>
-                            <option value="Wellness Activity">Wellness Activity</option>
-                            <option value="Community Gathering">Community Gathering</option>
-                        </select>
-                        <span asp-validation-for="EventType" class="text-danger small"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="EventDate" class="form-label fw-bold">Event Date *</label>
-                        <input asp-for="EventDate" type="date" class="form-control form-control-lg" />
-                        <span asp-validation-for="EventDate" class="text-danger small"></span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="EventTime" class="form-label fw-bold">Event Time *</label>
-                        <input asp-for="EventTime" type="time" class="form-control form-control-lg" />
-                        <span asp-validation-for="EventTime" class="text-danger small"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="EventLocation" class="form-label fw-bold">Event Location *</label>
-                        <input asp-for="EventLocation" class="form-control form-control-lg" placeholder="Enter event location" />
-                        <span asp-validation-for="EventLocation" class="text-danger small"></span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="OrganizedBy" class="form-label fw-bold">Organized By *</label>
-                        <input asp-for="OrganizedBy" class="form-control form-control-lg" placeholder="Enter organizer name" />
-                        <span asp-validation-for="OrganizedBy" class="text-danger small"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="MaxCapacity" class="form-label fw-bold">Max Capacity (Optional)</label>
-                        <input asp-for="MaxCapacity" type="number" class="form-control form-control-lg" min="1" placeholder="Leave empty for no limit" />
-                        <span asp-validation-for="MaxCapacity" class="text-danger small"></span>
-                    </div>
-                </div>
-              
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label asp-for="MaxCapacity" class="form-label">Max Capacity (Optional)</label>
-                            <input asp-for="MaxCapacity" type="number" min="0" class="form-control" placeholder="Leave empty for unlimited" />
-                            <span asp-validation-for="MaxCapacity" class="text-danger"></span>
-                            <small class="text-muted">Maximum number of attendees allowed</small>
+                            <label asp-for="EventTitle" class="form-label fw-bold">Event Title *</label>
+                            <input asp-for="EventTitle" class="form-control" placeholder="Enter event title" />
+                            <span asp-validation-for="EventTitle" class="text-danger small"></span>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label asp-for="AttendanceCount" class="form-label">Initial Attendance Count</label>
-                            <input asp-for="AttendanceCount" type="number" min="0" class="form-control" value="0" />
-                            <span asp-validation-for="AttendanceCount" class="text-danger"></span>
-                            <small class="text-muted">Current number of attendees</small>
+                            <label asp-for="EventType" class="form-label fw-bold">Event Type *</label>
+                            <select asp-for="EventType" class="form-select">
+                                <option value="">-- Select Event Type --</option>
+                                <option value="Medical Mission">Medical Mission</option>
+                                <option value="Assistance Program">Assistance Program</option>
+                                <option value="Wellness Activity">Wellness Activity</option>
+                                <option value="Community Gathering">Community Gathering</option>
+                                <option value="Educational">Educational</option>
+                                <option value="Social">Social</option>
+                            </select>
+                            <span asp-validation-for="EventType" class="text-danger small"></span>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="Status" class="form-label fw-bold">Status</label>
-                        <select asp-for="Status" class="form-select form-select-lg">
-                            <option value="Scheduled">Scheduled</option>
-                            <option value="Ongoing">Ongoing</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Cancelled">Cancelled</option>
-                        </select>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="EventDate" class="form-label fw-bold">Event Date *</label>
+                            <input asp-for="EventDate" type="date" class="form-control" />
+                            <span asp-validation-for="EventDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="EventTime" class="form-label fw-bold">Event Time *</label>
+                            <input asp-for="EventTime" type="time" class="form-control" step="300" />
+                            <span asp-validation-for="EventTime" class="text-danger small"></span>
+                            <small class="text-muted">Current: @FormatTime(Model.EventTime)</small>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="form-group mb-4">
-                <label asp-for="EventDescription" class="form-label fw-bold">Event Description *</label>
-                <textarea asp-for="EventDescription" class="form-control form-control-lg" rows="4" placeholder="Enter event description..."></textarea>
-                <span asp-validation-for="EventDescription" class="text-danger small"></span>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-4">
-                        <label asp-for="AttendanceCount" class="form-label fw-bold">Current Attendance</label>
-                        <input asp-for="AttendanceCount" type="number" class="form-control form-control-lg" min="0" />
-                        <span asp-validation-for="AttendanceCount" class="text-danger small"></span>
-                        <small class="text-muted">Only applicable for completed events</small>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="EventLocation" class="form-label fw-bold">Event Location *</label>
+                            <input asp-for="EventLocation" class="form-control" placeholder="Enter event location" />
+                            <span asp-validation-for="EventLocation" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="OrganizedBy" class="form-label fw-bold">Organized By *</label>
+                            <input asp-for="OrganizedBy" class="form-control" placeholder="Enter organizer name" />
+                            <span asp-validation-for="OrganizedBy" class="text-danger small"></span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="form-group mt-5">
-                <button type="submit" class="btn btn-primary btn-lg btn-update px-5 py-3">
-                    <i class="fas fa-save me-2"></i> Update Event
-                </button>
-                <a href="@Url.Action("Index", "Event")" class="btn btn-outline-secondary btn-lg px-5 py-3 ms-2">
-                    <i class="fas fa-times me-2"></i> Cancel
-                </a>
-            </div>
-        </form>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="MaxCapacity" class="form-label">Maximum Capacity (Optional)</label>
+                            <input asp-for="MaxCapacity" type="number" min="0" class="form-control"
+                                   placeholder="Leave empty for unlimited capacity" id="maxCapacity" />
+                            <span asp-validation-for="MaxCapacity" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="Status" class="form-label fw-bold">Status</label>
+                            <select asp-for="Status" class="form-select">
+                                <option value="Scheduled">Scheduled</option>
+                                <option value="Ongoing">Ongoing</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label asp-for="EventDescription" class="form-label fw-bold">Event Description *</label>
+                    <textarea asp-for="EventDescription" class="form-control" rows="4"
+                              placeholder="Enter event description..."></textarea>
+                    <span asp-validation-for="EventDescription" class="text-danger small"></span>
+                </div>
+
+                <!-- Attendance Section -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Attendance Management</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="AttendanceCount" class="form-label fw-bold">Current Attendance</label>
+                                    <div class="input-group">
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                onclick="updateAttendanceCount(-1)" id="decreaseBtn">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <input asp-for="AttendanceCount" type="number" min="0"
+                                               class="form-control text-center" id="attendanceCount" />
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                onclick="updateAttendanceCount(1)" id="increaseBtn">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    <span asp-validation-for="AttendanceCount" class="text-danger small"></span>
+
+                                    @if (Model.MaxCapacity.HasValue)
+                                    {
+                                        var percentage = (int)Math.Round((double)Model.AttendanceCount / Model.MaxCapacity.Value * 100);
+                                        <div class="mt-2">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <small>Capacity: @percentage% full</small>
+                                                @if (Model.AttendanceCount >= Model.MaxCapacity.Value)
+                                                {
+                                                    <span class="badge bg-danger">Full</span>
+                                                }
+                                            </div>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar
+                                                         @(percentage >= 90 ? "bg-danger" : percentage >= 70 ? "bg-warning" : "bg-success")"
+                                                     style="width: @(percentage)%"></div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save me-2"></i> Update Event
+                    </button>
+                    <a href="@Url.Action("Index", "Event")" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
-@section Styles {
-    <style>
-        .bg-gradient-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        }
-
-        .form-control-lg, .form-select-lg {
-            border-radius: 10px;
-            border: 2px solid #e0e0e0;
-            transition: all 0.3s;
-        }
-
-            .form-control-lg:focus, .form-select-lg:focus {
-                border-color: #667eea;
-                box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-            }
-
-        .btn-update {
-            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
-            transition: all 0.3s ease;
-        }
-
-            .btn-update:hover {
-                background: linear-gradient(135deg, #1E88E5 0%, #1565C0 100%);
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
-            }
-
-        .btn-outline-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-    </style>
-}
-
 @section Scripts {
     <script>
+        function updateAttendanceCount(change) {
+            const input = document.getElementById('attendanceCount');
+            let currentValue = parseInt(input.value) || 0;
+            const maxCapacity = document.getElementById('maxCapacity').value;
+
+            // Calculate new value
+            let newValue = currentValue + change;
+
+            // Validate
+            if (newValue < 0) {
+                newValue = 0;
+            }
+
+            if (maxCapacity && newValue > parseInt(maxCapacity)) {
+                alert('Cannot exceed maximum capacity of ' + maxCapacity);
+                newValue = parseInt(maxCapacity);
+            }
+
+            // Update input
+            input.value = newValue;
+
+            // Update button states
+            updateButtonStates(newValue, maxCapacity);
+        }
+
+        function updateButtonStates(currentValue, maxCapacity) {
+            const decreaseBtn = document.getElementById('decreaseBtn');
+            const increaseBtn = document.getElementById('increaseBtn');
+
+            // Enable/disable buttons
+            decreaseBtn.disabled = currentValue <= 0;
+
+            if (maxCapacity) {
+                increaseBtn.disabled = currentValue >= parseInt(maxCapacity);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            // Show success/error messages
-            const successMessage = '@TempData["SuccessMessage"]';
-            const errorMessage = '@TempData["ErrorMessage"]';
+            // Initial button state
+            const currentValue = parseInt(document.getElementById('attendanceCount').value) || 0;
+            const maxCapacity = document.getElementById('maxCapacity').value;
+            updateButtonStates(currentValue, maxCapacity);
 
-            if (successMessage) {
-                showAlert('success', successMessage);
-            }
-            if (errorMessage) {
-                showAlert('error', errorMessage);
-            }
+            // Validate on manual input
+            document.getElementById('attendanceCount').addEventListener('input', function() {
+                const value = parseInt(this.value) || 0;
+                const max = document.getElementById('maxCapacity').value;
 
-            function showAlert(type, message) {
-                const alertDiv = document.createElement('div');
-                alertDiv.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`;
-                alertDiv.innerHTML = `
-                    ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                `;
-                document.querySelector('.card-body').insertBefore(alertDiv, document.querySelector('.card-body').firstChild);
+                if (max && value > parseInt(max)) {
+                    alert('Cannot exceed maximum capacity of ' + max);
+                    this.value = max;
+                }
 
-                setTimeout(() => {
-                    alertDiv.remove();
-                }, 5000);
-            }
+                if (value < 0) {
+                    this.value = 0;
+                }
+
+                updateButtonStates(value, max);
+            });
+
+            // Validate when max capacity changes
+            document.getElementById('maxCapacity').addEventListener('input', function() {
+                const attendance = parseInt(document.getElementById('attendanceCount').value) || 0;
+                const max = this.value;
+
+                if (max && attendance > parseInt(max)) {
+                    alert('Current attendance exceeds new maximum capacity');
+                    document.getElementById('attendanceCount').value = max;
+                }
+
+                updateButtonStates(attendance, max);
+            });
+
+            // Form validation
+            const form = document.getElementById('eventForm');
+            form.addEventListener('submit', function(e) {
+                const maxCapacity = document.getElementById('maxCapacity').value;
+                const attendanceCount = document.getElementById('attendanceCount').value;
+
+                if (maxCapacity && parseInt(attendanceCount) > parseInt(maxCapacity)) {
+                    e.preventDefault();
+                    alert('Attendance count cannot exceed maximum capacity.');
+                    return false;
+                }
+            });
         });
     </script>
 }

@@ -1,5 +1,6 @@
 ﻿using MySql.Data.MySqlClient;
 using SeniorManagement.Models;
+using System.Diagnostics;
 
 namespace SeniorManagement.Helpers
 {
@@ -14,7 +15,16 @@ namespace SeniorManagement.Helpers
 
         public MySqlConnection GetConnection()
         {
-            string connectionString = _configuration.GetConnectionString("MySqlConnection");
+            // Change this line to use "DefaultConnection" instead of "MySqlConnection"
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+            Debug.WriteLine($"DatabaseHelper: Connection string: {connectionString}");
+
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new InvalidOperationException("Connection string 'DefaultConnection' not found in configuration.");
+            }
+
             return new MySqlConnection(connectionString);
         }
     }

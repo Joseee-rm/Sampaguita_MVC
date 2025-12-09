@@ -1,7 +1,6 @@
 ﻿@model SeniorManagement.Models.StaffVisualizationViewModel
 @{
     ViewData["Title"] = "Staff Dashboard";
-    var isAdmin = ViewBag.IsAdmin as bool? ?? false;
 }
 
 <div class="container-fluid px-0">
@@ -14,10 +13,6 @@
                     <button id="refreshBtn" class="btn btn-sm btn-outline-primary">
                         <i class="fas fa-sync-alt me-1"></i> Refresh
                     </button>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="autoRefreshToggle" checked>
-                        <label class="form-check-label small" for="autoRefreshToggle">Auto-refresh</label>
-                    </div>
                 </div>
             </div>
 
@@ -198,12 +193,18 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
+                        @{
+                            var zoneCounts = new[] {
+                                                Model.Zone1Count, Model.Zone2Count, Model.Zone3Count,
+                                                Model.Zone4Count, Model.Zone5Count, Model.Zone6Count,
+                                                Model.Zone7Count
+                                                };
+                            var colors = new[] { "primary", "success", "info", "warning", "danger", "secondary", "dark" };
+                        }
                         @for (int i = 1; i <= 7; i++)
                         {
-                            var countProperty = typeof(StaffVisualizationViewModel).GetProperty($"Zone{i}Count");
-                            var count = (int)(countProperty?.GetValue(Model) ?? 0);
+                            var count = zoneCounts[i - 1];
                             var percentage = Model.TotalSeniors > 0 ? Math.Round((count / (double)Model.TotalSeniors) * 100, 1) : 0;
-                            var colors = new[] { "primary", "success", "info", "warning", "danger", "secondary", "dark" };
 
                             <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                                 <div class="card border-left-@colors[i - 1] shadow-sm h-100">
@@ -277,10 +278,9 @@
         </div>
     </div>
 
-    <!-- Recent Seniors & Upcoming Events -->
+    <!-- Recent Seniors -->
     <div class="row mx-0">
-        <!-- Recent Seniors -->
-        <div class="col-12 col-lg-6 px-2 mb-3">
+        <div class="col-12 px-2 mb-3">
             <div class="card shadow">
                 <div class="card-header py-2 d-flex justify-content-between align-items-center">
                     <h6 class="m-0 font-weight-bold text-primary">
@@ -314,20 +314,15 @@
                                 </div>
                             }
                         }
-                        else
-                        {
-                            <div class="list-group-item text-center text-muted py-4">
-                                <i class="fas fa-user-slash fa-2x mb-2"></i>
-                                <p class="mb-0">No recent seniors found</p>
-                            </div>
-                        }
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Upcoming Events -->
-        <div class="col-12 col-lg-6 px-2 mb-3">
+    <!-- Upcoming Events -->
+    <div class="row mx-0">
+        <div class="col-12 px-2 mb-3">
             <div class="card shadow">
                 <div class="card-header py-2 d-flex justify-content-between align-items-center">
                     <h6 class="m-0 font-weight-bold text-success">
@@ -367,13 +362,6 @@
                         </div>
                                                 }
                         }
-                        else
-                        {
-                            <div class="list-group-item text-center text-muted py-4">
-                                <i class="fas fa-calendar-times fa-2x mb-2"></i>
-                                <p class="mb-0">No upcoming events</p>
-                            </div>
-                        }
                     </div>
                 </div>
             </div>
@@ -381,18 +369,18 @@
     </div>
 
     <!-- Civil Status Distribution -->
-    @if (Model.CivilStatusDistribution != null && Model.CivilStatusDistribution.Any(s => s.Count > 0))
-    {
-        <div class="row mx-0">
-            <div class="col-12 px-2 mb-3">
-                <div class="card shadow">
-                    <div class="card-header py-2">
-                        <h6 class="m-0 font-weight-bold text-secondary">
-                            <i class="fas fa-heart me-2"></i>Civil Status Distribution
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
+    <div class="row mx-0">
+        <div class="col-12 px-2 mb-3">
+            <div class="card shadow">
+                <div class="card-header py-2">
+                    <h6 class="m-0 font-weight-bold text-secondary">
+                        <i class="fas fa-heart me-2"></i>Civil Status Distribution
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @if (Model.CivilStatusDistribution != null)
+                        {
                             @foreach (var status in Model.CivilStatusDistribution.Where(s => s.Count > 0))
                             {
                                 <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
@@ -417,12 +405,12 @@
                             </div>
                         </div>
                                                 }
-                        </div>
+                        }
                     </div>
                 </div>
             </div>
         </div>
-    }
+    </div>
 </div>
 
 @section Styles {
@@ -496,17 +484,11 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Global variables
-        let genderChart = null;
-        let ageChart = null;
-        let isAutoRefresh = true;
-        let autoRefreshTimer = null;
-
         // Initialize charts
         function initializeCharts() {
             // Gender Distribution Chart
             var genderCtx = document.getElementById('genderChart').getContext('2d');
-            genderChart = new Chart(genderCtx, {
+            var genderChart = new Chart(genderCtx, {
                 type: 'pie',
                 data: {
                     labels: ['Male', 'Female'],
@@ -546,7 +528,7 @@
 
             // Age Distribution Chart
             var ageCtx = document.getElementById('ageChart').getContext('2d');
-            ageChart = new Chart(ageCtx, {
+            var ageChart = new Chart(ageCtx, {
                 type: 'bar',
                 data: {
                     labels: ['60-69', '70-79', '80-89', '90+'],
@@ -593,129 +575,8 @@
             });
         }
 
-        // Refresh dashboard data
-        async function refreshDashboard() {
-            try {
-                // Show loading state
-                $('#refreshBtn').html('<i class="fas fa-spinner fa-spin me-1"></i> Refreshing...');
-                $('#refreshBtn').prop('disabled', true);
-
-                // You can add AJAX calls here if you want live data
-                // For now, just reload the page
-                window.location.reload();
-
-            } catch (error) {
-                console.error("Error refreshing dashboard:", error);
-                showNotification('Error refreshing data', 'danger');
-            }
-        }
-
-        // Show notification
-        function showNotification(message, type = 'info') {
-            // Remove any existing notification
-            $('.notification-toast').remove();
-
-            const notification = $(`
-                <div class="notification-toast alert alert-${type} alert-dismissible fade show position-fixed" role="alert">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-${type === 'success' ? 'check-circle' :
-                                           type === 'warning' ? 'exclamation-triangle' :
-                                           'info-circle'} me-2"></i>
-                        <div>${message}</div>
-                        <button type="button" class="btn-close ms-3" data-bs-dismiss="alert"></button>
-                    </div>
-                </div>
-            `);
-
-            notification.css({
-                top: '20px',
-                right: '20px',
-                zIndex: '9999',
-                minWidth: '300px'
-            });
-
-            $('body').append(notification);
-
-            // Auto remove after 3 seconds
-            setTimeout(() => {
-                notification.alert('close');
-            }, 3000);
-        }
-
-        // Update current time
-        function updateCurrentTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            $('#currentTime').text(timeString);
-        }
-
-        // Setup auto-refresh
-        function setupAutoRefresh() {
-            if (isAutoRefresh) {
-                autoRefreshTimer = setInterval(() => {
-                    refreshDashboard();
-                }, 300000); // Refresh every 5 minutes
-            } else if (autoRefreshTimer) {
-                clearInterval(autoRefreshTimer);
-                autoRefreshTimer = null;
-            }
-        }
-
-        // Initialize on page load
         $(document).ready(function() {
-            // Initialize charts
             initializeCharts();
-
-            // Update current time every second
-            setInterval(updateCurrentTime, 1000);
-            updateCurrentTime();
-
-            // Setup auto-refresh
-            setupAutoRefresh();
-
-            // Refresh button click
-            $('#refreshBtn').click(function() {
-                refreshDashboard();
-            });
-
-            // Auto-refresh toggle
-            $('#autoRefreshToggle').change(function() {
-                isAutoRefresh = this.checked;
-                setupAutoRefresh();
-
-                if (isAutoRefresh) {
-                    showNotification('Auto-refresh enabled (5 minutes)', 'success');
-                } else {
-                    showNotification('Auto-refresh disabled', 'warning');
-                }
-            });
-
-            // Adjust chart sizes on window resize
-            $(window).resize(function() {
-                if (genderChart) {
-                    genderChart.resize();
-                }
-                if (ageChart) {
-                    ageChart.resize();
-                }
-            });
-
-            // Card hover effects
-            $('.card').hover(
-                function() {
-                    $(this).addClass('shadow-lg');
-                },
-                function() {
-                    $(this).removeClass('shadow-lg');
-                }
-            );
-        });
-
-        // Cleanup on page unload
-        $(window).on('beforeunload', function() {
-            if (autoRefreshTimer) {
-                clearInterval(autoRefreshTimer);
-            }
         });
     </script>
 }

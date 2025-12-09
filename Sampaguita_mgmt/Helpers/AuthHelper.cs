@@ -199,6 +199,35 @@ namespace SeniorManagement.Helpers
             return null;
         }
 
+        // In DatabaseHelper.cs
+        public async Task<int> ExecuteBatchInsertAsync(string query, List<MySqlParameter[]> parametersList)
+        {
+            using var connection = GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = await connection.BeginTransactionAsync();
+
+            try
+            {
+                int totalRowsAffected = 0;
+
+                foreach (var parameters in parametersList)
+                {
+                    using var command = new MySqlCommand(query, connection, transaction);
+                    command.Parameters.AddRange(parameters);
+                    totalRowsAffected += await command.ExecuteNonQueryAsync();
+                }
+
+                await transaction.CommitAsync();
+                return totalRowsAffected;
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
         // Check if user exists and is active
         public bool UserExistsAndActive(string username)
         {

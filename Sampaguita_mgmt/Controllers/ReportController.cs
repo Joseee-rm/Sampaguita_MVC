@@ -7,6 +7,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using System;
+using System.Threading.Tasks;
+using System.Data;
 
 namespace SeniorManagement.Controllers
 {
@@ -15,65 +17,335 @@ namespace SeniorManagement.Controllers
     {
         private readonly DatabaseHelper _dbHelper;
         private readonly ActivityHelper _activityHelper;
+        private readonly IConfiguration _configuration;
+        private readonly string _connectionString;
 
-        public ReportController(DatabaseHelper dbHelper, ActivityHelper activityHelper)
+        public ReportController(DatabaseHelper dbHelper, ActivityHelper activityHelper, IConfiguration configuration)
         {
             _dbHelper = dbHelper;
             _activityHelper = activityHelper;
+            _configuration = configuration;
+            _connectionString = _configuration.GetConnectionString("DefaultConnection");
         }
 
-        public IActionResult Index()
+        // GET: /Report
+        public async Task<IActionResult> Index(
+            // Senior filters
+            string status = null, string zone = null, string gender = null,
+            string civilStatus = null, string ageRange = null,
+            string monthYear = null, string seniorSearch = null,
+
+            // Event filters
+            string eventStatus = null, string eventType = null,
+            string eventDateFilter = null, string eventSearch = null,
+            string fromDate = null, string toDate = null)
         {
-            // Get actual data from database
+            try
+            {
+                // Get filtered seniors
+                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, monthYear, seniorSearch);
+
+                // Get filtered events
+                var events = await GetFilteredEvents(eventStatus, eventType, eventDateFilter, eventSearch, fromDate, toDate);
+
+                // Get distinct months/years for senior filter dropdown
+                var allSeniors = GetAllSeniors();
+                var availableMonthsYears = allSeniors
+                    .Select(s => new { Year = s.CreatedAt.Year, Month = s.CreatedAt.Month })
+                    .Distinct()
+                    .OrderByDescending(x => x.Year)
+                    .ThenByDescending(x => x.Month)
+                    .Select(x => $"{x.Year}-{x.Month:D2}")
+                    .ToList();
+
+                var viewModel = new ReportViewModel
+                {
+                    // Senior Data
+                    TotalSeniors = seniors.Count,
+                    SeniorList = seniors,
+                    ReportDate = DateTime.Now,
+
+                    // Senior Filters
+                    SelectedStatus = status,
+                    SelectedZoneFilter = zone,
+                    SelectedGender = gender,
+                    SelectedCivilStatus = civilStatus,
+                    SelectedAgeRange = ageRange,
+                    SelectedMonthYear = monthYear,
+                    SeniorSearchTerm = seniorSearch,
+                    AvailableMonthsYears = availableMonthsYears,
+
+                    // Event Data
+                    TotalEvents = events.Count,
+                    EventList = events,
+
+                    // Event Filters
+                    SelectedEventStatus = eventStatus,
+                    SelectedEventType = eventType,
+                    SelectedEventDateFilter = eventDateFilter,
+                    EventSearchTerm = eventSearch,
+                    SelectedFromDate = fromDate,
+                    SelectedToDate = toDate
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Error loading reports: {ex.Message}";
+                return View(new ReportViewModel());
+            }
+        }
+
+        // GET: /Report/ExportSeniorTable
+        public IActionResult ExportSeniorTable(string status = null, string zone = null, string gender = null,
+                                              string civilStatus = null, string ageRange = null,
+                                              string monthYear = null, string seniorSearch = null)
+        {
+            try
+            {
+                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, monthYear, seniorSearch);
+
+                if (!seniors.Any())
+                {
+                    TempData["ErrorMessage"] = "No senior data available for export.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var csvContent = GenerateSeniorCsvContent(seniors);
+                var bytes = Encoding.UTF8.GetBytes(csvContent);
+
+                _activityHelper.LogActivityAsync(
+                    "Export Senior Table",
+                    $"Exported senior table with {seniors.Count} records"
+                ).Wait();
+
+                return File(bytes, "text/csv", $"Senior_Table_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Error exporting senior table: {ex.Message}";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        // GET: /Report/ExportEventTable
+        public async Task<IActionResult> ExportEventTable(string eventStatus = null, string eventType = null,
+                                                         string eventDateFilter = null, string eventSearch = null,
+                                                         string fromDate = null, string toDate = null)
+        {
+            try
+            {
+                var events = await GetFilteredEvents(eventStatus, eventType, eventDateFilter, eventSearch, fromDate, toDate);
+
+                if (!events.Any())
+                {
+                    TempData["ErrorMessage"] = "No event data available for export.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var csvContent = GenerateEventCsvContent(events);
+                var bytes = Encoding.UTF8.GetBytes(csvContent);
+
+                await _activityHelper.LogActivityAsync(
+                    "Export Event Table",
+                    $"Exported event table with {events.Count} records"
+                );
+
+                return File(bytes, "text/csv", $"Event_Table_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Error exporting event table: {ex.Message}";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        #region Private Helper Methods
+
+        private List<Senior> GetFilteredSeniors(string status, string zone, string gender, string civilStatus,
+                                                string ageRange, string monthYear, string searchTerm)
+        {
             var seniors = GetAllSeniors();
 
-            var viewModel = new ReportViewModel
+            // Apply filters
+            if (!string.IsNullOrEmpty(status))
             {
-                TotalSeniors = seniors.Count,
-                ActiveSeniors = seniors.Count(s => s.Status == "Active"),
-                MaleCount = seniors.Count(s => s.s_sex?.ToLower() == "male"),
-                FemaleCount = seniors.Count(s => s.s_sex?.ToLower() == "female"),
-                ReportDate = DateTime.Now
-            };
+                seniors = seniors.Where(s => s.Status == status).ToList();
+            }
 
-            // Barangay Distribution
-            viewModel.SeniorsByBarangay = seniors
-                .Where(s => !string.IsNullOrEmpty(s.s_barangay))
-                .GroupBy(s => s.s_barangay)
-                .OrderByDescending(g => g.Count())
-                .Take(10) // Top 10 barangays
-                .ToDictionary(g => g.Key, g => g.Count());
-
-            // Age Group Distribution
-            viewModel.SeniorsByAgeGroup = new Dictionary<string, int>
+            if (!string.IsNullOrEmpty(zone) && int.TryParse(zone, out int zoneNum))
             {
-                ["60-69"] = seniors.Count(s => s.s_age >= 60 && s.s_age <= 69),
-                ["70-79"] = seniors.Count(s => s.s_age >= 70 && s.s_age <= 79),
-                ["80-89"] = seniors.Count(s => s.s_age >= 80 && s.s_age <= 89),
-                ["90+"] = seniors.Count(s => s.s_age >= 90)
-            };
+                seniors = seniors.Where(s => s.Zone == zoneNum).ToList();
+            }
 
-            // Health Conditions
-            viewModel.HealthConditions = new Dictionary<string, int>
+            if (!string.IsNullOrEmpty(gender))
             {
-                ["Health Problems"] = seniors.Count(s => s.s_health_problems_option == "Yes"),
-                ["Maintenance"] = seniors.Count(s => s.s_maintenance_option == "Yes"),
-                ["Visual Issues"] = seniors.Count(s => s.s_visual_option == "Yes"),
-                ["Hearing Issues"] = seniors.Count(s => s.s_hearing_option == "Yes"),
-                ["Emotional"] = seniors.Count(s => s.s_emotional_option == "Yes")
-            };
+                seniors = seniors.Where(s => s.Gender == gender).ToList();
+            }
 
-            // Disabilities
-            viewModel.Disabilities = new Dictionary<string, int>
+            if (!string.IsNullOrEmpty(civilStatus))
             {
-                ["With Disability"] = seniors.Count(s => s.s_disability_option == "Yes"),
-                ["Without Disability"] = seniors.Count(s => s.s_disability_option != "Yes")
-            };
+                seniors = seniors.Where(s => s.CivilStatus == civilStatus).ToList();
+            }
 
-            return View(viewModel);
+            if (!string.IsNullOrEmpty(ageRange))
+            {
+                switch (ageRange)
+                {
+                    case "60-69":
+                        seniors = seniors.Where(s => s.Age >= 60 && s.Age <= 69).ToList();
+                        break;
+                    case "70-79":
+                        seniors = seniors.Where(s => s.Age >= 70 && s.Age <= 79).ToList();
+                        break;
+                    case "80-89":
+                        seniors = seniors.Where(s => s.Age >= 80 && s.Age <= 89).ToList();
+                        break;
+                    case "90+":
+                        seniors = seniors.Where(s => s.Age >= 90).ToList();
+                        break;
+                }
+            }
+
+            // Filter by registration month/year
+            if (!string.IsNullOrEmpty(monthYear))
+            {
+                try
+                {
+                    var dateParts = monthYear.Split('-');
+                    if (dateParts.Length == 2 &&
+                        int.TryParse(dateParts[0], out int year) &&
+                        int.TryParse(dateParts[1], out int month))
+                    {
+                        seniors = seniors.Where(s =>
+                            s.CreatedAt.Year == year &&
+                            s.CreatedAt.Month == month).ToList();
+                    }
+                }
+                catch { /* Ignore parsing errors */ }
+            }
+
+            // Search by name or SCCN
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                searchTerm = searchTerm.ToLower();
+                seniors = seniors.Where(s =>
+                    s.CompleteName.ToLower().Contains(searchTerm) ||
+                    s.FormattedSCCN.ToLower().Contains(searchTerm) ||
+                    s.SeniorId.Contains(searchTerm)
+                ).ToList();
+            }
+
+            return seniors;
         }
 
-        // Get all seniors from database - SAME METHOD AS YOUR SENIOR CONTROLLER
+        private async Task<List<EventReportItem>> GetFilteredEvents(string status, string type, string dateFilter,
+                                                          string search, string fromDate, string toDate)
+        {
+            var events = new List<EventReportItem>();
+
+            try
+            {
+                await using (var connection = new MySqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    var query = @"
+                SELECT Id, EventTitle, EventDescription, EventType, EventDate, EventTime, 
+                       EventLocation, OrganizedBy, MaxCapacity, AttendanceCount, 
+                       Status, CreatedAt
+                FROM events
+                WHERE IsDeleted = 0";
+
+                    var parameters = new List<MySqlParameter>();
+
+                    // ... (same filter logic as before) ...
+
+                    query += " ORDER BY EventDate DESC, EventTime DESC";
+
+                    await using (var command = new MySqlCommand(query, connection))
+                    {
+                        command.Parameters.AddRange(parameters.ToArray());
+
+                        await using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                // CORRECT WAY: Use GetFieldValue<TimeSpan>() or GetValue()
+                                TimeSpan eventTime;
+
+                                try
+                                {
+                                    // Method 1: GetFieldValue<TimeSpan> (most modern)
+                                    eventTime = reader.GetFieldValue<TimeSpan>(reader.GetOrdinal("EventTime"));
+                                }
+                                catch (InvalidCastException)
+                                {
+                                    // Method 2: Get as object and convert
+                                    try
+                                    {
+                                        var timeValue = reader.GetValue(reader.GetOrdinal("EventTime"));
+
+                                        if (timeValue is TimeSpan ts)
+                                        {
+                                            eventTime = ts;
+                                        }
+                                        else if (timeValue is DateTime dt)
+                                        {
+                                            eventTime = dt.TimeOfDay;
+                                        }
+                                        else if (timeValue is string timeString)
+                                        {
+                                            eventTime = TimeSpan.Parse(timeString);
+                                        }
+                                        else if (timeValue is TimeOnly timeOnly) // If using newer .NET
+                                        {
+                                            eventTime = timeOnly.ToTimeSpan();
+                                        }
+                                        else
+                                        {
+                                            // Try to convert to string and parse
+                                            var stringValue = timeValue.ToString();
+                                            eventTime = TimeSpan.Parse(stringValue);
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        eventTime = TimeSpan.Zero;
+                                    }
+                                }
+
+                                var eventItem = new EventReportItem
+                                {
+                                    Id = reader.GetInt32("Id"),
+                                    EventTitle = reader.GetString("EventTitle"),
+                                    EventType = reader.GetString("EventType"),
+                                    EventDate = reader.GetDateTime("EventDate"),
+                                    EventTime = eventTime,
+                                    EventLocation = reader.GetString("EventLocation"),
+                                    OrganizedBy = reader.GetString("OrganizedBy"),
+                                    MaxCapacity = reader.IsDBNull(reader.GetOrdinal("MaxCapacity"))
+                                        ? null : (int?)reader.GetInt32("MaxCapacity"),
+                                    AttendanceCount = reader.GetInt32("AttendanceCount"),
+                                    Status = reader.GetString("Status"),
+                                    CreatedAt = reader.GetDateTime("CreatedAt")
+                                };
+
+                                events.Add(eventItem);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting events: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+            }
+
+            return events;
+        }
         private List<Senior> GetAllSeniors()
         {
             var seniors = new List<Senior>();
@@ -83,15 +355,10 @@ namespace SeniorManagement.Controllers
                 using (var connection = _dbHelper.GetConnection())
                 {
                     connection.Open();
-                    string query = @"SELECT Id, s_firstName, s_middleName, s_lastName, s_sex, s_dob, s_age, 
-                                   s_contact, s_barangay, s_guardian_zone, s_religion, s_bloodtype, Status, CreatedAt, UpdatedAt,
-                                   s_health_problems_option, s_health_problems, s_maintenance_option, s_maintenance,
-                                   s_disability_option, s_disability, s_visual_option, s_visual,
-                                   s_hearing_option, s_hearing, s_emotional_option, s_emotional,
-                                   s_spouse, s_spouse_age, s_spouse_occupation, s_spouse_contact, s_children,
-                                   s_guardian_name, s_guardian_relationship, s_guardian_relationship_other, 
-                                   s_guardian_contact, s_guardian_address
-                                   FROM seniors ORDER BY s_lastName, s_firstName";
+                    string query = @"SELECT Id, SeniorId, FirstName, LastName, MiddleInitial, Gender, Age, 
+                                   BirthDate, ContactNumber, Zone, Barangay, CivilStatus, Status, 
+                                   CreatedAt, UpdatedAt
+                                   FROM seniors ORDER BY LastName, FirstName";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     using (var reader = cmd.ExecuteReader())
@@ -101,45 +368,20 @@ namespace SeniorManagement.Controllers
                             seniors.Add(new Senior
                             {
                                 Id = reader.GetInt32("Id"),
-                                s_firstName = reader.GetString("s_firstName"),
-                                s_middleName = reader.IsDBNull(reader.GetOrdinal("s_middleName")) ? "" : reader.GetString("s_middleName"),
-                                s_lastName = reader.GetString("s_lastName"),
-                                s_sex = reader.GetString("s_sex"),
-                                s_dob = reader.GetDateTime("s_dob"),
-                                s_age = reader.GetInt32("s_age"),
-                                s_contact = reader.IsDBNull(reader.GetOrdinal("s_contact")) ? "" : reader.GetString("s_contact"),
-                                s_barangay = reader.IsDBNull(reader.GetOrdinal("s_barangay")) ? "" : reader.GetString("s_barangay"),
-                                s_guardian_zone = reader.IsDBNull(reader.GetOrdinal("s_guardian_zone")) ? "" : reader.GetString("s_guardian_zone"),
-                                s_religion = reader.IsDBNull(reader.GetOrdinal("s_religion")) ? "" : reader.GetString("s_religion"),
-                                s_bloodtype = reader.IsDBNull(reader.GetOrdinal("s_bloodtype")) ? "" : reader.GetString("s_bloodtype"),
+                                SeniorId = reader.GetString("SeniorId"),
+                                FirstName = reader.GetString("FirstName"),
+                                LastName = reader.GetString("LastName"),
+                                MiddleInitial = reader.IsDBNull(reader.GetOrdinal("MiddleInitial")) ? "" : reader.GetString("MiddleInitial"),
+                                Gender = reader.GetString("Gender"),
+                                Age = reader.GetInt32("Age"),
+                                BirthDate = reader.IsDBNull(reader.GetOrdinal("BirthDate")) ? (DateTime?)null : reader.GetDateTime("BirthDate"),
+                                ContactNumber = reader.IsDBNull(reader.GetOrdinal("ContactNumber")) ? "" : reader.GetString("ContactNumber"),
+                                Zone = reader.GetInt32("Zone"),
+                                Barangay = reader.GetString("Barangay"),
+                                CivilStatus = reader.IsDBNull(reader.GetOrdinal("CivilStatus")) ? "" : reader.GetString("CivilStatus"),
                                 Status = reader.GetString("Status"),
                                 CreatedAt = reader.GetDateTime("CreatedAt"),
-                                UpdatedAt = reader.GetDateTime("UpdatedAt"),
-                                // Health Information
-                                s_health_problems_option = reader.IsDBNull(reader.GetOrdinal("s_health_problems_option")) ? "No" : reader.GetString("s_health_problems_option"),
-                                s_health_problems = reader.IsDBNull(reader.GetOrdinal("s_health_problems")) ? "" : reader.GetString("s_health_problems"),
-                                s_maintenance_option = reader.IsDBNull(reader.GetOrdinal("s_maintenance_option")) ? "No" : reader.GetString("s_maintenance_option"),
-                                s_maintenance = reader.IsDBNull(reader.GetOrdinal("s_maintenance")) ? "" : reader.GetString("s_maintenance"),
-                                s_disability_option = reader.IsDBNull(reader.GetOrdinal("s_disability_option")) ? "No" : reader.GetString("s_disability_option"),
-                                s_disability = reader.IsDBNull(reader.GetOrdinal("s_disability")) ? "" : reader.GetString("s_disability"),
-                                s_visual_option = reader.IsDBNull(reader.GetOrdinal("s_visual_option")) ? "No" : reader.GetString("s_visual_option"),
-                                s_visual = reader.IsDBNull(reader.GetOrdinal("s_visual")) ? "" : reader.GetString("s_visual"),
-                                s_hearing_option = reader.IsDBNull(reader.GetOrdinal("s_hearing_option")) ? "No" : reader.GetString("s_hearing_option"),
-                                s_hearing = reader.IsDBNull(reader.GetOrdinal("s_hearing")) ? "" : reader.GetString("s_hearing"),
-                                s_emotional_option = reader.IsDBNull(reader.GetOrdinal("s_emotional_option")) ? "No" : reader.GetString("s_emotional_option"),
-                                s_emotional = reader.IsDBNull(reader.GetOrdinal("s_emotional")) ? "" : reader.GetString("s_emotional"),
-                                // Family Information
-                                s_spouse = reader.IsDBNull(reader.GetOrdinal("s_spouse")) ? "" : reader.GetString("s_spouse"),
-                                s_spouse_age = reader.IsDBNull(reader.GetOrdinal("s_spouse_age")) ? null : (int?)reader.GetInt32("s_spouse_age"),
-                                s_spouse_occupation = reader.IsDBNull(reader.GetOrdinal("s_spouse_occupation")) ? "" : reader.GetString("s_spouse_occupation"),
-                                s_spouse_contact = reader.IsDBNull(reader.GetOrdinal("s_spouse_contact")) ? "" : reader.GetString("s_spouse_contact"),
-                                s_children = reader.IsDBNull(reader.GetOrdinal("s_children")) ? "" : reader.GetString("s_children"),
-                                // Guardian/Emergency Contact
-                                s_guardian_name = reader.IsDBNull(reader.GetOrdinal("s_guardian_name")) ? "" : reader.GetString("s_guardian_name"),
-                                s_guardian_relationship = reader.IsDBNull(reader.GetOrdinal("s_guardian_relationship")) ? "" : reader.GetString("s_guardian_relationship"),
-                                s_guardian_relationship_other = reader.IsDBNull(reader.GetOrdinal("s_guardian_relationship_other")) ? "" : reader.GetString("s_guardian_relationship_other"),
-                                s_guardian_contact = reader.IsDBNull(reader.GetOrdinal("s_guardian_contact")) ? "" : reader.GetString("s_guardian_contact"),
-                                s_guardian_address = reader.IsDBNull(reader.GetOrdinal("s_guardian_address")) ? "" : reader.GetString("s_guardian_address")
+                                UpdatedAt = reader.GetDateTime("UpdatedAt")
                             });
                         }
                     }
@@ -147,155 +389,44 @@ namespace SeniorManagement.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting seniors for report: {ex.Message}");
-                TempData["ErrorMessage"] = "Error loading senior records for report.";
+                Console.WriteLine($"Error getting seniors: {ex.Message}");
             }
 
             return seniors;
         }
 
-        // PDF Export Functionality
-        public async Task<IActionResult> ExportPdf()
-        {
-            var seniors = GetAllSeniors();
-
-            if (!seniors.Any())
-            {
-                TempData["ErrorMessage"] = "No senior data available for export.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            // Generate PDF content
-            var pdfContent = GeneratePdfContent(seniors);
-            var bytes = Encoding.UTF8.GetBytes(pdfContent);
-
-            // Log the activity
-            await _activityHelper.LogActivityAsync(
-                "Export PDF",
-                $"Exported PDF report with {seniors.Count} senior records"
-            );
-
-            return File(bytes, "application/pdf", $"Senior_Report_{DateTime.Now:yyyyMMdd}.pdf");
-        }
-
-        // Excel Export Functionality
-        public async Task<IActionResult> ExportExcel()
-        {
-            var seniors = GetAllSeniors();
-
-            if (!seniors.Any())
-            {
-                TempData["ErrorMessage"] = "No senior data available for export.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            // Generate CSV (Excel-compatible)
-            var csvContent = GenerateCsvContent(seniors);
-            var bytes = Encoding.UTF8.GetBytes(csvContent);
-
-            // Log the activity
-            await _activityHelper.LogActivityAsync(
-                "Export Excel",
-                $"Exported Excel report with {seniors.Count} senior records"
-            );
-
-            return File(bytes, "application/vnd.ms-excel", $"Senior_Report_{DateTime.Now:yyyyMMdd}.csv");
-        }
-
-        private string GeneratePdfContent(List<Senior> seniors)
-        {
-            var sb = new StringBuilder();
-
-            sb.AppendLine("SENIOR CITIZENS REPORT");
-            sb.AppendLine($"Generated on: {DateTime.Now:MMMM dd, yyyy hh:mm tt}");
-            sb.AppendLine("=".PadRight(50, '='));
-            sb.AppendLine();
-
-            // Summary
-            sb.AppendLine("SUMMARY");
-            sb.AppendLine($"Total Seniors: {seniors.Count}");
-            sb.AppendLine($"Active Seniors: {seniors.Count(s => s.Status == "Active")}");
-            sb.AppendLine($"Male: {seniors.Count(s => s.s_sex?.ToLower() == "male")}");
-            sb.AppendLine($"Female: {seniors.Count(s => s.s_sex?.ToLower() == "female")}");
-            sb.AppendLine($"With Health Problems: {seniors.Count(s => s.s_health_problems_option == "Yes")}");
-            sb.AppendLine($"With Disability: {seniors.Count(s => s.s_disability_option == "Yes")}");
-            sb.AppendLine();
-
-            // Barangay Distribution
-            sb.AppendLine("BARANGAY DISTRIBUTION");
-            sb.AppendLine("=".PadRight(50, '='));
-            var barangayGroups = seniors
-                .Where(s => !string.IsNullOrEmpty(s.s_barangay))
-                .GroupBy(s => s.s_barangay)
-                .OrderByDescending(g => g.Count());
-
-            foreach (var group in barangayGroups)
-            {
-                sb.AppendLine($"{group.Key}: {group.Count()} seniors");
-            }
-            sb.AppendLine();
-
-            // Detailed List
-            sb.AppendLine("DETAILED LIST");
-            sb.AppendLine("=".PadRight(50, '='));
-            sb.AppendLine($"{"ID",-5} {"Name",-25} {"Sex",-6} {"Age",-4} {"Barangay",-12} {"Status",-8} {"Health",-8} {"Disability",-10}");
-            sb.AppendLine("-".PadRight(80, '-'));
-
-            foreach (var senior in seniors)
-            {
-                sb.AppendLine($"{senior.Id,-5} {senior.FullName,-25} {senior.s_sex,-6} {senior.s_age,-4} {senior.s_barangay,-12} {senior.Status,-8} {senior.s_health_problems_option,-8} {senior.s_disability_option,-10}");
-            }
-
-            return sb.ToString();
-        }
-
-        private string GenerateCsvContent(List<Senior> seniors)
+        private string GenerateSeniorCsvContent(List<Senior> seniors)
         {
             var sb = new StringBuilder();
 
             // Headers
-            sb.AppendLine("ID,Full Name,First Name,Middle Name,Last Name,Sex,Age,Date of Birth,Barangay,Contact,Status,Health Problems,Maintenance Medicines,Visual Problems,Hearing Problems,Emotional Conditions,Disability");
+            sb.AppendLine("SCCN Number,Formatted SCCN,Full Name,Gender,Age,Zone,Civil Status,Contact Number,Status,Registered On");
 
             // Data
             foreach (var senior in seniors)
             {
-                sb.AppendLine($"\"{senior.Id}\",\"{senior.FullName}\",\"{senior.s_firstName}\",\"{senior.s_middleName}\",\"{senior.s_lastName}\",\"{senior.s_sex}\",\"{senior.s_age}\",\"{senior.s_dob:yyyy-MM-dd}\",\"{senior.s_barangay}\",\"{senior.s_contact}\",\"{senior.Status}\",\"{senior.s_health_problems_option}\",\"{senior.s_maintenance_option}\",\"{senior.s_visual_option}\",\"{senior.s_hearing_option}\",\"{senior.s_emotional_option}\",\"{senior.s_disability_option}\"");
+                sb.AppendLine($"\"{senior.SeniorId}\",\"{senior.FormattedSCCN}\",\"{senior.CompleteName}\",\"{senior.Gender}\",\"{senior.Age}\",\"Zone {senior.Zone}\",\"{senior.CivilStatus}\",\"{senior.ContactNumber}\",\"{senior.Status}\",\"{senior.CreatedAt:yyyy-MM-dd}\"");
             }
 
             return sb.ToString();
         }
 
-        // Additional method to get statistics for AJAX calls if needed
-        [HttpGet]
-        public async Task<JsonResult> GetStatistics()
+        private string GenerateEventCsvContent(List<EventReportItem> events)
         {
-            try
-            {
-                var seniors = GetAllSeniors();
+            var sb = new StringBuilder();
 
-                var statistics = new
-                {
-                    total = seniors.Count,
-                    active = seniors.Count(s => s.Status == "Active"),
-                    male = seniors.Count(s => s.s_sex?.ToLower() == "male"),
-                    female = seniors.Count(s => s.s_sex?.ToLower() == "female"),
-                    withHealthProblems = seniors.Count(s => s.s_health_problems_option == "Yes"),
-                    withDisability = seniors.Count(s => s.s_disability_option == "Yes"),
-                    barangayDistribution = seniors
-                        .Where(s => !string.IsNullOrEmpty(s.s_barangay))
-                        .GroupBy(s => s.s_barangay)
-                        .Select(g => new { barangay = g.Key, count = g.Count() })
-                        .OrderByDescending(x => x.count)
-                        .Take(5)
-                };
+            // Headers
+            sb.AppendLine("Event Title,Event Type,Date,Time,Location,Organized By,Max Capacity,Attendance,Attendance %,Available Slots,Status,Attendance Status,Created Date");
 
-                return Json(statistics);
-            }
-            catch (Exception ex)
+            // Data
+            foreach (var eventItem in events)
             {
-                await _activityHelper.LogErrorAsync(ex.Message, "Get Statistics");
-                return Json(new { error = ex.Message });
+                sb.AppendLine($"\"{eventItem.EventTitle}\",\"{eventItem.EventType}\",\"{eventItem.EventDate:yyyy-MM-dd}\",\"{eventItem.EventTime:hh\\:mm}\",\"{eventItem.EventLocation}\",\"{eventItem.OrganizedBy}\",\"{eventItem.MaxCapacity}\",\"{eventItem.AttendanceCount}\",\"{eventItem.AttendancePercentage}\",\"{eventItem.AvailableSlots}\",\"{eventItem.Status}\",\"{eventItem.AttendanceStatus}\",\"{eventItem.CreatedAt:yyyy-MM-dd}\"");
             }
+
+            return sb.ToString();
         }
+
+        #endregion
     }
 }

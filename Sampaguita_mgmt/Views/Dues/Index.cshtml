@@ -1,0 +1,535 @@
+﻿@model List<SeniorManagement.Models.MonthlyContribution>
+@using System.Globalization
+@{
+    ViewData["Title"] = "";
+    var currentMonth = DateTime.Now.Month;
+    var currentYear = DateTime.Now.Year;
+    var selectedMonth = ViewBag.Month != null ? (int)ViewBag.Month : currentMonth;
+    var selectedYear = ViewBag.Year != null ? (int)ViewBag.Year : currentYear;
+    var monthName = ViewBag.MonthName != null ? ViewBag.MonthName : CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(selectedMonth);
+    var hasLog = ViewBag.HasLog != null && (bool)ViewBag.HasLog;
+}
+
+<style>
+    /* Fix for table text visibility */
+    .table {
+        color: #333333 !important;
+    }
+
+        .table thead th {
+            color: #333333 !important;
+            font-weight: 600;
+        }
+
+        .table td {
+            color: #333333 !important;
+            vertical-align: middle;
+        }
+
+    /* Badge text contrast fixes */
+    .badge-secondary {
+        background-color: #6c757d !important;
+        color: white !important;
+        border: none;
+    }
+
+    .badge-success {
+        background-color: #1cc88a !important;
+        color: white !important;
+        border: none;
+    }
+
+    .badge-danger {
+        background-color: #e74a3b !important;
+        color: white !important;
+        border: none;
+    }
+
+    .badge-warning {
+        background-color: #f6c23e !important;
+        color: #333333 !important;
+        border: none;
+    }
+
+    .badge-primary {
+        background-color: #4e73df !important;
+        color: white !important;
+        border: none;
+    }
+
+    /* Button styles */
+    .btn-success {
+        background-color: #1cc88a !important;
+        color: white !important;
+        border: none;
+    }
+
+    .btn-warning {
+        background-color: #f6c23e !important;
+        color: #333333 !important;
+        border: none;
+    }
+
+    .btn-outline-primary {
+        color: #4e73df !important;
+        border-color: #4e73df !important;
+    }
+
+        .btn-outline-primary:hover {
+            background-color: #4e73df !important;
+            color: white !important;
+        }
+
+    /* Table header background */
+    .bg-light {
+        background-color: #f8f9fc !important;
+    }
+
+    /* Card styling */
+    .card {
+        border: 1px solid #e3e6f0;
+    }
+
+    .card-header {
+        background-color: #f8f9fc !important;
+        border-bottom: 1px solid #e3e6f0;
+    }
+
+    /* Text colors */
+    .text-muted {
+        color: #6c757d !important;
+    }
+
+    .text-gray-800 {
+        color: #5a5c69 !important;
+    }
+
+    /* Fix for light text on light background */
+    .table-hover tbody tr:hover {
+        background-color: rgba(0,0,0,.03);
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-calendar-check text-primary mr-2"></i>Monthly Contributions
+        </h1>
+        <div class="btn-group">
+            <a href="@Url.Action("ViewLogs", "Dues")" class="btn btn-outline-primary">
+                <i class="fas fa-history mr-2"></i>View Logs
+            </a>
+        </div>
+    </div>
+
+    <!-- Notification Alert -->
+    @if (!string.IsNullOrEmpty(ViewBag.Message))
+    {
+        <div class="alert alert-@(ViewBag.MessageType) alert-dismissible fade show" role="alert">
+            @ViewBag.Message
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    <!-- New Seniors Alert -->
+    @if (ViewBag.NewSeniorsCount != null && ViewBag.NewSeniorsCount > 0)
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="fas fa-info-circle mr-2"></i>
+            <strong>@ViewBag.NewSeniorsCount new senior(s)</strong> have been added to the system.
+            They have been automatically included in this month's contributions.
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Seniors
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Paid
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@(ViewBag.PaidCount != null ? ViewBag.PaidCount : 0)</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Not Paid
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@(ViewBag.UnpaidCount != null ? ViewBag.UnpaidCount : 0)</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Collected Amount
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">₱@(ViewBag.CollectedAmount != null ? ViewBag.CollectedAmount : 0)</div>
+                            <div class="text-xs text-muted">Total: ₱@(ViewBag.TotalAmount != null ? ViewBag.TotalAmount : 0)</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Filter Form -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Filter Contributions</h6>
+            <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportCsv()">
+                    <i class="fas fa-file-export mr-1"></i>Export CSV
+                </button>
+                @if (!hasLog)
+                {
+                    <button type="button" class="btn btn-sm btn-success" onclick="saveLog()">
+                        <i class="fas fa-save mr-1"></i>Save Log
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-sm btn-warning" onclick="updateLog()">
+                        <i class="fas fa-sync-alt mr-1"></i>Update Log
+                    </button>
+                }
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label">Month</label>
+                    <select name="month" class="form-control" onchange="this.form.submit()">
+                        @for (int m = 1; m <= 12; m++)
+                        {
+                            var isSelected = m == selectedMonth;
+                            <option value="@m" selected="@isSelected">
+                                @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Year</label>
+                    <input type="number" name="year" value="@selectedYear" class="form-control" onchange="this.form.submit()" min="2000" max="2100" />
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter mr-1"></i>Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contributions Table -->
+    <div class="card shadow">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                Contributions for @monthName @selectedYear
+                <span class="badge badge-primary ml-2">@Model.Count seniors</span>
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="contributionsTable" width="100%" cellspacing="0" style="color: #333333 !important;">
+                    <thead class="bg-light" style="color: #333333 !important;">
+                        <tr>
+                            <th style="color: #333333 !important;">#</th>
+                            <th style="color: #333333 !important;">Senior Name</th>
+                            <th style="color: #333333 !important;">Zone</th>
+                            <th style="color: #333333 !important;">Senior Status</th>
+                            <th style="color: #333333 !important;">Payment Status</th>
+                            <th style="color: #333333 !important;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody style="color: #333333 !important;">
+                        @if (Model.Any())
+                        {
+                            var counter = 1;
+                            foreach (var item in Model)
+                            {
+                                <tr data-id="@item.Id" style="color: #333333 !important;">
+                                    <td style="color: #333333 !important;">@counter</td>
+                                    <td style="color: #333333 !important; font-weight: 500;">@item.FullName</td>
+                                    <td style="color: #333333 !important;">
+                                        <span class="badge badge-secondary" style="background-color: #6c757d !important; color: white !important;">Zone @item.Zone</span>
+                                    </td>
+                                    <td style="color: #333333 !important;">
+                                        @if (item.Status == "Active")
+                                        {
+                                            <span class="badge badge-success" style="background-color: #1cc88a !important; color: white !important;">@item.Status</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-warning" style="background-color: #f6c23e !important; color: #333333 !important;">@item.Status</span>
+                                        }
+                                    </td>
+                                    <td style="color: #333333 !important;">
+                                        @if (item.IsPaid)
+                                        {
+                                            <span class="badge badge-success" style="background-color: #1cc88a !important; color: white !important;">
+                                                <i class="fas fa-check mr-1"></i>PAID
+                                            </span>
+                                            <br />
+                                            <small class="text-muted" style="color: #6c757d !important;">@(item.PaidDate?.ToString("MMM dd, yyyy"))</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-danger" style="background-color: #e74a3b !important; color: white !important;">
+                                                <i class="fas fa-times mr-1"></i>NOT PAID
+                                            </span>
+                                        }
+                                    </td>
+                                    <td style="color: #333333 !important;">
+                                        @{
+                                            var buttonClass = item.IsPaid ? "btn-warning" : "btn-success";
+                                            var buttonText = item.IsPaid ? "Mark Unpaid" : "Mark Paid";
+                                            var buttonIcon = item.IsPaid ? "undo" : "check";
+                                            var buttonStyle = item.IsPaid ?
+                                            "background-color: #f6c23e !important; color: #333333 !important;" :
+                                            "background-color: #1cc88a !important; color: white !important;";
+                                        }
+                                        <button class="btn btn-sm toggle-payment @buttonClass"
+                                                data-id="@item.Id"
+                                                data-paid="@item.IsPaid.ToString().ToLower()"
+                                                style="@buttonStyle border: none; font-weight: 500; padding: 0.25rem 0.5rem;">
+                                            <i class="fas fa-@buttonIcon mr-1"></i>@buttonText
+                                        </button>
+                                    </td>
+                                </tr>
+                                counter++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4" style="color: #6c757d !important;">
+                                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                                    <p class="mb-0">No contribution records found for @monthName @selectedYear</p>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Toggle Payment Status
+        $(document).on('click', '.toggle-payment', function () {
+            var button = $(this);
+            var contributionId = button.data('id');
+            var isPaid = button.data('paid') === 'true';
+
+            // Show loading state
+            var originalHtml = button.html();
+            button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Processing...');
+
+            $.ajax({
+                url: '@Url.Action("TogglePayment", "Dues")',
+                type: 'POST',
+                data: { id: contributionId },
+                success: function (response) {
+                    if (response.success) {
+                        // Update button appearance
+                        if (isPaid) {
+                            button.removeClass('btn-warning').addClass('btn-success')
+                                .data('paid', 'false')
+                                .html('<i class="fas fa-check mr-1"></i>Mark Paid');
+
+                            // Update status badge
+                            var row = button.closest('tr');
+                            row.find('td:nth-child(5)').html(
+                                '<span class="badge badge-danger" style="background-color: #e74a3b !important; color: white !important;">' +
+                                '<i class="fas fa-times mr-1"></i>NOT PAID</span>'
+                            );
+                        } else {
+                            button.removeClass('btn-success').addClass('btn-warning')
+                                .data('paid', 'true')
+                                .html('<i class="fas fa-undo mr-1"></i>Mark Unpaid');
+
+                            // Update status badge with current date
+                            var currentDate = new Date();
+                            var formattedDate = currentDate.toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: '2-digit',
+                                year: 'numeric'
+                            });
+
+                            var row = button.closest('tr');
+                            row.find('td:nth-child(5)').html(
+                                '<span class="badge badge-success" style="background-color: #1cc88a !important; color: white !important;">' +
+                                '<i class="fas fa-check mr-1"></i>PAID</span><br>' +
+                                '<small class="text-muted" style="color: #6c757d !important;">' + formattedDate + '</small>'
+                            );
+                        }
+
+                        // Show success message
+                        showAlert('Payment status updated successfully!', 'success');
+
+                        // Reload page after 1.5 seconds to update stats
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        showAlert(response.message, 'danger');
+                        button.prop('disabled', false).html(originalHtml);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    showAlert('Error updating payment status: ' + error, 'danger');
+                    button.prop('disabled', false).html(originalHtml);
+                }
+            });
+        });
+
+                // Update Log
+        function updateLog() {
+            if (confirm('Are you sure you want to update the log for @monthName @selectedYear? This will overwrite the existing log with current data.')) {
+                var month = @selectedMonth;
+                var year = @selectedYear;
+
+                // Show loading
+                var updateButton = $('button:contains("Update Log")');
+                var originalText = updateButton.html();
+                updateButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Updating...');
+
+                $.ajax({
+                    url: '@Url.Action("UpdateLog", "Dues")', // You need to add this action to your controller
+                    type: 'POST',
+                    data: {
+                        month: month,
+                        year: year
+                    },
+                    success: function () {
+                        showAlert('Log updated successfully! The page will reload.', 'success');
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000);
+                    },
+                    error: function (xhr, status, error) {
+                        showAlert('Error updating log: ' + error, 'danger');
+                        updateButton.prop('disabled', false).html(originalText);
+                    }
+                });
+            }
+        }
+
+        // Export CSV
+        function exportCsv() {
+            var month = @selectedMonth;
+            var year = @selectedYear;
+            window.location.href = '@Url.Action("ExportCsv", "Dues")?month=' + month + '&year=' + year;
+        }
+
+        // Save Log
+        function saveLog() {
+            if (confirm('Are you sure you want to save a log for @monthName @selectedYear? This will create a permanent record that cannot be deleted.')) {
+                var month = @selectedMonth;
+                var year = @selectedYear;
+
+                // Show loading
+                var saveButton = $('button:contains("Save Log")');
+                var originalText = saveButton.html();
+                saveButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving...');
+
+                $.ajax({
+                    url: '@Url.Action("SaveLog", "Dues")',
+                    type: 'POST',
+                    data: {
+                        month: month,
+                        year: year
+                    },
+                    success: function () {
+                        showAlert('Log saved successfully! The page will reload.', 'success');
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000);
+                    },
+                    error: function (xhr, status, error) {
+                        showAlert('Error saving log: ' + error, 'danger');
+                        saveButton.prop('disabled', false).html(originalText);
+                    }
+                });
+            }
+        }
+
+        // Helper function to show alerts
+        function showAlert(message, type) {
+            var alertClass = 'alert-' + type;
+            var alertHtml = '<div class="alert ' + alertClass + ' alert-dismissible fade show" role="alert">' +
+                message +
+                '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                '<span aria-hidden="true">&times;</span>' +
+                '</button>' +
+                '</div>';
+
+            $('.container-fluid').prepend(alertHtml);
+
+            // Auto-remove alert after 5 seconds
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 5000);
+        }
+
+        // Initialize page
+        $(document).ready(function() {
+            console.log('Monthly Contributions page loaded');
+            console.log('Selected Month: @selectedMonth, Year: @selectedYear');
+            console.log('Has Log: @hasLog');
+        });
+    </script>
+}

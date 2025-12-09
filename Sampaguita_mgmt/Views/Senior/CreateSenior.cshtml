@@ -4,738 +4,383 @@
     ViewData["Title"] = "";
 }
 
-<!-- Success/Error Message Display Area -->
-<div id="alertContainer"></div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create New Senior Citizen</h3>
+                </div>
+                <div class="card-body">
+                    <form asp-action="CreateSenior" method="post" id="createSeniorForm">
+                        @Html.AntiForgeryToken()
 
-<div class="card">
-    <div class="card-header bg-primary text-white">
-        <h3><i class="fas fa-user-plus me-2"></i>Create New Senior Record</h3>
-    </div>
-    <div class="card-body">
-        <form asp-action="CreateSenior" method="post" id="seniorForm">
-            @Html.AntiForgeryToken()
+                        <!-- SCCN Number Section - MANUAL INPUT -->
+                        <div class="section-card mb-4">
+                            <div class="section-header">
+                                <h5><i class="fas fa-id-card me-2"></i>SCCN Identification</h5>
+                            </div>
+                            <div class="section-body">
+                                <div class="mb-3">
+                                    <label asp-for="SeniorId" class="form-label required">SCCN Number</label>
+                                    <div class="input-group">
+                                        <input asp-for="SeniorId"
+                                               class="form-control"
+                                               placeholder="Enter 12-digit SCCN number"
+                                               maxlength="12"
+                                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 12)"
+                                               required />
+                                        <button type="button"
+                                                class="btn btn-outline-secondary"
+                                                onclick="formatSCCN()"
+                                                title="Format as XXX-XXX-XXX-XXX">
+                                            <i class="fas fa-magic"></i> Format
+                                        </button>
+                                    </div>
+                                    <div class="form-text">
+                                        <small><i class="fas fa-info-circle text-primary"></i> Must be exactly 12 digits (numbers only)</small>
+                                    </div>
+                                    <span asp-validation-for="SeniorId" class="text-danger small"></span>
+                                </div>
 
-            <h5 class="mb-3 text-primary"><i class="fas fa-user me-2"></i>Personal Information</h5>
-
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_firstName" class="form-label">First Name *</label>
-                        <input asp-for="s_firstName" class="form-control" placeholder="Enter first name" required />
-                        <span asp-validation-for="s_firstName" class="text-danger"></span>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_middleName" class="form-label">Middle Name</label>
-                        <input asp-for="s_middleName" class="form-control" placeholder="Enter middle name" />
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_lastName" class="form-label">Last Name *</label>
-                        <input asp-for="s_lastName" class="form-control" placeholder="Enter last name" required />
-                        <span asp-validation-for="s_lastName" class="text-danger"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_sex" class="form-label">Sex *</label>
-                        <select asp-for="s_sex" class="form-select" required>
-                            <option value="">-- Select Sex --</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
-                        <span asp-validation-for="s_sex" class="text-danger"></span>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_dob" class="form-label">Date of Birth *</label>
-                        <input asp-for="s_dob" type="date" class="form-control" id="dobField" required />
-                        <span asp-validation-for="s_dob" class="text-danger"></span>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group mb-3">
-                        <label class="form-label">Age</label>
-                        <input type="text" class="form-control" id="ageField" readonly />
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_bloodtype" class="form-label">Blood Type</label>
-                        <select asp-for="s_bloodtype" class="form-select">
-                            <option value="">-- Select Blood Type --</option>
-                            <option value="A+">A+</option>
-                            <option value="A-">A-</option>
-                            <option value="B+">B+</option>
-                            <option value="B-">B-</option>
-                            <option value="AB+">AB+</option>
-                            <option value="AB-">AB-</option>
-                            <option value="O+">O+</option>
-                            <option value="O-">O-</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_contact" class="form-label">Contact Number</label>
-                        <input asp-for="s_contact" class="form-control" placeholder="Enter contact number" />
-                        <span asp-validation-for="s_contact" class="text-danger"></span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_barangay" class="form-label">Barangay</label>
-                        <input asp-for="s_barangay" class="form-control" placeholder="Enter barangay" />
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_guardian_zone" class="form-label">Guardian Zone/Street</label>
-                        <input asp-for="s_guardian_zone" class="form-control" placeholder="Enter zone/street" />
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_religion" class="form-label">Religion</label>
-                        <input asp-for="s_religion" class="form-control" placeholder="Enter religion" />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Health Information Section -->
-            <h5 class="mb-3 text-primary mt-4"><i class="fas fa-heartbeat me-2"></i>Health Information</h5>
-
-            <!-- Health Problems -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_health_problems_option" class="form-label">Do you have any health problems?</label>
-                        <select asp-for="s_health_problems_option" class="form-select health-option" data-target="health-problems">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="health-problems-details" style="display: none;">
-                        <label asp-for="s_health_problems" class="form-label">Specify health problems</label>
-                        <textarea asp-for="s_health_problems" class="form-control" rows="3" placeholder="Please specify health problems..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Maintenance Medicines -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_maintenance_option" class="form-label">Do you take maintenance medicines?</label>
-                        <select asp-for="s_maintenance_option" class="form-select health-option" data-target="maintenance" id="maintenanceOption">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="maintenance-details" style="display: none;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label">Medicines & Schedule</label>
-                            <button type="button" class="btn btn-sm btn-primary" id="addMedicineBtn">
-                                <i class="fas fa-plus"></i> Add Medicine
-                            </button>
-                        </div>
-
-                        <div id="medicineListContainer">
-                            <div id="noMedicinesMessage" class="text-center p-3 border rounded">
-                                <p class="text-muted mb-0">No medicines added yet</p>
+                                <!-- SCCN Format Example -->
+                                <div class="alert alert-info mt-3">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-lightbulb me-2 mt-1"></i>
+                                        <div>
+                                            <h6 class="alert-heading mb-1">SCCN Format Example</h6>
+                                            <p class="mb-1">Format: <code class="bg-light px-2 py-1 rounded">202-312-340-001</code></p>
+                                            <p class="mb-0">Raw: <code class="bg-light px-2 py-1 rounded">202312340001</code> (12 digits)</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <!-- REMOVED THE TEXT AREA SECTION -->
-                    </div>
+
+                        <!-- Personal Information Section -->
+                        <div class="section-card mb-4">
+                            <div class="section-header">
+                                <h5><i class="fas fa-user me-2"></i>Personal Information</h5>
+                            </div>
+                            <div class="section-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label asp-for="FirstName" class="form-label required">First Name</label>
+                                        <input asp-for="FirstName" class="form-control" placeholder="Enter first name" />
+                                        <span asp-validation-for="FirstName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label asp-for="LastName" class="form-label required">Last Name</label>
+                                        <input asp-for="LastName" class="form-control" placeholder="Enter last name" />
+                                        <span asp-validation-for="LastName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label asp-for="MiddleInitial" class="form-label">Middle Initial</label>
+                                        <input asp-for="MiddleInitial" class="form-control" maxlength="1" placeholder="M" />
+                                        <span asp-validation-for="MiddleInitial" class="text-danger small"></span>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Gender" class="form-label required">Gender</label>
+                                        <select asp-for="Gender" class="form-select">
+                                            <option value="">Select Gender</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                        </select>
+                                        <span asp-validation-for="Gender" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="CivilStatus" class="form-label">Civil Status</label>
+                                        <select asp-for="CivilStatus" class="form-select">
+                                            <option value="">Select Civil Status</option>
+                                            <option value="Single">Single</option>
+                                            <option value="Married">Married</option>
+                                            <option value="Widowed">Widowed</option>
+                                            <option value="Separated">Separated</option>
+                                        </select>
+                                        <span asp-validation-for="CivilStatus" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Age & Birth Date Section -->
+                        <div class="section-card mb-4">
+                            <div class="section-header">
+                                <h5><i class="fas fa-birthday-cake me-2"></i>Age & Birth Date</h5>
+                            </div>
+                            <div class="section-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Age" class="form-label required">Age</label>
+                                        <div class="input-group">
+                                            <input asp-for="Age" type="number" class="form-control"
+                                                   min="60" max="120" placeholder="Enter age (60-120)" />
+                                            <span class="input-group-text">years old</span>
+                                        </div>
+                                        <span asp-validation-for="Age" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="BirthDate" class="form-label">Birth Date</label>
+                                        <input asp-for="BirthDate" type="date" class="form-control" />
+                                        <small class="text-muted">Optional - will auto-calculate age</small>
+                                        <span asp-validation-for="BirthDate" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact & Location Section -->
+                        <div class="section-card mb-4">
+                            <div class="section-header">
+                                <h5><i class="fas fa-map-marker-alt me-2"></i>Contact & Location</h5>
+                            </div>
+                            <div class="section-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Zone" class="form-label required">Zone</label>
+                                        <select asp-for="Zone" class="form-select">
+                                            <option value="">Select Zone</option>
+                                            <option value="1">Zone 1</option>
+                                            <option value="2">Zone 2</option>
+                                            <option value="3">Zone 3</option>
+                                            <option value="4">Zone 4</option>
+                                            <option value="5">Zone 5</option>
+                                            <option value="6">Zone 6</option>
+                                            <option value="7">Zone 7</option>
+                                        </select>
+                                        <span asp-validation-for="Zone" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Barangay</label>
+                                        <input type="text" class="form-control" value="Sampaguita" disabled readonly />
+                                        <small class="text-muted">Fixed barangay for all seniors</small>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label asp-for="ContactNumber" class="form-label">Contact Number</label>
+                                        <input asp-for="ContactNumber" class="form-control" placeholder="09XXXXXXXXX" />
+                                        <span asp-validation-for="ContactNumber" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="@Url.Action("Index", "Senior")" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Create Senior Record
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
-
-            <!-- Disability -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_disability_option" class="form-label">Do you have any disability?</label>
-                        <select asp-for="s_disability_option" class="form-select health-option" data-target="disability">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="disability-details" style="display: none;">
-                        <label asp-for="s_disability" class="form-label">Specify disability</label>
-                        <textarea asp-for="s_disability" class="form-control" rows="2" placeholder="Please specify disability..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Visual Problems -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_visual_option" class="form-label">Do you have visual problems?</label>
-                        <select asp-for="s_visual_option" class="form-select health-option" data-target="visual">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="visual-details" style="display: none;">
-                        <label asp-for="s_visual" class="form-label">Specify visual issues</label>
-                        <textarea asp-for="s_visual" class="form-control" rows="2" placeholder="Please specify visual issues..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Hearing Problems -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_hearing_option" class="form-label">Do you have hearing problems?</label>
-                        <select asp-for="s_hearing_option" class="form-select health-option" data-target="hearing">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="hearing-details" style="display: none;">
-                        <label asp-for="s_hearing" class="form-label">Specify hearing issues</label>
-                        <textarea asp-for="s_hearing" class="form-control" rows="2" placeholder="Please specify hearing issues..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Emotional Conditions -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_emotional_option" class="form-label">Do you have emotional conditions?</label>
-                        <select asp-for="s_emotional_option" class="form-select health-option" data-target="emotional">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="emotional-details" style="display: none;">
-                        <label asp-for="s_emotional" class="form-label">Specify emotional conditions</label>
-                        <textarea asp-for="s_emotional" class="form-control" rows="2" placeholder="Please specify emotional conditions..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Family Information Section -->
-            <h5 class="mb-3 text-primary mt-4"><i class="fas fa-home me-2"></i>Family Information</h5>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_spouse" class="form-label">Spouse Name</label>
-                        <input asp-for="s_spouse" class="form-control" placeholder="Enter spouse name" />
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_spouse_age" class="form-label">Spouse Age</label>
-                        <input asp-for="s_spouse_age" type="number" class="form-control" placeholder="Age" min="0" max="120" />
-                        <span asp-validation-for="s_spouse_age" class="text-danger"></span>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_spouse_contact" class="form-label">Spouse Contact</label>
-                        <input asp-for="s_spouse_contact" class="form-control" placeholder="Contact number" />
-                        <span asp-validation-for="s_spouse_contact" class="text-danger"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_spouse_occupation" class="form-label">Spouse Occupation</label>
-                        <input asp-for="s_spouse_occupation" class="form-control" placeholder="Enter occupation" />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Children/Dependents with Plus Button -->
-            <div class="form-group mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <label class="form-label">Children/Dependents Information</label>
-                    <button type="button" class="btn btn-sm btn-primary" id="addChildBtn">
-                        <i class="fas fa-plus"></i> Add Child/Dependent
-                    </button>
-                </div>
-
-                <div id="childrenListContainer">
-                    <div id="noChildrenMessage" class="text-center p-3 border rounded">
-                        <p class="text-muted mb-0">No children/dependents added yet</p>
-                    </div>
-                </div>
-                <!-- REMOVED THE TEXT AREA SECTION -->
-            </div>
-
-            <!-- Guardian/Emergency Contact Section -->
-            <h5 class="mb-3 text-primary mt-4"><i class="fas fa-phone-alt me-2"></i>Guardian/Emergency Contact</h5>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_guardian_name" class="form-label">Guardian Name</label>
-                        <input asp-for="s_guardian_name" class="form-control" placeholder="Enter guardian name" />
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_guardian_relationship" class="form-label">Relationship</label>
-                        <select asp-for="s_guardian_relationship" class="form-select" id="guardianRelationship">
-                            <option value="">-- Select Relationship --</option>
-                            <option value="Spouse">Spouse</option>
-                            <option value="Child">Child</option>
-                            <option value="Son">Son</option>
-                            <option value="Daughter">Daughter</option>
-                            <option value="Grandchild">Grandchild</option>
-                            <option value="Sibling">Sibling</option>
-                            <option value="Brother">Brother</option>
-                            <option value="Sister">Sister</option>
-                            <option value="Nephew">Nephew</option>
-                            <option value="Niece">Niece</option>
-                            <option value="Friend">Friend</option>
-                            <option value="Neighbor">Neighbor</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3" id="otherRelationshipContainer" style="display: none;">
-                        <label asp-for="s_guardian_relationship_other" class="form-label">Specify Relationship</label>
-                        <input asp-for="s_guardian_relationship_other" class="form-control" placeholder="Please specify relationship" />
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_guardian_contact" class="form-label">Guardian Contact</label>
-                        <input asp-for="s_guardian_contact" class="form-control" placeholder="Enter contact number" />
-                        <span asp-validation-for="s_guardian_contact" class="text-danger"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_guardian_address" class="form-label">Guardian Address</label>
-                        <textarea asp-for="s_guardian_address" class="form-control" rows="3" placeholder="Enter complete address"></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group mt-4">
-                <button type="submit" class="btn btn-primary me-2">
-                    <i class="fas fa-save"></i> Create Senior Record
-                </button>
-                <a asp-action="Index" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Cancel
-                </a>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
+@section Styles {
+    <style>
+        .section-card {
+            border: 1px solid #e3f2fd;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background: white;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e3f2fd;
+        }
+
+            .section-header h5 {
+                margin: 0;
+                color: #1976d2;
+                font-weight: 600;
+            }
+
+                .section-header h5 i {
+                    color: #2196f3;
+                }
+
+        .section-body {
+            padding: 1.5rem;
+        }
+
+        .form-label.required::after {
+            content: " *";
+            color: #f44336;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #2196f3;
+            box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            border: none;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+        }
+
+            .btn-primary:hover {
+                background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+            }
+
+        .btn-outline-secondary {
+            border: 2px solid #78909c;
+            color: #78909c;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+        }
+
+            .btn-outline-secondary:hover {
+                background: #78909c;
+                color: white;
+                border-color: #78909c;
+            }
+
+        /* SCCN Input Styling */
+        .input-group .btn-outline-secondary {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            border-left: 1px solid #dee2e6;
+        }
+
+        /* Alert Styling */
+        .alert-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 1px solid #90caf9;
+            color: #1565c0;
+        }
+
+        .alert-heading {
+            color: #0d47a1;
+            font-size: 0.9rem;
+        }
+
+        code {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+    </style>
+}
+
 @section Scripts {
     <script>
-        // Medicine counter
-        let medicineCounter = 0;
-        // Child counter
-        let childCounter = 0;
+        // Format SCCN with dashes
+        function formatSCCN() {
+            const sccnInput = document.querySelector('input[name="SeniorId"]');
+            let value = sccnInput.value.replace(/[^0-9]/g, '');
 
-        // Calculate age when date of birth changes
-        function calculateAge() {
-            const dob = new Date(document.getElementById('dobField').value);
-            if (isNaN(dob.getTime())) return;
-
-            const today = new Date();
-            let age = today.getFullYear() - dob.getFullYear();
-            const monthDiff = today.getMonth() - dob.getMonth();
-
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-                age--;
+            if (value.length === 12) {
+                // Format as XXX-XXX-XXX-XXX
+                value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{3})/, '$1-$2-$3-$4');
+                sccnInput.value = value;
+            } else {
+                alert('Please enter exactly 12 digits before formatting.');
+                sccnInput.focus();
             }
-
-            document.getElementById('ageField').value = age;
         }
 
-        document.getElementById('dobField').addEventListener('change', calculateAge);
-
-        // Initialize on page load
+        // Auto-format on blur
         document.addEventListener('DOMContentLoaded', function() {
-            // Set max date to today
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('dobField').max = today;
+            const sccnInput = document.querySelector('input[name="SeniorId"]');
 
-            calculateAge();
-            initializeHealthSections();
-            initializeGuardianRelationship();
-            showTempDataMessages();
-            setupMedicineHandlers();
-            setupChildHandlers();
-        });
+            // Format when user leaves the field
+            sccnInput.addEventListener('blur', function() {
+                let value = this.value.replace(/[^0-9]/g, '');
 
-        // Health information toggle functionality
-        function initializeHealthSections() {
-            document.querySelectorAll('.health-option').forEach(select => {
-                const target = select.getAttribute('data-target');
-                const detailsDiv = document.getElementById(target + '-details');
-
-                function toggleDetails() {
-                    if (select.value === 'Yes') {
-                        detailsDiv.style.display = 'block';
-                        // Make textarea required when shown
-                        const textarea = detailsDiv.querySelector('textarea');
-                        if (textarea) textarea.required = true;
-                    } else {
-                        detailsDiv.style.display = 'none';
-                        // Remove required when hidden
-                        const textarea = detailsDiv.querySelector('textarea');
-                        if (textarea) {
-                            textarea.required = false;
-                            textarea.value = '';
-                        }
-                    }
+                if (value.length === 12) {
+                    this.value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{3})/, '$1-$2-$3-$4');
                 }
-
-                select.addEventListener('change', toggleDetails);
-                toggleDetails(); // Initial toggle
             });
-        }
 
-        // Guardian relationship toggle
-        function initializeGuardianRelationship() {
-            const relationshipSelect = document.getElementById('guardianRelationship');
-            const otherContainer = document.getElementById('otherRelationshipContainer');
+            // Remove dashes on focus for easy editing
+            sccnInput.addEventListener('focus', function() {
+                this.value = this.value.replace(/-/g, '');
+            });
 
-            function toggleOtherRelationship() {
-                if (relationshipSelect.value === 'Other') {
-                    otherContainer.style.display = 'block';
-                    const input = otherContainer.querySelector('input');
-                    if (input) input.required = true;
+            // Real-time digit counter
+            const digitCounter = document.createElement('div');
+            digitCounter.className = 'form-text text-end mt-1';
+            digitCounter.innerHTML = '<small>Digits: <span id="digitCount">0</span>/12</small>';
+            sccnInput.parentNode.parentNode.appendChild(digitCounter);
+
+            sccnInput.addEventListener('input', function() {
+                const digitCount = this.value.replace(/[^0-9]/g, '').length;
+                document.getElementById('digitCount').textContent = digitCount;
+
+                // Color code based on length
+                const counterSpan = document.getElementById('digitCount');
+                if (digitCount === 12) {
+                    counterSpan.className = 'text-success fw-bold';
+                } else if (digitCount > 12) {
+                    counterSpan.className = 'text-danger fw-bold';
                 } else {
-                    otherContainer.style.display = 'none';
-                    const input = otherContainer.querySelector('input');
-                    if (input) {
-                        input.required = false;
-                        input.value = '';
-                    }
-                }
-            }
-
-            relationshipSelect.addEventListener('change', toggleOtherRelationship);
-            toggleOtherRelationship(); // Initial toggle
-        }
-
-        // Medicine management functions
-        function setupMedicineHandlers() {
-            // Add medicine button
-            document.getElementById('addMedicineBtn')?.addEventListener('click', addMedicineRow);
-        }
-
-        function addMedicineRow() {
-            const container = document.getElementById('medicineListContainer');
-            const noMedicinesMsg = document.getElementById('noMedicinesMessage');
-
-            if (noMedicinesMsg) {
-                noMedicinesMsg.remove();
-            }
-
-            const newRow = document.createElement('div');
-            newRow.className = 'medicine-item card mb-2';
-            newRow.innerHTML = `
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label class="form-label">Medicine Name</label>
-                                <input type="text" class="form-control"
-                                       name="MaintenanceMedicines[${medicineCounter}].MedicineName"
-                                       placeholder="e.g., Metformin" />
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="form-group">
-                                <label class="form-label">Dosage</label>
-                                <input type="text" class="form-control"
-                                       name="MaintenanceMedicines[${medicineCounter}].Dosage"
-                                       placeholder="e.g., 500mg" />
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label class="form-label">Schedule</label>
-                                <select class="form-select"
-                                        name="MaintenanceMedicines[${medicineCounter}].Schedule">
-                                    <option value="">-- Select --</option>
-                                    <option value="Once daily">Once daily</option>
-                                    <option value="Twice daily">Twice daily</option>
-                                    <option value="Three times daily">Three times daily</option>
-                                    <option value="Four times daily">Four times daily</option>
-                                    <option value="Every 6 hours">Every 6 hours</option>
-                                    <option value="Every 8 hours">Every 8 hours</option>
-                                    <option value="Every 12 hours">Every 12 hours</option>
-                                    <option value="Weekly">Weekly</option>
-                                    <option value="As needed">As needed</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label class="form-label">Instructions</label>
-                                <input type="text" class="form-control"
-                                       name="MaintenanceMedicines[${medicineCounter}].Instructions"
-                                       placeholder="e.g., With meals" />
-                            </div>
-                        </div>
-                        <div class="col-md-1">
-                            <div class="form-group">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="button" class="btn btn-danger btn-sm remove-medicine" title="Remove">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            container.appendChild(newRow);
-
-            // Add event listener to remove button
-            newRow.querySelector('.remove-medicine').addEventListener('click', function() {
-                this.closest('.medicine-item').remove();
-                updateMedicineIndexes();
-
-                // Show "no medicines" message if all removed
-                if (container.querySelectorAll('.medicine-item').length === 0) {
-                    container.innerHTML = '<div id="noMedicinesMessage" class="text-center p-3 border rounded"><p class="text-muted mb-0">No medicines added yet</p></div>';
+                    counterSpan.className = '';
                 }
             });
 
-            medicineCounter++;
-        }
+            // Birth date change triggers age calculation
+            const birthDateInput = document.querySelector('input[name="BirthDate"]');
+            const ageInput = document.querySelector('input[name="Age"]');
 
-        function updateMedicineIndexes() {
-            const items = document.querySelectorAll('.medicine-item');
-            items.forEach((item, index) => {
-                const inputs = item.querySelectorAll('input, select');
-                inputs.forEach(input => {
-                    const name = input.getAttribute('name');
-                    if (name) {
-                        const newName = name.replace(/MaintenanceMedicines\[\d+\]/g, `MaintenanceMedicines[${index}]`);
-                        input.setAttribute('name', newName);
+            birthDateInput.addEventListener('change', function() {
+                if (this.value) {
+                    const birthDate = new Date(this.value);
+                    const today = new Date();
+                    let age = today.getFullYear() - birthDate.getFullYear();
+                    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                        age--;
                     }
-                });
-            });
-            medicineCounter = items.length;
-        }
 
-        // Child management functions
-        function setupChildHandlers() {
-            // Add child button
-            document.getElementById('addChildBtn')?.addEventListener('click', addChildRow);
-        }
-
-        function addChildRow() {
-            const container = document.getElementById('childrenListContainer');
-            const noChildrenMsg = document.getElementById('noChildrenMessage');
-
-            if (noChildrenMsg) {
-                noChildrenMsg.remove();
-            }
-
-            const newRow = document.createElement('div');
-            newRow.className = 'child-item card mb-2';
-            newRow.innerHTML = `
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="form-label">Name</label>
-                                <input type="text" class="form-control"
-                                       name="ChildrenList[${childCounter}].Name"
-                                       placeholder="Enter name" />
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label class="form-label">Age</label>
-                                <input type="number" class="form-control"
-                                       name="ChildrenList[${childCounter}].Age"
-                                       placeholder="Age" min="0" max="120" />
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="form-label">Relationship</label>
-                                <select class="form-select"
-                                        name="ChildrenList[${childCounter}].Relationship">
-                                    <option value="">-- Select --</option>
-                                    <option value="Son">Son</option>
-                                    <option value="Daughter">Daughter</option>
-                                    <option value="Grandchild">Grandchild</option>
-                                    <option value="Nephew">Nephew</option>
-                                    <option value="Niece">Niece</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-1">
-                            <div class="form-group">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="button" class="btn btn-danger btn-sm remove-child" title="Remove">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            container.appendChild(newRow);
-
-            // Add event listener to remove button
-            newRow.querySelector('.remove-child').addEventListener('click', function() {
-                this.closest('.child-item').remove();
-                updateChildIndexes();
-
-                // Show "no children" message if all removed
-                if (container.querySelectorAll('.child-item').length === 0) {
-                    container.innerHTML = '<div id="noChildrenMessage" class="text-center p-3 border rounded"><p class="text-muted mb-0">No children/dependents added yet</p></div>';
+                    if (age >= 60 && age <= 120) {
+                        ageInput.value = age;
+                    }
                 }
             });
 
-            childCounter++;
-        }
-
-        function updateChildIndexes() {
-            const items = document.querySelectorAll('.child-item');
-            items.forEach((item, index) => {
-                const inputs = item.querySelectorAll('input, select');
-                inputs.forEach(input => {
-                    const name = input.getAttribute('name');
-                    if (name) {
-                        const newName = name.replace(/ChildrenList\[\d+\]/g, `ChildrenList[${index}]`);
-                        input.setAttribute('name', newName);
+            // Age change triggers estimated birth date
+            ageInput.addEventListener('change', function() {
+                if (this.value && !birthDateInput.value) {
+                    const age = parseInt(this.value);
+                    if (age >= 60 && age <= 120) {
+                        const today = new Date();
+                        const estimatedBirthYear = today.getFullYear() - age;
+                        birthDateInput.value = `${estimatedBirthYear}-01-01`;
                     }
-                });
+                }
             });
-            childCounter = items.length;
-        }
 
-        // Form validation
-        document.getElementById('seniorForm').addEventListener('submit', function(e) {
-            const firstName = document.getElementById('s_firstName').value.trim();
-            const lastName = document.getElementById('s_lastName').value.trim();
-            const sex = document.getElementById('s_sex').value;
-            const dob = document.getElementById('dobField').value;
+            // SCCN input validation on submit
+            const form = document.getElementById('createSeniorForm');
+            form.addEventListener('submit', function(e) {
+                const sccnValue = sccnInput.value.replace(/[^0-9]/g, '');
 
-            let isValid = true;
-            let errorMessage = '';
+                if (sccnValue.length !== 12) {
+                    e.preventDefault();
+                    alert('SCCN number must be exactly 12 digits.');
+                    sccnInput.focus();
+                    return false;
+                }
 
-            if (!firstName) {
-                isValid = false;
-                errorMessage += '• First Name is required\n';
-            }
-            if (!lastName) {
-                isValid = false;
-                errorMessage += '• Last Name is required\n';
-            }
-            if (!sex) {
-                isValid = false;
-                errorMessage += '• Sex is required\n';
-            }
-            if (!dob) {
-                isValid = false;
-                errorMessage += '• Date of Birth is required\n';
-            }
-
-            if (!isValid) {
-                e.preventDefault();
-                showAlert('Please fix the following errors:\n\n' + errorMessage, 'error');
-                return false;
-            }
-
-            // Show loading state
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
-            submitBtn.disabled = true;
-
-            // Re-enable button after 5 seconds in case submission fails
-            setTimeout(() => {
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            }, 5000);
+                // Ensure we submit the raw digits (no dashes)
+                sccnInput.value = sccnValue;
+            });
         });
-
-        // Alert function for popup messages
-        function showAlert(message, type = 'success') {
-            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert ${alertClass} alert-dismissible fade show`;
-            alertDiv.innerHTML = `
-                <strong>${type === 'success' ? 'Success!' : 'Error!'}</strong> ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-
-            const container = document.getElementById('alertContainer');
-            // Clear existing alerts
-            container.innerHTML = '';
-            container.appendChild(alertDiv);
-
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                if (alertDiv.parentElement) {
-                    alertDiv.remove();
-                }
-            }, 5000);
-        }
-
-        // Show TempData messages
-        function showTempDataMessages() {
-            // Check for success message from TempData
-            const successMessage = '@TempData["SuccessMessage"]';
-            if (successMessage && successMessage !== '') {
-                showAlert(successMessage, 'success');
-            }
-
-            // Check for error message from TempData
-            const errorMessage = '@TempData["ErrorMessage"]';
-            if (errorMessage && errorMessage !== '') {
-                showAlert(errorMessage, 'error');
-            }
-        }
     </script>
 }
