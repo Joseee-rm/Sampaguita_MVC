@@ -1,0 +1,540 @@
+﻿@model SeniorManagement.Models.Senior
+
+@{
+    ViewData["Title"] = "";
+}
+
+<div class="container-fluid">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="@Url.Action("Index", "Senior")" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Senior Records
+        </a>
+    </div>
+
+    <!-- Main Card -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">
+                <i class="fas fa-user-circle me-2"></i>Senior Citizen Details
+            </h3>
+            <div class="d-flex gap-2">
+                <a href="@Url.Action("EditSenior", "Senior", new { id = Model.Id })"
+                   class="btn btn-primary btn-sm">
+                    <i class="fas fa-edit me-1"></i> Edit
+                </a>
+                @if (Model.Status == "Active")
+                {
+                    <form method="post" action="@Url.Action("ArchiveSenior", "Senior")"
+                          onsubmit="return confirm('Are you sure you want to archive this senior record?')">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-warning btn-sm">
+                            <i class="fas fa-archive me-1"></i> Archive
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        <div class="card-body">
+            <!-- Status Banner -->
+            <div class="alert @(Model.Status == "Active" ? "alert-success" : "alert-warning") mb-4">
+                <div class="d-flex align-items-center">
+                    <i class="fas @(Model.Status == "Active" ? "fa-check-circle" : "fa-archive") me-2"></i>
+                    <strong>Status:</strong>
+                    <span class="ms-2 badge @(Model.Status == "Active" ? "bg-success" : "bg-warning")">
+                        @Model.Status
+                    </span>
+                    <span class="ms-auto text-muted">
+                        Last Updated: @Model.UpdatedAt.ToString("MMM dd, yyyy hh:mm tt")
+                    </span>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- SCCN Badge -->
+                <div class="col-12 mb-4">
+                    <div class="sccn-display-card">
+                        <div class="sccn-label">SCCN NUMBER</div>
+                        <div class="sccn-number">@Model.FormattedSCCN</div>
+                    </div>
+                </div>
+
+                <!-- Personal Information -->
+                <div class="col-lg-6 mb-4">
+                    <div class="info-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-user me-2"></i>Personal Information
+                        </h5>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Complete Name</span>
+                                <span class="info-value">@Model.CompleteName</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Gender</span>
+                                <span class="info-value">
+                                    <span class="badge @(Model.Gender == "Male" ? "badge-male" : "badge-female")">
+                                        @Model.Gender
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Age</span>
+                                <span class="info-value age-display">@Model.Age years old</span>
+                            </div>
+                            @if (Model.BirthDate.HasValue)
+                            {
+                                <div class="info-item">
+                                    <span class="info-label">Birth Date</span>
+                                    <span class="info-value">@Model.BirthDate.Value.ToString("MMMM dd, yyyy")</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.CivilStatus))
+                            {
+                                <div class="info-item">
+                                    <span class="info-label">Civil Status</span>
+                                    <span class="info-value">@Model.CivilStatus</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact & Location -->
+                <div class="col-lg-6 mb-4">
+                    <div class="info-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-map-marker-alt me-2"></i>Contact & Location
+                        </h5>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Zone</span>
+                                <span class="info-value">
+                                    <span class="zone-display">Zone @Model.Zone</span>
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Barangay</span>
+                                <span class="info-value">@Model.Barangay</span>
+                            </div>
+                            @if (!string.IsNullOrEmpty(Model.ContactNumber))
+                            {
+                                <div class="info-item">
+                                    <span class="info-label">Contact Number</span>
+                                    <span class="info-value">
+                                        <i class="fas fa-phone me-2 text-primary"></i>
+                                        @Model.ContactNumber
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Information -->
+                <div class="col-12">
+                    <div class="info-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-database me-2"></i>System Information
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="system-info-item">
+                                    <span class="system-label">Record Created</span>
+                                    <span class="system-value">@Model.CreatedAt.ToString("MMMM dd, yyyy hh:mm tt")</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="system-info-item">
+                                    <span class="system-label">Last Updated</span>
+                                    <span class="system-value">@Model.UpdatedAt.ToString("MMMM dd, yyyy hh:mm tt")</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="system-info-item">
+                                    <span class="system-label">Senior ID</span>
+                                    <span class="system-value">@Model.Id</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons Footer -->
+        <div class="card-footer d-flex justify-content-between">
+            <div>
+                <a href="@Url.Action("Index", "Senior")" class="btn btn-outline-secondary">
+                    <i class="fas fa-list me-1"></i> Back to List
+                </a>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="@Url.Action("EditSenior", "Senior", new { id = Model.Id })"
+                   class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i> Edit Record
+                </a>
+                @if (Model.Status == "Active")
+                {
+                    <form method="post" action="@Url.Action("ArchiveSenior", "Senior")"
+                          onsubmit="return confirm('Are you sure you want to archive this senior record?')">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-archive me-1"></i> Archive Record
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <form method="post" action="@Url.Action("RestoreSenior", "Senior")"
+                          onsubmit="return confirm('Are you sure you want to restore this senior record?')">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-undo me-1"></i> Restore Record
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        /* Card Styles */
+        .card {
+            border: none;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 150, 243, 0.1);
+            border-radius: 0.75rem;
+            border-left: 4px solid #2196f3;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            color: white;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 1.5rem;
+        }
+
+        .card-footer {
+            background: #f8fbff;
+            border-top: 1px solid #e3f2fd;
+            padding: 1.5rem;
+        }
+
+        /* SCCN Display */
+        .sccn-display-card {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 2px solid #2196f3;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .sccn-label {
+            font-size: 0.875rem;
+            color: #1976d2;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .sccn-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0d47a1;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+
+        /* Info Sections */
+        .info-section {
+            background: white;
+            border: 1px solid #e3f2fd;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            height: 100%;
+        }
+
+        .section-title {
+            color: #1976d2;
+            border-bottom: 2px solid #e3f2fd;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+            .section-title i {
+                color: #2196f3;
+            }
+
+        /* Info Grid */
+        .info-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f8fbff;
+            border-radius: 0.375rem;
+            transition: all 0.2s ease;
+        }
+
+            .info-item:hover {
+                background: #e3f2fd;
+                transform: translateX(5px);
+            }
+
+        .info-label {
+            color: #5c6bc0;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .info-value {
+            color: #1976d2;
+            font-weight: 500;
+        }
+
+        /* Badge Styles */
+        .badge-male {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            color: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .badge-female {
+            background: linear-gradient(135deg, #f06292 0%, #ec407a 100%);
+            color: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .zone-display {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            color: #1565c0;
+            padding: 0.25rem 1rem;
+            border-radius: 1rem;
+            font-weight: 600;
+            border: 1px solid #bbdefb;
+        }
+
+        .age-display {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            color: #2e7d32;
+            padding: 0.25rem 1rem;
+            border-radius: 1rem;
+            font-weight: 600;
+            border: 1px solid #c8e6c9;
+        }
+
+        /* System Information */
+        .system-info-item {
+            text-align: center;
+            padding: 1rem;
+            background: #f8fbff;
+            border-radius: 0.5rem;
+            border: 1px solid #e3f2fd;
+        }
+
+        .system-label {
+            display: block;
+            color: #5c6bc0;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .system-value {
+            display: block;
+            color: #1976d2;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        /* Alert Styles */
+        .alert {
+            border: none;
+            border-radius: 0.5rem;
+            padding: 1rem 1.5rem;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            color: #2e7d32;
+            border-left: 4px solid #4caf50;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            color: #f57c00;
+            border-left: 4px solid #ff9800;
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            border: none;
+        }
+
+            .btn-primary:hover {
+                background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+            }
+
+        .btn-outline-primary {
+            border: 2px solid #2196f3;
+            color: #2196f3;
+        }
+
+            .btn-outline-primary:hover {
+                background: #2196f3;
+                color: white;
+                border-color: #2196f3;
+            }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            border: none;
+        }
+
+            .btn-success:hover {
+                background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+                transform: translateY(-2px);
+            }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            border: none;
+            color: white;
+        }
+
+            .btn-warning:hover {
+                background: linear-gradient(135deg, #f57c00 0%, #ef6c00 100%);
+                transform: translateY(-2px);
+            }
+
+        .btn-outline-secondary {
+            border: 2px solid #78909c;
+            color: #78909c;
+        }
+
+            .btn-outline-secondary:hover {
+                background: #78909c;
+                color: white;
+                border-color: #78909c;
+            }
+
+        /* Responsive Design */
+        @@media (max-width: 768px) {
+            .sccn-number {
+                font-size: 1.5rem;
+            }
+
+            .card-header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .info-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.25rem;
+            }
+
+            .card-footer {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+                .card-footer .d-flex {
+                    width: 100%;
+                    justify-content: stretch;
+                }
+
+                .card-footer .btn {
+                    flex: 1;
+                }
+        }
+
+        /* Animations */
+        @@keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeInUp 0.5s ease-out;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add print functionality
+            const printBtn = document.createElement('button');
+            printBtn.className = 'btn btn-info ms-2';
+            printBtn.innerHTML = '<i class="fas fa-print me-1"></i> Print';
+            printBtn.onclick = function() {
+                window.print();
+            };
+
+            // Add to card header actions
+            const cardHeader = document.querySelector('.card-header .d-flex');
+            if (cardHeader) {
+                cardHeader.appendChild(printBtn);
+            }
+
+            // Add confirmation to archive/restore buttons
+            const archiveForms = document.querySelectorAll('form[onsubmit*="archive"]');
+            archiveForms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    if (!confirm('Are you sure you want to archive this senior record?')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                });
+            });
+
+            const restoreForms = document.querySelectorAll('form[onsubmit*="restore"]');
+            restoreForms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    if (!confirm('Are you sure you want to restore this senior record?')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                });
+            });
+        });
+    </script>
+}

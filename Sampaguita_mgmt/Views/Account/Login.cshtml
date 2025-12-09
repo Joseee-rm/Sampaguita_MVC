@@ -23,7 +23,6 @@
         body {
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /* REMOVED: overflow: hidden; - Allows scrolling */
         }
 
         .login-container {
@@ -33,7 +32,7 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            padding: 20px; /* Added padding for mobile */
+            padding: 20px;
         }
 
         .login-card {
@@ -43,14 +42,14 @@
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
             padding: 3rem;
             width: 100%;
-            max-width: 450px;
+            max-width: 420px;
             margin: 2rem;
             position: relative;
             z-index: 10;
             transform: translateY(0);
             transition: all 0.3s ease;
-            max-height: 95vh; /* Limits height on tall screens */
-            overflow-y: auto; /* Makes card scrollable if content overflows */
+            max-height: 95vh;
+            overflow-y: auto;
         }
 
             .login-card:hover {
@@ -58,7 +57,7 @@
                 box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2);
             }
 
-        /* NEW: Logout Success Toast/Popup */
+        /* Logout Success Toast/Popup */
         .logout-toast {
             position: fixed;
             top: 20px;
@@ -116,57 +115,48 @@
             }
 
         @@keyframes slideIn {
-            from
+            from {
+                transform: translateX(120%);
+            }
 
-        {
-            transform: translateX(120%);
+            to {
+                transform: translateX(0);
+            }
         }
 
-        to {
-            transform: translateX(0);
-        }
+        @@keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
 
-        }
-
-       @@keyframes slideOut {
-            from
-
-        {
-            transform: translateX(0);
-            opacity: 1;
-        }
-
-        to {
-            transform: translateX(120%);
-            opacity: 0;
-        }
-
+            to {
+                transform: translateX(120%);
+                opacity: 0;
+            }
         }
 
         /* Fade in/out animation */
         @@keyframes fadeInOut {
-            0%
+            0% {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
 
-        {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
+            15% {
+                opacity: 1;
+                transform: translateY(0);
+            }
 
-        15% {
-            opacity: 1;
-            transform: translateY(0);
-        }
+            85% {
+                opacity: 1;
+                transform: translateY(0);
+            }
 
-        85% {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        100% {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-
+            100% {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
         }
 
         .logo-section {
@@ -227,29 +217,6 @@
             .form-control::placeholder {
                 color: #a0a0a0;
                 font-weight: 400;
-            }
-
-        .form-select {
-            width: 100%;
-            padding: 14px 16px;
-            border: 2px solid #e1e8ed;
-            border-radius: 12px;
-            font-size: 15px;
-            transition: all 0.3s ease;
-            background: #ffffff;
-            color: #2c3e50;
-            cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 12px center;
-            background-repeat: no-repeat;
-            background-size: 16px;
-        }
-
-            .form-select:focus {
-                border-color: #1e3c72;
-                box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
-                transform: translateY(-2px);
             }
 
         .password-container {
@@ -361,6 +328,12 @@
             border-left: 4px solid #28a745;
         }
 
+        .alert-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
         /* Floating animation for background */
         .floating-bg {
             position: absolute;
@@ -385,7 +358,7 @@
             .login-card {
                 margin: 1rem;
                 padding: 2rem;
-                max-height: 90vh; /* Adjusted for mobile */
+                max-height: 90vh;
             }
 
             .logo-section h1 {
@@ -397,6 +370,14 @@
                 right: 10px;
                 left: 10px;
                 max-width: none;
+            }
+        }
+
+        /* Better mobile scrolling */
+        @@media (max-height: 700px) {
+            .login-card {
+                margin-top: auto;
+                margin-bottom: auto;
             }
         }
 
@@ -418,14 +399,6 @@
             ::-webkit-scrollbar-thumb:hover {
                 background: #2a5298;
             }
-
-        /* NEW: Better mobile scrolling */
-        @@media (max-height: 700px) {
-            .login-card {
-                margin-top: auto;
-                margin-bottom: auto;
-            }
-        }
     </style>
 </head>
 <body>
@@ -433,7 +406,7 @@
         <!-- Background overlay with blue tint -->
         <div class="floating-bg" style="top: -50%; left: -50%;"></div>
 
-        <!-- NEW: Logout Success Toast -->
+        <!-- Logout Success Toast -->
         @if (TempData["LogoutSuccess"] != null && (bool)TempData["LogoutSuccess"])
         {
             <div class="logout-toast" id="logoutToast">
@@ -476,34 +449,26 @@
 
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
+                <!-- Hidden UserRole field (removed dropdown) -->
+                <input type="hidden" asp-for="UserRole" id="UserRole" value="staff" />
+
                 <!-- Username Field -->
                 <div class="form-group">
-                    <label asp-for="Username" class="form-label"></label>
-                    <input asp-for="Username" class="form-control" placeholder="" autocomplete="off" />
+                    <label asp-for="Username" class="form-label">Username</label>
+                    <input asp-for="Username" class="form-control" placeholder="" autocomplete="username" id="Username" />
                     <span asp-validation-for="Username" class="validation-message"></span>
                 </div>
 
                 <!-- Password Field -->
                 <div class="form-group">
-                    <label asp-for="Password" class="form-label"></label>
+                    <label asp-for="Password" class="form-label">Password</label>
                     <div class="password-container">
-                        <input asp-for="Password" type="password" class="form-control" id="passwordField" placeholder="" autocomplete="new-password" />
+                        <input asp-for="Password" type="password" class="form-control" id="passwordField" placeholder="" autocomplete="current-password" />
                         <button type="button" class="password-toggle" id="togglePassword">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
                     <span asp-validation-for="Password" class="validation-message"></span>
-                </div>
-
-                <!-- User Role Dropdown -->
-                <div class="form-group">
-                    <label asp-for="UserRole" class="form-label"></label>
-                    <select asp-for="UserRole" class="form-select" id="UserRole">
-                        <option value="">-- Select Access Level --</option>
-                        <option value="admin">Administrator</option>
-                        <option value="staff">Staff Member</option>
-                    </select>
-                    <span asp-validation-for="UserRole" class="validation-message"></span>
                 </div>
 
                 <!-- Remember Me -->
@@ -527,7 +492,7 @@
             <div class="mt-4 text-center">
                 <small class="text-muted">
                     <i class="fas fa-shield-alt me-1"></i>
-                    For security reasons, please select the appropriate access level and enter your credentials manually.
+                    Please Enter Valid Credentials.
                 </small>
             </div>
         </div>
@@ -550,12 +515,11 @@
             }
         });
 
-        // NEW: Logout Toast Functions
+        // Logout Toast Functions
         function showLogoutToast() {
             const toast = document.getElementById('logoutToast');
             if (toast) {
                 toast.classList.add('show');
-                // Auto-remove after animation completes
                 setTimeout(() => {
                     toast.remove();
                 }, 3000);
@@ -572,92 +536,89 @@
             }
         }
 
+        // Detect user role based on username/email pattern (but don't show it to user)
+        function detectUserRole(username) {
+            const usernameLower = username.toLowerCase().trim();
+
+            // Check for admin patterns
+            if (usernameLower.includes('admin') ||
+                usernameLower.includes('administrator') ||
+                usernameLower.endsWith('@@admin.com') ||
+                usernameLower.includes('supervisor')) {
+                return 'admin';
+            }
+
+            // Check for staff patterns
+            if (usernameLower.includes('staff') ||
+                usernameLower.includes('employee') ||
+                usernameLower.endsWith('@@staff.com') ||
+                usernameLower.includes('user')) {
+                return 'staff';
+            }
+
+            // Default to staff for normal users
+            return 'staff';
+        }
+
+        // Update role in hidden field without showing popup
+        function updateUserRole(username) {
+            const userRoleField = document.getElementById('UserRole');
+            if (username.trim() === '') {
+                userRoleField.value = 'staff'; // Default
+                return;
+            }
+
+            const detectedRole = detectUserRole(username);
+            userRoleField.value = detectedRole;
+        }
+
+        // Username input event listener
+        document.getElementById('Username').addEventListener('input', function(e) {
+            updateUserRole(this.value);
+        });
+
         // Show logout toast on page load if it exists
         document.addEventListener('DOMContentLoaded', function() {
             showLogoutToast();
 
-            // Clear form on page load
-            document.getElementById('loginForm').reset();
-            document.getElementById('Username').focus();
+            // Auto-detect role if username is pre-filled (without showing popup)
+            const usernameInput = document.getElementById('Username');
+            if (usernameInput.value.trim()) {
+                updateUserRole(usernameInput.value);
+            }
+
+            // Focus on username field
+            usernameInput.focus();
         });
 
-        // Prevent autofill when dropdown changes
-        document.getElementById('UserRole').addEventListener('change', function() {
-            // Clear username and password fields
-            document.getElementById('Username').value = '';
-            document.getElementById('passwordField').value = '';
-
-            // Focus on username field for manual entry
-            document.getElementById('Username').focus();
-
-            // Show instruction message
-            const role = this.value;
-            if (role) {
-                showRoleInstruction(role);
-            }
-        });
-
-        // Show instruction based on selected role
-        function showRoleInstruction(role) {
-            // Remove any existing instruction
-            const existingInstruction = document.querySelector('.role-instruction');
-            if (existingInstruction) {
-                existingInstruction.remove();
-            }
-
-            // Create instruction element
-            const instruction = document.createElement('div');
-            instruction.className = 'alert alert-info mt-3 role-instruction';
-            instruction.style.fontSize = '0.85rem';
-            instruction.style.padding = '0.75rem';
-
-            if (role === 'admin') {
-                instruction.innerHTML = '<i class="fas fa-info-circle me-2"></i><strong>Administrator Access:</strong> Please enter your admin credentials manually.';
-            } else if (role === 'staff') {
-                instruction.innerHTML = '<i class="fas fa-info-circle me-2"></i><strong>Staff Access:</strong> Please enter your staff credentials manually.';
-            }
-
-            // Insert after the dropdown
-            const dropdownGroup = document.getElementById('UserRole').closest('.form-group');
-            dropdownGroup.appendChild(instruction);
-        }
-
-        // Form validation before submission
+        // Form submission validation
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             const username = document.getElementById('Username').value.trim();
             const password = document.getElementById('passwordField').value.trim();
-            const userRole = document.getElementById('UserRole').value;
 
-            if (!userRole) {
+            // Basic validation
+            if (!username) {
                 e.preventDefault();
-                alert('Please select an access level.');
+                alert('Please enter your username');
+                document.getElementById('Username').focus();
                 return false;
             }
 
-            if (!username || !password) {
+            if (!password) {
                 e.preventDefault();
-                alert('Please enter both username and password.');
+                alert('Please enter your password');
+                document.getElementById('passwordField').focus();
                 return false;
             }
 
-            // Additional validation for demo accounts
-            if (userRole === 'admin' && username === 'staff') {
+            // Additional security validation
+            if (username.toLowerCase() === 'admin' && password === 'admin') {
                 e.preventDefault();
-                alert('Staff account cannot access admin area. Please select "Staff Member" access level.');
+                alert('Default admin credentials detected. For security, please use your assigned credentials.');
                 return false;
             }
 
-            if (userRole === 'staff' && username === 'admin') {
-                e.preventDefault();
-                alert('Admin account cannot use staff access. Please select "Administrator" access level.');
-                return false;
-            }
-
-            return true;
-        });
-
-        // Form submission loading state
-        document.getElementById('loginForm').addEventListener('submit', function() {
+            // Set loading state
             const loginButton = document.getElementById('loginButton');
             const loginText = document.getElementById('loginText');
             const loginSpinner = document.getElementById('loginSpinner');
@@ -666,40 +627,61 @@
             loginSpinner.classList.remove('d-none');
             loginButton.disabled = true;
 
-            // Re-enable after 3 seconds in case of error
+            // Re-enable after 5 seconds in case of error
             setTimeout(() => {
                 loginText.textContent = 'Login';
                 loginSpinner.classList.add('d-none');
                 loginButton.disabled = false;
-            }, 3000);
+            }, 5000);
+
+            return true;
         });
 
         // Add focus effects
-        document.querySelectorAll('.form-control, .form-select').forEach(element => {
+        document.querySelectorAll('.form-control').forEach(element => {
             element.addEventListener('focus', function() {
-                this.parentElement.classList.add('focused');
+                this.style.transform = 'translateY(-2px)';
             });
 
             element.addEventListener('blur', function() {
-                this.parentElement.classList.remove('focused');
+                this.style.transform = 'translateY(0)';
             });
         });
 
-        // Add some interactive background effects
+        // Add interactive background effects
         document.addEventListener('mousemove', function(e) {
             const floatingBg = document.querySelector('.floating-bg');
             const x = (e.clientX / window.innerWidth) * 10;
             const y = (e.clientY / window.innerHeight) * 10;
-            floatingBg.style.transform = `translate(${x}px, ${y}px)`;
+            floatingBg.style.transform = `translate(${x}px, ${y}px) rotate(0.5deg)`;
         });
 
-        // NEW: Make card scrollable when keyboard appears on mobile
+        // Make card scrollable when keyboard appears on mobile
         document.addEventListener('focusin', function(e) {
-            if (window.innerWidth <= 576 && (e.target.matches('input') || e.target.matches('select'))) {
+            if (window.innerWidth <= 576 && (e.target.matches('input'))) {
                 setTimeout(() => {
                     const loginCard = document.querySelector('.login-card');
                     loginCard.scrollTop = loginCard.scrollHeight;
                 }, 300);
+            }
+        });
+
+        // Handle Enter key to submit form
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.target.matches('textarea')) {
+                const activeElement = document.activeElement;
+                if (activeElement.matches('input') && !activeElement.matches('button')) {
+                    e.preventDefault();
+                    document.getElementById('loginForm').requestSubmit();
+                }
+            }
+        });
+
+        // Clear form on page load (prevent autofill issues)
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                document.getElementById('loginForm').reset();
+                document.getElementById('Username').focus();
             }
         });
     </script>

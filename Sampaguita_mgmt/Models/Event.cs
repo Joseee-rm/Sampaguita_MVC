@@ -1,62 +1,97 @@
-﻿// Models/Event.cs
+﻿// Models/Event.cs - Complete Fixed Version
 using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SeniorManagement.Models
 {
     public class Event
     {
         public int Id { get; set; }
-        public string EventTitle { get; set; }          
-        public string EventDescription { get; set; }     
+
+        [Required(ErrorMessage = "Event title is required")]
+        [Display(Name = "Event Title")]
+        [StringLength(200)]
+        public string EventTitle { get; set; }
+
+        [Required(ErrorMessage = "Event description is required")]
+        [Display(Name = "Event Description")]
+        public string EventDescription { get; set; }
+
+        [Required(ErrorMessage = "Event type is required")]
+        [Display(Name = "Event Type")]
         public string EventType { get; set; }
+
+        [Required(ErrorMessage = "Event date is required")]
+        [Display(Name = "Event Date")]
+        [DataType(DataType.Date)]
         public DateTime EventDate { get; set; }
-        public TimeSpan EventTime { get; set; }          
-        public string EventLocation { get; set; }       
-        public string OrganizedBy { get; set; }         
-        public int? MaxCapacity { get; set; }            
-        public int AttendanceCount { get; set; }      
-        public string Status { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
-        public bool IsDeleted { get; set; }
-        public DateTime? DeletedAt { get; set; }         
 
-        // Computed properties for view
-        public bool IsFull => MaxCapacity.HasValue && MaxCapacity > 0 && AttendanceCount >= MaxCapacity.Value;
-        public int AvailableSpots => MaxCapacity.HasValue && MaxCapacity > 0 ? MaxCapacity.Value - AttendanceCount : 0;
-        public string DateFormatted => EventDate.ToString("MMM dd, yyyy");
-        public string TimeFormatted => EventTime.ToString(@"hh\:mm");
+        [Required(ErrorMessage = "Event time is required")]
+        [Display(Name = "Event Time")]
+        [DataType(DataType.Time)]
+        public TimeSpan EventTime { get; set; }
 
-        public string StartTime => EventTime.ToString(@"hh\:mm");
-        public string EndTime => EventTime.ToString(@"hh\:mm");
+        [Required(ErrorMessage = "Event location is required")]
+        [Display(Name = "Event Location")]
+        public string EventLocation { get; set; }
 
-        public string StatusColor
+        [Required(ErrorMessage = "Organizer is required")]
+        [Display(Name = "Organized By")]
+        public string OrganizedBy { get; set; }
+
+        [Display(Name = "Maximum Capacity")]
+        [Range(0, int.MaxValue)]
+        public int? MaxCapacity { get; set; }
+
+        [Display(Name = "Attendance Count")]
+        [Range(0, int.MaxValue)]
+        public int AttendanceCount { get; set; } = 0;
+
+        [Display(Name = "Status")]
+        public string Status { get; set; } = "Scheduled";
+
+        public bool IsDeleted { get; set; } = false;
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? DeletedAt { get; set; }
+
+        // Display properties (not stored in database)
+        [NotMapped]
+        public string TimeFormatted
         {
             get
             {
-                return Status switch
+                try
                 {
-                    "Scheduled" => "info",
-                    "Ongoing" => "warning",
-                    "Completed" => "success",
-                    "Cancelled" => "danger",
-                    _ => "secondary"
-                };
+                    var time = DateTime.Today.Add(EventTime);
+                    return time.ToString("h:mm tt");
+                }
+                catch
+                {
+                    return EventTime.ToString(@"hh\:mm");
+                }
             }
         }
 
-        public string StatusIcon
+        [NotMapped]
+        public string DateTimeFormatted
         {
             get
             {
-                return Status switch
+                try
                 {
-                    "Scheduled" => "fa-calendar-check",
-                    "Ongoing" => "fa-play-circle",
-                    "Completed" => "fa-check-circle",
-                    "Cancelled" => "fa-times-circle",
-                    _ => "fa-calendar"
-                };
+                    var dateTime = EventDate.Add(EventTime);
+                    return dateTime.ToString("MMM dd, yyyy") + " at " +
+                           dateTime.ToString("h:mm tt");
+                }
+                catch
+                {
+                    return $"{EventDate:MMM dd, yyyy} at {EventTime:hh\\:mm}";
+                }
             }
         }
     }

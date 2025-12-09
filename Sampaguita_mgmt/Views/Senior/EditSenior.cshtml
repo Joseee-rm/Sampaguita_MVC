@@ -17,29 +17,65 @@
             <input type="hidden" asp-for="Id" />
             <input type="hidden" asp-for="CreatedAt" />
             <input type="hidden" asp-for="Status" />
-            <input type="hidden" asp-for="UpdatedAt" />
+            <input type="hidden" asp-for="Barangay" />
 
-            <h5 class="mb-3 text-primary"><i class="fas fa-user me-2"></i>Personal Information</h5>
+            <h5 class="mb-3 text-primary"><i class="fas fa-id-card me-2"></i>Senior Information</h5>
 
+            <!-- SCCN Number -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="SeniorId" class="form-label">SCCN Number *</label>
+                        <div class="input-group">
+                            <input asp-for="SeniorId" class="form-control"
+                                   placeholder="Enter 12-digit SCCN number"
+                                   required
+                                   id="seniorIdInput"
+                                   pattern="\d{12}"
+                                   maxlength="12"
+                                   title="Exactly 12 digits (numbers only)" readonly />
+                            <button type="button" class="btn btn-outline-info" id="formatBtn" title="Format SCCN number">
+                                <i class="fas fa-magic"></i>
+                            </button>
+                        </div>
+                        <span asp-validation-for="SeniorId" class="text-danger"></span>
+                        <div id="seniorIdStatus" class="mt-1">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                Formatted: <span id="formattedSCCN">@Model.FormattedSCCN</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-info">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <strong>SCCN Note:</strong> This field cannot be edited once created.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personal Information -->
             <div class="row">
                 <div class="col-md-4">
                     <div class="form-group mb-3">
-                        <label asp-for="s_firstName" class="form-label">First Name *</label>
-                        <input asp-for="s_firstName" class="form-control" placeholder="Enter first name" required />
-                        <span asp-validation-for="s_firstName" class="text-danger"></span>
+                        <label asp-for="FirstName" class="form-label">First Name *</label>
+                        <input asp-for="FirstName" class="form-control" placeholder="Enter first name" required />
+                        <span asp-validation-for="FirstName" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="form-group mb-3">
-                        <label asp-for="s_middleName" class="form-label">Middle Name</label>
-                        <input asp-for="s_middleName" class="form-control" placeholder="Enter middle name" />
+                        <label asp-for="LastName" class="form-label">Last Name *</label>
+                        <input asp-for="LastName" class="form-control" placeholder="Enter last name" required />
+                        <span asp-validation-for="LastName" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="form-group mb-3">
-                        <label asp-for="s_lastName" class="form-label">Last Name *</label>
-                        <input asp-for="s_lastName" class="form-control" placeholder="Enter last name" required />
-                        <span asp-validation-for="s_lastName" class="text-danger"></span>
+                        <label asp-for="MiddleInitial" class="form-label">Middle Initial</label>
+                        <input asp-for="MiddleInitial" class="form-control" placeholder="Enter middle initial" maxlength="1" />
+                        <span asp-validation-for="MiddleInitial" class="text-danger"></span>
                     </div>
                 </div>
             </div>
@@ -47,449 +83,100 @@
             <div class="row">
                 <div class="col-md-3">
                     <div class="form-group mb-3">
-                        <label asp-for="s_sex" class="form-label">Sex *</label>
-                        <select asp-for="s_sex" class="form-select" required>
-                            <option value="">-- Select Sex --</option>
+                        <label asp-for="Gender" class="form-label">Gender *</label>
+                        <select asp-for="Gender" class="form-select" required>
+                            <option value="">-- Select Gender --</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
                             <option value="Other">Other</option>
                         </select>
-                        <span asp-validation-for="s_sex" class="text-danger"></span>
+                        <span asp-validation-for="Gender" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group mb-3">
-                        <label asp-for="s_dob" class="form-label">Date of Birth *</label>
-                        <input asp-for="s_dob" type="date" class="form-control" id="dobField" required />
-                        <span asp-validation-for="s_dob" class="text-danger"></span>
+                        <label asp-for="BirthDate" class="form-label">Birth Date</label>
+                        <input asp-for="BirthDate" type="date" class="form-control" id="birthDateField" />
+                        <span asp-validation-for="BirthDate" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group mb-3">
-                        <label class="form-label">Age</label>
-                        <input type="text" class="form-control" id="ageField" value="@Model.s_age" readonly />
+                        <label asp-for="Age" class="form-label">Age *</label>
+                        <input asp-for="Age" type="number" class="form-control" id="ageField"
+                               placeholder="Enter age" min="60" max="120" required />
+                        <span asp-validation-for="Age" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group mb-3">
-                        <label asp-for="s_bloodtype" class="form-label">Blood Type</label>
-                        <select asp-for="s_bloodtype" class="form-select">
-                            <option value="">-- Select Blood Type --</option>
-                            <option value="A+">A+</option>
-                            <option value="A-">A-</option>
-                            <option value="B+">B+</option>
-                            <option value="B-">B-</option>
-                            <option value="AB+">AB+</option>
-                            <option value="AB-">AB-</option>
-                            <option value="O+">O+</option>
-                            <option value="O-">O-</option>
+                        <label asp-for="CivilStatus" class="form-label">Civil Status</label>
+                        <select asp-for="CivilStatus" class="form-select">
+                            <option value="">-- Select Status --</option>
+                            <option value="Single">Single</option>
+                            <option value="Married">Married</option>
+                            <option value="Widowed">Widowed</option>
+                            <option value="Separated">Separated</option>
+                            <option value="Divorced">Divorced</option>
                         </select>
                     </div>
                 </div>
             </div>
 
+            <!-- Contact Information -->
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group mb-3">
-                        <label asp-for="s_contact" class="form-label">Contact Number</label>
-                        <input asp-for="s_contact" class="form-control" placeholder="Enter contact number" />
-                        <span asp-validation-for="s_contact" class="text-danger"></span>
+                        <label asp-for="ContactNumber" class="form-label">Contact Number</label>
+                        <input asp-for="ContactNumber" class="form-control" placeholder="Enter contact number" />
+                        <span asp-validation-for="ContactNumber" class="text-danger"></span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-3">
                     <div class="form-group mb-3">
-                        <label asp-for="s_barangay" class="form-label">Barangay</label>
-                        <input asp-for="s_barangay" class="form-control" placeholder="Enter barangay" />
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_guardian_zone" class="form-label">Guardian Zone/Street</label>
-                        <input asp-for="s_guardian_zone" class="form-control" placeholder="Enter zone/street" />
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_religion" class="form-label">Religion</label>
-                        <input asp-for="s_religion" class="form-control" placeholder="Enter religion" />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Health Information Section -->
-            <h5 class="mb-3 text-primary mt-4"><i class="fas fa-heartbeat me-2"></i>Health Information</h5>
-
-            <!-- Health Problems -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_health_problems_option" class="form-label">Do you have any health problems?</label>
-                        <select asp-for="s_health_problems_option" class="form-select health-option" data-target="health-problems">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="health-problems-details">
-                        <label asp-for="s_health_problems" class="form-label">Specify health problems</label>
-                        <textarea asp-for="s_health_problems" class="form-control" rows="3" placeholder="Please specify health problems..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Maintenance Medicines -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_maintenance_option" class="form-label">Do you take maintenance medicines?</label>
-                        <select asp-for="s_maintenance_option" class="form-select health-option" data-target="maintenance" id="maintenanceOption">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="maintenance-details">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label">Medicines & Schedule</label>
-                            <button type="button" class="btn btn-sm btn-primary" id="addMedicineBtn">
-                                <i class="fas fa-plus"></i> Add Medicine
-                            </button>
-                        </div>
-
-                        <div id="medicineListContainer">
-                            @if (Model.MaintenanceMedicines != null && Model.MaintenanceMedicines.Any())
+                        <label asp-for="Zone" class="form-label">Zone *</label>
+                        <select asp-for="Zone" class="form-select" required>
+                            <option value="">-- Select Zone --</option>
+                            @for (int i = 1; i <= 7; i++)
                             {
-                                for (int i = 0; i < Model.MaintenanceMedicines.Count; i++)
-                                {
-                                    <div class="medicine-item card mb-2">
-                                        <div class="card-body">
-                                            <input type="hidden" name="MaintenanceMedicines[@i].Id" value="@Model.MaintenanceMedicines[i].Id" />
-                                            <input type="hidden" name="MaintenanceMedicines[@i].SeniorId" value="@Model.MaintenanceMedicines[i].SeniorId" />
-                                            <div class="row">
-                                                <div class="col-md-3">
-                                                    <div class="form-group">
-                                                        <label class="form-label">Medicine Name</label>
-                                                        <input type="text" class="form-control"
-                                                               name="MaintenanceMedicines[@i].MedicineName"
-                                                               value="@Model.MaintenanceMedicines[i].MedicineName"
-                                                               placeholder="e.g., Metformin" />
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-group">
-                                                        <label class="form-label">Dosage</label>
-                                                        <input type="text" class="form-control"
-                                                               name="MaintenanceMedicines[@i].Dosage"
-                                                               value="@Model.MaintenanceMedicines[i].Dosage"
-                                                               placeholder="e.g., 500mg" />
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <div class="form-group">
-                                                        <label class="form-label">Schedule</label>
-                                                        <select class="form-select"
-                                                                name="MaintenanceMedicines[@i].Schedule">
-                                                            <option value="">-- Select --</option>
-                                                            <option value="Once daily" selected="@(Model.MaintenanceMedicines[i].Schedule == "Once daily")">Once daily</option>
-                                                            <option value="Twice daily" selected="@(Model.MaintenanceMedicines[i].Schedule == "Twice daily")">Twice daily</option>
-                                                            <option value="Three times daily" selected="@(Model.MaintenanceMedicines[i].Schedule == "Three times daily")">Three times daily</option>
-                                                            <option value="Four times daily" selected="@(Model.MaintenanceMedicines[i].Schedule == "Four times daily")">Four times daily</option>
-                                                            <option value="Every 6 hours" selected="@(Model.MaintenanceMedicines[i].Schedule == "Every 6 hours")">Every 6 hours</option>
-                                                            <option value="Every 8 hours" selected="@(Model.MaintenanceMedicines[i].Schedule == "Every 8 hours")">Every 8 hours</option>
-                                                            <option value="Every 12 hours" selected="@(Model.MaintenanceMedicines[i].Schedule == "Every 12 hours")">Every 12 hours</option>
-                                                            <option value="Weekly" selected="@(Model.MaintenanceMedicines[i].Schedule == "Weekly")">Weekly</option>
-                                                            <option value="As needed" selected="@(Model.MaintenanceMedicines[i].Schedule == "As needed")">As needed</option>
-                                                            <option value="Other" selected="@(Model.MaintenanceMedicines[i].Schedule == "Other")">Other</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <div class="form-group">
-                                                        <label class="form-label">Instructions</label>
-                                                        <input type="text" class="form-control"
-                                                               name="MaintenanceMedicines[@i].Instructions"
-                                                               value="@Model.MaintenanceMedicines[i].Instructions"
-                                                               placeholder="e.g., With meals" />
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-1">
-                                                    <div class="form-group">
-                                                        <label class="form-label">&nbsp;</label>
-                                                        <button type="button" class="btn btn-danger btn-sm remove-medicine" title="Remove">
-                                                            <i class="fas fa-times"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
+                                <option value="@i">Zone @i</option>
                             }
-                            else
-                            {
-                                <div id="noMedicinesMessage" class="text-center p-3 border rounded">
-                                    <p class="text-muted mb-0">No medicines added yet</p>
-                                </div>
-                            }
-                        </div>
-
-                        <div class="mt-3">
-                            <label asp-for="s_maintenance" class="form-label">Or enter medicines as text:</label>
-                            <textarea asp-for="s_maintenance" class="form-control" rows="2" placeholder="List medicines and schedule (optional)"></textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Disability -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_disability_option" class="form-label">Do you have any disability?</label>
-                        <select asp-for="s_disability_option" class="form-select health-option" data-target="disability">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
                         </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="disability-details">
-                        <label asp-for="s_disability" class="form-label">Specify disability</label>
-                        <textarea asp-for="s_disability" class="form-control" rows="2" placeholder="Please specify disability..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Visual Problems -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_visual_option" class="form-label">Do you have visual problems?</label>
-                        <select asp-for="s_visual_option" class="form-select health-option" data-target="visual">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="visual-details">
-                        <label asp-for="s_visual" class="form-label">Specify visual issues</label>
-                        <textarea asp-for="s_visual" class="form-control" rows="2" placeholder="Please specify visual issues..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Hearing Problems -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_hearing_option" class="form-label">Do you have hearing problems?</label>
-                        <select asp-for="s_hearing_option" class="form-select health-option" data-target="hearing">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="hearing-details">
-                        <label asp-for="s_hearing" class="form-label">Specify hearing issues</label>
-                        <textarea asp-for="s_hearing" class="form-control" rows="2" placeholder="Please specify hearing issues..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Emotional Conditions -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="s_emotional_option" class="form-label">Do you have emotional conditions?</label>
-                        <select asp-for="s_emotional_option" class="form-select health-option" data-target="emotional">
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group health-details" id="emotional-details">
-                        <label asp-for="s_emotional" class="form-label">Specify emotional conditions</label>
-                        <textarea asp-for="s_emotional" class="form-control" rows="2" placeholder="Please specify emotional conditions..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Family Information Section -->
-            <h5 class="mb-3 text-primary mt-4"><i class="fas fa-home me-2"></i>Family Information</h5>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_spouse" class="form-label">Spouse Name</label>
-                        <input asp-for="s_spouse" class="form-control" placeholder="Enter spouse name" />
+                        <span asp-validation-for="Zone" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group mb-3">
-                        <label asp-for="s_spouse_age" class="form-label">Spouse Age</label>
-                        <input asp-for="s_spouse_age" type="number" class="form-control" placeholder="Age" min="0" max="120" />
-                        <span asp-validation-for="s_spouse_age" class="text-danger"></span>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_spouse_contact" class="form-label">Spouse Contact</label>
-                        <input asp-for="s_spouse_contact" class="form-control" placeholder="Contact number" />
-                        <span asp-validation-for="s_spouse_contact" class="text-danger"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_spouse_occupation" class="form-label">Spouse Occupation</label>
-                        <input asp-for="s_spouse_occupation" class="form-control" placeholder="Enter occupation" />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Children/Dependents with Plus Button -->
-            <div class="form-group mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <label class="form-label">Children/Dependents Information</label>
-                    <button type="button" class="btn btn-sm btn-primary" id="addChildBtn">
-                        <i class="fas fa-plus"></i> Add Child/Dependent
-                    </button>
-                </div>
-
-                <div id="childrenListContainer">
-                    @if (Model.ChildrenList != null && Model.ChildrenList.Any())
-                    {
-                        for (int i = 0; i < Model.ChildrenList.Count; i++)
-                        {
-                            <div class="child-item card mb-2">
-                                <div class="card-body">
-                                    <input type="hidden" name="ChildrenList[@i].Id" value="@Model.ChildrenList[i].Id" />
-                                    <input type="hidden" name="ChildrenList[@i].SeniorId" value="@Model.ChildrenList[i].SeniorId" />
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label class="form-label">Name</label>
-                                                <input type="text" class="form-control"
-                                                       name="ChildrenList[@i].Name"
-                                                       value="@Model.ChildrenList[i].Name"
-                                                       placeholder="Enter name" />
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-group">
-                                                <label class="form-label">Age</label>
-                                                <input type="number" class="form-control"
-                                                       name="ChildrenList[@i].Age"
-                                                       value="@(Model.ChildrenList[i].Age.HasValue ? Model.ChildrenList[i].Age.Value.ToString() : "")"
-                                                       placeholder="Age" min="0" max="120" />
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label class="form-label">Relationship</label>
-                                                <select class="form-select"
-                                                        name="ChildrenList[@i].Relationship">
-                                                    <option value="">-- Select --</option>
-                                                    <option value="Son" selected="@(Model.ChildrenList[i].Relationship == "Son")">Son</option>
-                                                    <option value="Daughter" selected="@(Model.ChildrenList[i].Relationship == "Daughter")">Daughter</option>
-                                                    <option value="Grandchild" selected="@(Model.ChildrenList[i].Relationship == "Grandchild")">Grandchild</option>
-                                                    <option value="Nephew" selected="@(Model.ChildrenList[i].Relationship == "Nephew")">Nephew</option>
-                                                    <option value="Niece" selected="@(Model.ChildrenList[i].Relationship == "Niece")">Niece</option>
-                                                    <option value="Other" selected="@(Model.ChildrenList[i].Relationship == "Other")">Other</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-1">
-                                            <div class="form-group">
-                                                <label class="form-label">&nbsp;</label>
-                                                <button type="button" class="btn btn-danger btn-sm remove-child" title="Remove">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    }
-                    else
-                    {
-                        <div id="noChildrenMessage" class="text-center p-3 border rounded">
-                            <p class="text-muted mb-0">No children/dependents added yet</p>
+                        <label class="form-label">Barangay</label>
+                        <input type="text" class="form-control" value="Sampaguita" readonly />
+                        <div class="form-text">
+                            <small class="text-muted">Fixed value as per requirement</small>
                         </div>
-                    }
-                </div>
-
-               
-
-            <!-- Guardian/Emergency Contact Section -->
-            <h5 class="mb-3 text-primary mt-4"><i class="fas fa-phone-alt me-2"></i>Guardian/Emergency Contact</h5>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_guardian_name" class="form-label">Guardian Name</label>
-                        <input asp-for="s_guardian_name" class="form-control" placeholder="Enter guardian name" />
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_guardian_relationship" class="form-label">Relationship</label>
-                        <select asp-for="s_guardian_relationship" class="form-select" id="guardianRelationship">
-                            <option value="">-- Select Relationship --</option>
-                            <option value="Spouse">Spouse</option>
-                            <option value="Child">Child</option>
-                            <option value="Son">Son</option>
-                            <option value="Daughter">Daughter</option>
-                            <option value="Grandchild">Grandchild</option>
-                            <option value="Sibling">Sibling</option>
-                            <option value="Brother">Brother</option>
-                            <option value="Sister">Sister</option>
-                            <option value="Nephew">Nephew</option>
-                            <option value="Niece">Niece</option>
-                            <option value="Friend">Friend</option>
-                            <option value="Neighbor">Neighbor</option>
-                            <option value="Other">Other</option>
-                        </select>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3" id="otherRelationshipContainer">
-                        <label asp-for="s_guardian_relationship_other" class="form-label">Specify Relationship</label>
-                        <input asp-for="s_guardian_relationship_other" class="form-control" placeholder="Please specify relationship" />
-                    </div>
+            <!-- Summary Card -->
+            <div class="card mt-4 mb-4 border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Record Summary</h6>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_guardian_contact" class="form-label">Guardian Contact</label>
-                        <input asp-for="s_guardian_contact" class="form-control" placeholder="Enter contact number" />
-                        <span asp-validation-for="s_guardian_contact" class="text-danger"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group mb-3">
-                        <label asp-for="s_guardian_address" class="form-label">Guardian Address</label>
-                        <textarea asp-for="s_guardian_address" class="form-control" rows="3" placeholder="Enter complete address"></textarea>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p><strong>Senior ID:</strong> <span id="summarySeniorId">@Model.SeniorId</span></p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Full Name:</strong> <span id="summaryFullName">@Model.CompleteName</span></p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Zone:</strong> <span id="summaryZone">@Model.Zone</span></p>
+                        </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Form Actions -->
             <div class="form-group mt-4">
                 <button type="submit" class="btn btn-primary me-2">
                     <i class="fas fa-save"></i> Update Senior Record
@@ -497,383 +184,337 @@
                 <a asp-action="Index" class="btn btn-secondary">
                     <i class="fas fa-times"></i> Cancel
                 </a>
+                <button type="button" class="btn btn-outline-info" id="previewBtn">
+                    <i class="fas fa-eye"></i> Preview
+                </button>
             </div>
         </form>
     </div>
 </div>
 
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="previewModalLabel">
+                    <i class="fas fa-eye me-2"></i>Record Preview
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th width="30%">SCCN Number</th>
+                                <td id="previewSeniorId">@Model.FormattedSCCN</td>
+                            </tr>
+                            <tr>
+                                <th>Full Name</th>
+                                <td id="previewFullName">@Model.CompleteName</td>
+                            </tr>
+                            <tr>
+                                <th>Gender</th>
+                                <td id="previewGender">@Model.Gender</td>
+                            </tr>
+                            <tr>
+                                <th>Age</th>
+                                <td id="previewAge">@Model.Age</td>
+                            </tr>
+                            <tr>
+                                <th>Birth Date</th>
+                                <td id="previewBirthDate">
+                                    @if (Model.BirthDate.HasValue)
+                                    {
+                                        @Model.BirthDate.Value.ToString("MMMM dd, yyyy")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not specified</span>
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Civil Status</th>
+                                <td id="previewCivilStatus">@Model.CivilStatus</td>
+                            </tr>
+                            <tr>
+                                <th>Contact Number</th>
+                                <td id="previewContact">@(string.IsNullOrEmpty(Model.ContactNumber) ? "Not specified" : Model.ContactNumber)</td>
+                            </tr>
+                            <tr>
+                                <th>Zone</th>
+                                <td id="previewZone">Zone @Model.Zone</td>
+                            </tr>
+                            <tr>
+                                <th>Barangay</th>
+                                <td id="previewBarangay">@Model.Barangay</td>
+                            </tr>
+                            <tr>
+                                <th>Status</th>
+                                <td>
+                                    <span class="badge @(Model.Status == "Active" ? "bg-success" : "bg-warning")">
+                                        @Model.Status
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('seniorForm').submit()">
+                    <i class="fas fa-check"></i> Confirm Update
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
-        // Medicine counter
-        let medicineCounter = @(Model.MaintenanceMedicines?.Count ?? 0);
-        // Child counter
-        let childCounter = @(Model.ChildrenList?.Count ?? 0);
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeFormValidation();
+            setupRealTimeUpdates();
+            setupSCCNFormatting();
+            showTempDataMessages();
 
-        // Calculate age when date of birth changes
-        function calculateAge() {
-            const dob = new Date(document.getElementById('dobField').value);
-            if (isNaN(dob.getTime())) return;
+            // Set max date to today for birth date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('birthDateField').max = today;
 
+            // Auto-calculate age when birth date changes
+            document.getElementById('birthDateField').addEventListener('change', calculateAgeFromDate);
+
+            // Calculate age on load if birth date exists
+            if (document.getElementById('birthDateField').value) {
+                calculateAgeFromDate();
+            }
+        });
+
+        // Setup real-time form updates
+        function setupRealTimeUpdates() {
+            const fields = [
+                'FirstName', 'LastName', 'MiddleInitial',
+                'Gender', 'BirthDate', 'Zone', 'Age',
+                'ContactNumber', 'CivilStatus'
+            ];
+
+            fields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element) {
+                    element.addEventListener('input', updateSummary);
+                    element.addEventListener('change', updateSummary);
+                }
+            });
+
+            // Initial update
+            updateSummary();
+        }
+
+        // Update summary card
+        function updateSummary() {
+            const firstName = document.getElementById('FirstName').value || '';
+            const lastName = document.getElementById('LastName').value || '';
+            const middleInitial = document.getElementById('MiddleInitial').value || '';
+            const zone = document.getElementById('Zone').value || 'Not set';
+
+            document.getElementById('summaryZone').textContent = zone;
+
+            let fullName = '';
+            if (firstName || lastName) {
+                fullName = `${firstName} ${lastName}`.trim();
+                if (middleInitial) {
+                    fullName = `${firstName} ${middleInitial}. ${lastName}`.trim();
+                }
+            } else {
+                fullName = 'Not set';
+            }
+
+            document.getElementById('summaryFullName').textContent = fullName;
+        }
+
+        // Setup SCCN formatting
+        function setupSCCNFormatting() {
+            const formatBtn = document.getElementById('formatBtn');
+
+            if (formatBtn) {
+                formatBtn.addEventListener('click', function() {
+                    const seniorId = document.getElementById('seniorIdInput').value;
+                    if (seniorId.length === 12) {
+                        const formatted = formatSCCNNumber(seniorId);
+                        document.getElementById('formattedSCCN').textContent = formatted;
+                        showAlert(`SCCN formatted: ${formatted}`, 'info');
+                    }
+                });
+            }
+        }
+
+        // Format SCCN number with dashes
+        function formatSCCNNumber(sccn) {
+            if (!sccn || sccn.length !== 12) return sccn;
+            return `${sccn.substring(0, 3)}-${sccn.substring(3, 6)}-${sccn.substring(6, 9)}-${sccn.substring(9, 12)}`;
+        }
+
+        // Calculate age from birth date
+        function calculateAgeFromDate() {
+            const birthDateField = document.getElementById('birthDateField');
+            const ageField = document.getElementById('ageField');
+
+            if (!birthDateField.value) {
+                return;
+            }
+
+            const birthDate = new Date(birthDateField.value);
             const today = new Date();
-            let age = today.getFullYear() - dob.getFullYear();
-            const monthDiff = today.getMonth() - dob.getMonth();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
 
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
                 age--;
             }
 
-            document.getElementById('ageField').value = age;
+            ageField.value = age;
         }
 
-        document.getElementById('dobField').addEventListener('change', calculateAge);
+        // Setup form validation
+        function initializeFormValidation() {
+            const form = document.getElementById('seniorForm');
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set max date to today
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('dobField').max = today;
-
-            calculateAge();
-            initializeHealthSections();
-            initializeGuardianRelationship();
-            showTempDataMessages();
-            setupMedicineHandlers();
-            setupChildHandlers();
-        });
-
-        // Health information toggle functionality
-        function initializeHealthSections() {
-            document.querySelectorAll('.health-option').forEach(select => {
-                const target = select.getAttribute('data-target');
-                const detailsDiv = document.getElementById(target + '-details');
-
-                function toggleDetails() {
-                    if (select.value === 'Yes') {
-                        detailsDiv.style.display = 'block';
-                        // Make textarea required when shown
-                        const textarea = detailsDiv.querySelector('textarea');
-                        if (textarea) textarea.required = true;
-                    } else {
-                        detailsDiv.style.display = 'none';
-                        // Remove required when hidden
-                        const textarea = detailsDiv.querySelector('textarea');
-                        if (textarea) {
-                            textarea.required = false;
-                        }
-                    }
-                }
-
-                select.addEventListener('change', toggleDetails);
-                toggleDetails(); // Initial toggle
-            });
-        }
-
-        // Guardian relationship toggle
-        function initializeGuardianRelationship() {
-            const relationshipSelect = document.getElementById('guardianRelationship');
-            const otherContainer = document.getElementById('otherRelationshipContainer');
-
-            function toggleOtherRelationship() {
-                if (relationshipSelect.value === 'Other') {
-                    otherContainer.style.display = 'block';
-                    const input = otherContainer.querySelector('input');
-                    if (input) input.required = true;
-                } else {
-                    otherContainer.style.display = 'none';
-                    const input = otherContainer.querySelector('input');
-                    if (input) {
-                        input.required = false;
-                    }
-                }
-            }
-
-            relationshipSelect.addEventListener('change', toggleOtherRelationship);
-            toggleOtherRelationship(); // Initial toggle
-        }
-
-        // Medicine management functions
-        function setupMedicineHandlers() {
-            // Add medicine button
-            document.getElementById('addMedicineBtn')?.addEventListener('click', addMedicineRow);
-
-            // Remove medicine buttons
-            document.querySelectorAll('.remove-medicine').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    this.closest('.medicine-item').remove();
-                    updateMedicineIndexes();
-
-                    // Show "no medicines" message if all removed
-                    const container = document.getElementById('medicineListContainer');
-                    if (container.querySelectorAll('.medicine-item').length === 0) {
-                        container.innerHTML = '<div id="noMedicinesMessage" class="text-center p-3 border rounded"><p class="text-muted mb-0">No medicines added yet</p></div>';
-                    }
-                });
-            });
-        }
-
-        function addMedicineRow() {
-            const container = document.getElementById('medicineListContainer');
-            const noMedicinesMsg = document.getElementById('noMedicinesMessage');
-
-            if (noMedicinesMsg) {
-                noMedicinesMsg.remove();
-            }
-
-            const newRow = document.createElement('div');
-            newRow.className = 'medicine-item card mb-2';
-            newRow.innerHTML = `
-                <div class="card-body">
-                    <input type="hidden" name="MaintenanceMedicines[${medicineCounter}].Id" value="0" />
-                    <input type="hidden" name="MaintenanceMedicines[${medicineCounter}].SeniorId" value="@Model.Id" />
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label class="form-label">Medicine Name</label>
-                                <input type="text" class="form-control"
-                                       name="MaintenanceMedicines[${medicineCounter}].MedicineName"
-                                       placeholder="e.g., Metformin" />
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="form-group">
-                                <label class="form-label">Dosage</label>
-                                <input type="text" class="form-control"
-                                       name="MaintenanceMedicines[${medicineCounter}].Dosage"
-                                       placeholder="e.g., 500mg" />
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label class="form-label">Schedule</label>
-                                <select class="form-select"
-                                        name="MaintenanceMedicines[${medicineCounter}].Schedule">
-                                    <option value="">-- Select --</option>
-                                    <option value="Once daily">Once daily</option>
-                                    <option value="Twice daily">Twice daily</option>
-                                    <option value="Three times daily">Three times daily</option>
-                                    <option value="Four times daily">Four times daily</option>
-                                    <option value="Every 6 hours">Every 6 hours</option>
-                                    <option value="Every 8 hours">Every 8 hours</option>
-                                    <option value="Every 12 hours">Every 12 hours</option>
-                                    <option value="Weekly">Weekly</option>
-                                    <option value="As needed">As needed</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label class="form-label">Instructions</label>
-                                <input type="text" class="form-control"
-                                       name="MaintenanceMedicines[${medicineCounter}].Instructions"
-                                       placeholder="e.g., With meals" />
-                            </div>
-                        </div>
-                        <div class="col-md-1">
-                            <div class="form-group">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="button" class="btn btn-danger btn-sm remove-medicine" title="Remove">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            container.appendChild(newRow);
-
-            // Add event listener to remove button
-            newRow.querySelector('.remove-medicine').addEventListener('click', function() {
-                this.closest('.medicine-item').remove();
-                updateMedicineIndexes();
-
-                // Show "no medicines" message if all removed
-                if (container.querySelectorAll('.medicine-item').length === 0) {
-                    container.innerHTML = '<div id="noMedicinesMessage" class="text-center p-3 border rounded"><p class="text-muted mb-0">No medicines added yet</p></div>';
+            // Preview button
+            document.getElementById('previewBtn').addEventListener('click', function() {
+                if (validateForm()) {
+                    showPreviewModal();
                 }
             });
-
-            medicineCounter++;
         }
 
-        function updateMedicineIndexes() {
-            const items = document.querySelectorAll('.medicine-item');
-            items.forEach((item, index) => {
-                const inputs = item.querySelectorAll('input, select');
-                inputs.forEach(input => {
-                    const name = input.getAttribute('name');
-                    if (name) {
-                        const newName = name.replace(/MaintenanceMedicines\[\d+\]/g, `MaintenanceMedicines[${index}]`);
-                        input.setAttribute('name', newName);
-                    }
-                });
-            });
-            medicineCounter = items.length;
-        }
-
-        // Child management functions
-        function setupChildHandlers() {
-            // Add child button
-            document.getElementById('addChildBtn')?.addEventListener('click', addChildRow);
-
-            // Remove child buttons
-            document.querySelectorAll('.remove-child').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    this.closest('.child-item').remove();
-                    updateChildIndexes();
-
-                    // Show "no children" message if all removed
-                    const container = document.getElementById('childrenListContainer');
-                    if (container.querySelectorAll('.child-item').length === 0) {
-                        container.innerHTML = '<div id="noChildrenMessage" class="text-center p-3 border rounded"><p class="text-muted mb-0">No children/dependents added yet</p></div>';
-                    }
-                });
-            });
-        }
-
-        function addChildRow() {
-            const container = document.getElementById('childrenListContainer');
-            const noChildrenMsg = document.getElementById('noChildrenMessage');
-
-            if (noChildrenMsg) {
-                noChildrenMsg.remove();
-            }
-
-            const newRow = document.createElement('div');
-            newRow.className = 'child-item card mb-2';
-            newRow.innerHTML = `
-                <div class="card-body">
-                    <input type="hidden" name="ChildrenList[${childCounter}].Id" value="0" />
-                    <input type="hidden" name="ChildrenList[${childCounter}].SeniorId" value="@Model.Id" />
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="form-label">Name</label>
-                                <input type="text" class="form-control"
-                                       name="ChildrenList[${childCounter}].Name"
-                                       placeholder="Enter name" />
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label class="form-label">Age</label>
-                                <input type="number" class="form-control"
-                                       name="ChildrenList[${childCounter}].Age"
-                                       placeholder="Age" min="0" max="120" />
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="form-label">Relationship</label>
-                                <select class="form-select"
-                                        name="ChildrenList[${childCounter}].Relationship">
-                                    <option value="">-- Select --</option>
-                                    <option value="Son">Son</option>
-                                    <option value="Daughter">Daughter</option>
-                                    <option value="Grandchild">Grandchild</option>
-                                    <option value="Nephew">Nephew</option>
-                                    <option value="Niece">Niece</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-1">
-                            <div class="form-group">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="button" class="btn btn-danger btn-sm remove-child" title="Remove">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            container.appendChild(newRow);
-
-            // Add event listener to remove button
-            newRow.querySelector('.remove-child').addEventListener('click', function() {
-                this.closest('.child-item').remove();
-                updateChildIndexes();
-
-                // Show "no children" message if all removed
-                if (container.querySelectorAll('.child-item').length === 0) {
-                    container.innerHTML = '<div id="noChildrenMessage" class="text-center p-3 border rounded"><p class="text-muted mb-0">No children/dependents added yet</p></div>';
-                }
-            });
-
-            childCounter++;
-        }
-
-        function updateChildIndexes() {
-            const items = document.querySelectorAll('.child-item');
-            items.forEach((item, index) => {
-                const inputs = item.querySelectorAll('input, select');
-                inputs.forEach(input => {
-                    const name = input.getAttribute('name');
-                    if (name) {
-                        const newName = name.replace(/ChildrenList\[\d+\]/g, `ChildrenList[${index}]`);
-                        input.setAttribute('name', newName);
-                    }
-                });
-            });
-            childCounter = items.length;
-        }
-
-        // Form validation
-        document.getElementById('seniorForm').addEventListener('submit', function(e) {
-            const firstName = document.getElementById('s_firstName').value.trim();
-            const lastName = document.getElementById('s_lastName').value.trim();
-            const sex = document.getElementById('s_sex').value;
-            const dob = document.getElementById('dobField').value;
-
+        // Validate form
+        function validateForm() {
             let isValid = true;
-            let errorMessage = '';
+            let errors = [];
 
-            if (!firstName) {
-                isValid = false;
-                errorMessage += '• First Name is required\n';
+            // Check required fields
+            const requiredFields = [
+                { id: 'FirstName', name: 'First Name' },
+                { id: 'LastName', name: 'Last Name' },
+                { id: 'Gender', name: 'Gender' },
+                { id: 'Age', name: 'Age' },
+                { id: 'Zone', name: 'Zone' }
+            ];
+
+            requiredFields.forEach(field => {
+                const element = document.getElementById(field.id);
+                if (!element || !element.value.trim()) {
+                    isValid = false;
+                    errors.push(`• ${field.name} is required`);
+
+                    // Highlight error
+                    element.classList.add('is-invalid');
+                } else {
+                    element.classList.remove('is-invalid');
+                }
+            });
+
+            // Validate Age range
+            const ageField = document.getElementById('Age');
+            if (ageField && ageField.value) {
+                const age = parseInt(ageField.value);
+                if (age < 60 || age > 120) {
+                    isValid = false;
+                    errors.push('• Age must be between 60 and 120');
+                    ageField.classList.add('is-invalid');
+                } else {
+                    ageField.classList.remove('is-invalid');
+                }
             }
-            if (!lastName) {
-                isValid = false;
-                errorMessage += '• Last Name is required\n';
-            }
-            if (!sex) {
-                isValid = false;
-                errorMessage += '• Sex is required\n';
-            }
-            if (!dob) {
-                isValid = false;
-                errorMessage += '• Date of Birth is required\n';
+
+            // Validate Zone range
+            const zoneField = document.getElementById('Zone');
+            if (zoneField && zoneField.value) {
+                const zone = parseInt(zoneField.value);
+                if (zone < 1 || zone > 7) {
+                    isValid = false;
+                    errors.push('• Zone must be between 1 and 7');
+                    zoneField.classList.add('is-invalid');
+                } else {
+                    zoneField.classList.remove('is-invalid');
+                }
             }
 
             if (!isValid) {
-                e.preventDefault();
-                showAlert('Please fix the following errors:\n\n' + errorMessage, 'error');
-                return false;
+                const errorMessage = 'Please fix the following errors:\n\n' + errors.join('\n');
+                showAlert(errorMessage, 'error');
             }
 
-            // Show loading state
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
-            submitBtn.disabled = true;
+            return isValid;
+        }
 
-            // Re-enable button after 5 seconds in case submission fails
-            setTimeout(() => {
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            }, 5000);
-        });
+        // Show preview modal
+        function showPreviewModal() {
+            // Update preview modal with current values
+            const seniorId = document.getElementById('seniorIdInput').value;
+            const firstName = document.getElementById('FirstName').value || '';
+            const lastName = document.getElementById('LastName').value || '';
+            const middleInitial = document.getElementById('MiddleInitial').value || '';
+            const gender = document.getElementById('Gender').value || '';
+            const age = document.getElementById('Age').value || '';
+            const birthDate = document.getElementById('birthDateField').value || '';
+            const civilStatus = document.getElementById('CivilStatus').value || '';
+            const contactNumber = document.getElementById('ContactNumber').value || '';
+            const zone = document.getElementById('Zone').value || '';
+
+            // Format SCCN for display
+            const formattedSCCN = formatSCCNNumber(seniorId);
+
+            // Update preview modal
+            document.getElementById('previewSeniorId').textContent = formattedSCCN;
+
+            let fullName = `${firstName} ${lastName}`.trim();
+            if (middleInitial) {
+                fullName = `${firstName} ${middleInitial}. ${lastName}`.trim();
+            }
+            document.getElementById('previewFullName').textContent = fullName || 'Not specified';
+
+            document.getElementById('previewGender').textContent = gender || 'Not specified';
+            document.getElementById('previewAge').textContent = age || 'Not specified';
+
+            // Format birth date for display
+            let birthDateDisplay = 'Not specified';
+            if (birthDate) {
+                const date = new Date(birthDate);
+                birthDateDisplay = date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            }
+            document.getElementById('previewBirthDate').textContent = birthDateDisplay;
+
+            document.getElementById('previewCivilStatus').textContent = civilStatus || 'Not specified';
+            document.getElementById('previewContact').textContent = contactNumber || 'Not specified';
+            document.getElementById('previewZone').textContent = zone ? `Zone ${zone}` : 'Not specified';
+
+            // Show modal
+            const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+            previewModal.show();
+        }
 
         // Alert function for popup messages
         function showAlert(message, type = 'success') {
-            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const alertClass = type === 'success' ? 'alert-success' :
+                              type === 'error' ? 'alert-danger' :
+                              type === 'info' ? 'alert-info' : 'alert-warning';
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert ${alertClass} alert-dismissible fade show`;
             alertDiv.innerHTML = `
-                <strong>${type === 'success' ? 'Success!' : 'Error!'}</strong> ${message}
+                <strong>${type === 'success' ? 'Success!' :
+                          type === 'error' ? 'Error!' :
+                          type === 'info' ? 'Info!' : 'Warning!'}</strong>
+                ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
 

@@ -4,6 +4,7 @@
 }
 
 <style>
+    /* Button Styles */
     .btn-primary {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: none;
@@ -34,6 +35,19 @@
         background: linear-gradient(135deg, #868f96 0%, #596164 100%) !important;
     }
 
+    /* Form Styles */
+    .form-control {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 10px 15px;
+        transition: all 0.3s ease;
+    }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
     .card {
         border: none;
         border-radius: 15px;
@@ -48,6 +62,85 @@
         padding: 20px;
         border-radius: 15px 15px 0 0 !important;
     }
+
+    .text-danger {
+        font-size: 14px;
+        margin-top: 5px;
+        display: block;
+    }
+
+    .info-note {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        color: #856404;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #ffc107;
+    }
+
+    .info-note-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+        .info-note-header i {
+            font-size: 1.25rem;
+            color: #856404;
+        }
+
+        .info-note-header h5 {
+            margin: 0;
+            font-weight: 600;
+            color: #856404;
+        }
+
+    .info-note-list {
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+
+        .info-note-list li {
+            margin-bottom: 5px;
+        }
+
+    .info-note-footer {
+        margin-top: 10px;
+        font-style: italic;
+        color: #856404;
+    }
+
+    .password-example {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        color: #155724;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+        border-left: 4px solid #28a745;
+    }
+
+        .password-example h6 {
+            margin: 0 0 5px 0;
+            font-weight: 600;
+            color: #155724;
+        }
+
+    .example-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        font-family: monospace;
+    }
+
+    .example-name {
+        font-weight: 500;
+    }
+
+    .example-password {
+        color: #0c5460;
+        font-weight: 600;
+    }
 </style>
 
 <div class="card">
@@ -55,6 +148,14 @@
         <h3 class="mb-0"><i class="fas fa-user-plus me-2"></i>Add New User</h3>
     </div>
     <div class="card-body">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>@Html.Raw(TempData["SuccessMessage"])
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
         @if (TempData["ErrorMessage"] != null)
         {
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -63,62 +164,80 @@
             </div>
         }
 
+        <!-- Permanent Information Note -->
+        <div class="info-note">
+            <div class="info-note-header">
+                <i class="fas fa-info-circle"></i>
+                <h5>Important Information</h5>
+            </div>
+            <ul class="info-note-list">
+                <li>All new users are created as <strong>Staff</strong> members</li>
+                <li>A secure password will be generated from the user's name</li>
+                <li>Username must be unique</li>
+                <li>Only firstname and lastname are added to the password</li>
+            </ul>
+            <div class="info-note-footer">
+                <i class="fas fa-lightbulb me-1"></i>
+                Tip: Use a professional naming convention for usernames (e.g., firstname lastname)
+            </div>
+        </div>
+
+        <!-- Password Generation Examples -->
+        <div class="password-example">
+            <h6><i class="fas fa-key me-2"></i>How passwords are generated:</h6>
+            <div class="example-item">
+                <span class="example-name">John Smith</span>
+                <span class="example-password">→ johnsmith123</span>
+            </div>
+            <small class="text-muted">Password = Full name (lowercase, no spaces) + "123"</small>
+        </div>
+
         <form asp-action="AddUser" method="post" id="addUserForm">
             @Html.AntiForgeryToken()
+
+            <!-- Hidden fields for default values -->
+            <input type="hidden" asp-for="Role" value="Staff" />
+            <input type="hidden" asp-for="IsAdmin" value="false" />
+            <input type="hidden" asp-for="IsActive" value="true" />
 
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group mb-3">
                         <label asp-for="Name" class="form-label">Full Name *</label>
-                        <input asp-for="Name" class="form-control" placeholder="Enter full name" required />
+                        <input asp-for="Name" class="form-control" placeholder="Enter full name (e.g., John Smith)" required />
                         <span asp-validation-for="Name" class="text-danger"></span>
+                        <small class="text-muted">This will be used to generate a secure password</small>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group mb-3">
                         <label asp-for="Username" class="form-label">Username *</label>
-                        <input asp-for="Username" class="form-control" placeholder="Enter username" required />
+                        <input asp-for="Username" class="form-control" placeholder="Enter username (e.g., john.smith)" required />
                         <span asp-validation-for="Username" class="text-danger"></span>
-                        <small class="form-text text-muted">Username must be unique</small>
+                        <small class="text-muted">Username must be unique</small>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
+            <!-- Role Information (Readonly) -->
+            <div class="row mb-3">
                 <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label class="form-label">Role *</label>
-                        <input type="text" class="form-control" value="Staff" readonly style="background-color: #f8f9fa;" />
-                        <small class="form-text text-muted">New users can only be added as Staff</small>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label class="form-label">Admin Privileges</label>
-                        <div class="form-check mt-2">
-                            <input type="checkbox" class="form-check-input" disabled />
-                            <label class="form-check-label text-muted">
-                                Staff users cannot have admin privileges
-                            </label>
+                    <div class="form-group">
+                        <label class="form-label">User Role</label>
+                        <div class="form-control bg-light">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-user me-2 text-muted"></i>
+                                <span class="fw-bold">Staff</span>
+                                <small class="text-muted ms-2">(Default for new users)</small>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Information Note -->
-            <div class="alert alert-info mt-3">
-                <i class="fas fa-info-circle me-2"></i>
-                <strong>Note:</strong>
-                <ul class="mb-0 mt-2">
-                    <li>All new users are created as <strong>Staff</strong> members</li>
-                    <li>A default password of "<strong>password123</strong>" will be assigned</li>
-                    <li>To grant admin privileges, edit the user after creation and change role to "Administrator"</li>
-                </ul>
-            </div>
-
             <div class="form-group mt-4">
                 <button type="submit" class="btn-primary btn-save me-2" id="submitBtn">
-                    <i class="fas fa-save"></i> Create User
+                    <i class="fas fa-user-plus"></i> Create User
                 </button>
                 <a href="@Url.Action("ManageUsers", "Admin")" class="btn-primary btn-cancel">
                     <i class="fas fa-times"></i> Cancel
@@ -130,14 +249,54 @@
 
 @section Scripts {
     <script>
+        // Form validation and submission
         document.getElementById('addUserForm').addEventListener('submit', function(e) {
             const name = document.getElementById('Name').value.trim();
             const username = document.getElementById('Username').value.trim();
             const submitBtn = document.getElementById('submitBtn');
 
-            if (!name || !username) {
+            // Basic validation
+            if (!name) {
                 e.preventDefault();
-                alert('Please fill in all required fields.');
+                alert('Please enter the full name.');
+                document.getElementById('Name').focus();
+                return false;
+            }
+
+            if (!username) {
+                e.preventDefault();
+                alert('Please enter a username.');
+                document.getElementById('Username').focus();
+                return false;
+            }
+
+            // Username format validation
+            const usernameRegex = /^[a-zA-Z0-9._-]+$/;
+            if (!usernameRegex.test(username)) {
+                e.preventDefault();
+                alert('Username can only contain letters, numbers, dots, hyphens, and underscores.');
+                document.getElementById('Username').focus();
+                return false;
+            }
+
+            // Generate password preview
+            function generatePasswordFromName(fullName) {
+                // Remove special characters and convert to lowercase
+                let cleanedName = fullName.toLowerCase().replace(/[^a-z\s]/g, '');
+
+                // Remove spaces
+                cleanedName = cleanedName.replace(/\s+/g, '');
+
+                // Add "123" suffix
+                return cleanedName + "123";
+            }
+
+            const generatedPassword = generatePasswordFromName(name);
+
+            // Confirm before creating user
+            const confirmed = confirm(`Create new user "${name}" with username "${username}"?\n\nGenerated Password: ${generatedPassword}\nRole: Staff\n\nNote: Please save this password to provide to the user.`);
+            if (!confirmed) {
+                e.preventDefault();
                 return false;
             }
 
@@ -145,7 +304,65 @@
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
             submitBtn.disabled = true;
 
+            // Allow form to submit
             return true;
+        });
+
+        // Auto-generate username from name
+        document.getElementById('Name').addEventListener('blur', function() {
+            const nameInput = this.value.trim();
+            const usernameInput = document.getElementById('Username');
+
+            // Only auto-generate if username field is empty and name has value
+            if (nameInput && !usernameInput.value.trim()) {
+                // Generate username from name (firstname.lastname format)
+                const nameParts = nameInput.toLowerCase().split(' ');
+                if (nameParts.length >= 2) {
+                    const firstName = nameParts[0];
+                    const lastName = nameParts[nameParts.length - 1];
+                    const generatedUsername = `${firstName}.${lastName}`;
+
+                    // Clean the generated username (remove special characters)
+                    const cleanUsername = generatedUsername.replace(/[^a-zA-Z0-9._-]/g, '');
+                    usernameInput.value = cleanUsername;
+                }
+            }
+        });
+
+        // Show password preview when name changes
+        document.getElementById('Name').addEventListener('input', function() {
+            const name = this.value.trim();
+            if (name) {
+                function generatePasswordPreview(fullName) {
+                    // Remove special characters and convert to lowercase
+                    let cleanedName = fullName.toLowerCase().replace(/[^a-z\s]/g, '');
+
+                    // Remove spaces
+                    cleanedName = cleanedName.replace(/\s+/g, '');
+
+                    // Add "123" suffix
+                    return cleanedName + "123";
+                }
+
+                const passwordPreview = generatePasswordPreview(name);
+
+                // Check if we already have a preview element
+                let previewElement = document.getElementById('passwordPreview');
+                if (!previewElement) {
+                    previewElement = document.createElement('small');
+                    previewElement.id = 'passwordPreview';
+                    previewElement.className = 'text-muted mt-1 d-block';
+                    document.getElementById('Name').parentNode.appendChild(previewElement);
+                }
+
+                previewElement.innerHTML = `<i class="fas fa-key me-1"></i>Generated password will be: <code class="text-primary">${passwordPreview}</code>`;
+            } else {
+                // Remove preview if name is cleared
+                const previewElement = document.getElementById('passwordPreview');
+                if (previewElement) {
+                    previewElement.remove();
+                }
+            }
         });
     </script>
 }

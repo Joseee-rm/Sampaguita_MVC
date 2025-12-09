@@ -1,3 +1,4 @@
+// Complete HomeController.cs with correct column names
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -30,31 +31,664 @@ namespace SeniorManagement.Controllers
                 ViewBag.IsAdmin = ViewBag.UserRole == "Administrator";
                 ViewBag.UserId = HttpContext.Session.GetString("UserId");
 
-                // Get dashboard statistics
-                var dashboardStats = GetDashboardStatistics();
-                ViewBag.DashboardStats = dashboardStats;
+                // Check if user is admin or staff
+                if (ViewBag.IsAdmin)
+                {
+                    // Admin sees the regular dashboard using DashboardViewModel
+                    var viewModel = new DashboardViewModel
+                    {
+                        SeniorStats = GetSeniorStatsForDashboard(),
+                        EventStats = GetEventStatsForDashboard(),
+                        RecentActivities = GetRecentActivities()
+                    };
 
-                // Get recent activities
-                var activities = GetRecentActivities();
-                ViewBag.RecentActivities = activities;
-
-                return View();
+                    return View(viewModel);
+                }
+                else
+                {
+                    // Staff sees the visualization dashboard
+                    return RedirectToAction("StaffDashboard");
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in Home/Index: {ex.Message}");
                 TempData["ErrorMessage"] = "Error loading dashboard data.";
-                return View();
+                return View(new DashboardViewModel());
             }
         }
 
+        // STAFF DASHBOARD - Senior & Event Visualizations
+        public IActionResult StaffDashboard()
+        {
+            try
+            {
+                // Get staff user info
+                var staffName = HttpContext.Session.GetString("UserName") ?? "Staff User";
+
+                // Get staff-specific data using existing models
+                var seniorStats = GetSeniorStatsForStaff();
+                var eventStats = GetEventStatsForStaff();
+
+                var viewModel = new StaffVisualizationViewModel
+                {
+                    StaffName = staffName,
+                    CurrentDate = DateTime.Now.ToString("dddd, MMMM dd, yyyy"),
+
+                    // Senior statistics from SeniorStats model
+                    TotalSeniors = seniorStats.TotalSeniors,
+                    ActiveSeniors = seniorStats.ActiveSeniors,
+                    MaleCount = seniorStats.MaleCount,
+                    FemaleCount = seniorStats.FemaleCount,
+                    RecentRegistrations = seniorStats.RecentRegistrations,
+                    Zone1Count = seniorStats.ZoneDistribution.ContainsKey(1) ? seniorStats.ZoneDistribution[1] : 0,
+                    Zone2Count = seniorStats.ZoneDistribution.ContainsKey(2) ? seniorStats.ZoneDistribution[2] : 0,
+                    Zone3Count = seniorStats.ZoneDistribution.ContainsKey(3) ? seniorStats.ZoneDistribution[3] : 0,
+                    Zone4Count = seniorStats.ZoneDistribution.ContainsKey(4) ? seniorStats.ZoneDistribution[4] : 0,
+                    Zone5Count = seniorStats.ZoneDistribution.ContainsKey(5) ? seniorStats.ZoneDistribution[5] : 0,
+                    Zone6Count = seniorStats.ZoneDistribution.ContainsKey(6) ? seniorStats.ZoneDistribution[6] : 0,
+                    Zone7Count = seniorStats.ZoneDistribution.ContainsKey(7) ? seniorStats.ZoneDistribution[7] : 0,
+                    Age60_69 = seniorStats.Age60_69,
+                    Age70_79 = seniorStats.Age70_79,
+                    Age80_89 = seniorStats.Age80_89,
+                    Age90plus = seniorStats.Age90plus,
+
+                    // Event statistics from EventStats model
+                    TotalEvents = eventStats.TotalEvents,
+                    UpcomingEvents = eventStats.UpcomingEvents,
+                    TodayEvents = eventStats.TodayEvents,
+                    MedicalEvents = eventStats.MedicalCount,
+                    AssistanceEvents = eventStats.AssistanceCount,
+                    CommunityEvents = eventStats.CommunityCount,
+                    WellnessEvents = eventStats.WellnessCount,
+
+                    // Get civil status distribution
+                    CivilStatusSingle = seniorStats.CivilStatusSingle,
+                    CivilStatusMarried = seniorStats.CivilStatusMarried,
+                    CivilStatusWidowed = seniorStats.CivilStatusWidowed,
+                    CivilStatusSeparated = seniorStats.CivilStatusSeparated,
+                    CivilStatusDivorced = seniorStats.CivilStatusDivorced,
+
+                    // Get charts data
+                    GenderDistribution = GetGenderDistribution(),
+                    ZoneDistribution = GetZoneDistribution(),
+                    AgeDistribution = GetAgeDistribution(),
+                    EventTypeDistribution = GetEventTypeDistribution(),
+                    CivilStatusDistribution = GetCivilStatusDistribution(),
+
+                    // Get quick lists
+                    RecentSeniors = GetRecentSeniors(10),
+                    UpcomingEventsList = GetUpcomingEventsList(5)
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in StaffDashboard: {ex.Message}");
+                TempData["ErrorMessage"] = "Error loading staff dashboard data.";
+                return View(new StaffVisualizationViewModel());
+            }
+        }
+
+        // AJAX METHODS FOR STAFF DASHBOARD
+        [HttpGet]
+        public JsonResult GetStaffDashboardStats()
+        {
+            try
+            {
+                var seniorStats = GetSeniorStatsForStaff();
+                var eventStats = GetEventStatsForStaff();
+
+                var stats = new
+                {
+                    SeniorStats = seniorStats,
+                    EventStats = eventStats,
+                    CivilStatusDistribution = GetCivilStatusDistribution()
+                };
+
+                return Json(new { success = true, stats = stats });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // HELPER METHODS FOR STAFF DASHBOARD
+        private SeniorStats GetSeniorStatsForStaff()
+        {
+            var stats = new SeniorStats();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // Get total seniors (no IsDeleted column in your table)
+                    string totalQuery = "SELECT COUNT(*) FROM seniors";
+                    stats.TotalSeniors = GetCount(connection, totalQuery);
+
+                    // Get active seniors
+                    string activeQuery = "SELECT COUNT(*) FROM seniors WHERE Status = 'Active'";
+                    stats.ActiveSeniors = GetCount(connection, activeQuery);
+
+                    // Get archived seniors
+                    string archivedQuery = "SELECT COUNT(*) FROM seniors WHERE Status = 'Archived'";
+                    stats.ArchivedSeniors = GetCount(connection, archivedQuery);
+
+                    // Get gender counts - CORRECTED: your column is 'Gender' not 's_sex'
+                    string maleQuery = "SELECT COUNT(*) FROM seniors WHERE Gender = 'Male'";
+                    stats.MaleCount = GetCount(connection, maleQuery);
+
+                    string femaleQuery = "SELECT COUNT(*) FROM seniors WHERE Gender = 'Female'";
+                    stats.FemaleCount = GetCount(connection, femaleQuery);
+
+                    // Get recent registrations (last 7 days)
+                    string recentQuery = @"
+                        SELECT COUNT(*) 
+                        FROM seniors 
+                        WHERE CreatedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+                    stats.RecentRegistrations = GetCount(connection, recentQuery);
+
+                    // Get age distribution
+                    stats.Age60_69 = GetCount(connection,
+                        "SELECT COUNT(*) FROM seniors WHERE Age >= 60 AND Age <= 69");
+                    stats.Age70_79 = GetCount(connection,
+                        "SELECT COUNT(*) FROM seniors WHERE Age >= 70 AND Age <= 79");
+                    stats.Age80_89 = GetCount(connection,
+                        "SELECT COUNT(*) FROM seniors WHERE Age >= 80 AND Age <= 89");
+                    stats.Age90plus = GetCount(connection,
+                        "SELECT COUNT(*) FROM seniors WHERE Age >= 90");
+
+                    // Get zone distribution
+                    stats.ZoneDistribution = new Dictionary<int, int>();
+                    for (int i = 1; i <= 7; i++)
+                    {
+                        string zoneQuery = $"SELECT COUNT(*) FROM seniors WHERE Zone = {i}";
+                        stats.ZoneDistribution[i] = GetCount(connection, zoneQuery);
+                    }
+
+                    // Get civil status
+                    stats.CivilStatusSingle = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE CivilStatus = 'Single'");
+                    stats.CivilStatusMarried = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE CivilStatus = 'Married'");
+                    stats.CivilStatusWidowed = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE CivilStatus = 'Widowed'");
+                    stats.CivilStatusSeparated = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE CivilStatus = 'Separated'");
+                    stats.CivilStatusDivorced = GetCount(connection, "SELECT COUNT(*) FROM seniors WHERE CivilStatus = 'Divorced'");
+
+                    // Get contact information
+                    stats.WithContact = GetCount(connection,
+                        "SELECT COUNT(*) FROM seniors WHERE ContactNumber IS NOT NULL AND ContactNumber != ''");
+                    stats.WithoutContact = GetCount(connection,
+                        "SELECT COUNT(*) FROM seniors WHERE ContactNumber IS NULL OR ContactNumber = ''");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting senior stats for staff: {ex.Message}");
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+            }
+
+            return stats;
+        }
+
+        private EventStats GetEventStatsForStaff()
+        {
+            var stats = new EventStats();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // Check if IsDeleted column exists
+                    bool hasIsDeletedColumn = CheckColumnExists(connection, "events", "IsDeleted");
+
+                    // Base query condition
+                    string condition = hasIsDeletedColumn ? " WHERE IsDeleted = 0" : "";
+
+                    // Get total events
+                    stats.TotalEvents = GetCount(connection, $"SELECT COUNT(*) FROM events{condition}");
+
+                    // Get upcoming events (next 30 days)
+                    string upcomingCondition = hasIsDeletedColumn ?
+                        " WHERE EventDate >= CURDATE() AND EventDate <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) AND IsDeleted = 0" :
+                        " WHERE EventDate >= CURDATE() AND EventDate <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)";
+                    stats.UpcomingEvents = GetCount(connection, $"SELECT COUNT(*) FROM events{upcomingCondition}");
+
+                    // Get today's events
+                    string todayCondition = hasIsDeletedColumn ?
+                        " WHERE DATE(EventDate) = CURDATE() AND IsDeleted = 0" :
+                        " WHERE DATE(EventDate) = CURDATE()";
+                    stats.TodayEvents = GetCount(connection, $"SELECT COUNT(*) FROM events{todayCondition}");
+
+                    // Get event type counts
+                    string typeBase = $"SELECT COUNT(*) FROM events WHERE EventType = '{{0}}'";
+                    if (hasIsDeletedColumn)
+                    {
+                        typeBase += " AND IsDeleted = 0";
+                    }
+
+                    stats.MedicalCount = GetCount(connection, string.Format(typeBase, "Medical Mission"));
+                    stats.AssistanceCount = GetCount(connection, string.Format(typeBase, "Assistance Program"));
+                    stats.CommunityCount = GetCount(connection, string.Format(typeBase, "Community Gathering"));
+                    stats.WellnessCount = GetCount(connection, string.Format(typeBase, "Wellness Activity"));
+                    stats.EducationalCount = GetCount(connection, string.Format(typeBase, "Educational"));
+                    stats.SocialCount = GetCount(connection, string.Format(typeBase, "Social"));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting event stats for staff: {ex.Message}");
+            }
+
+            return stats;
+        }
+
+        private List<GenderData> GetGenderDistribution()
+        {
+            var distribution = new List<GenderData>();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // Get male count - CORRECTED: your column is 'Gender' not 's_sex'
+                    string maleQuery = "SELECT COUNT(*) FROM seniors WHERE Gender = 'Male'";
+                    int maleCount = GetCount(connection, maleQuery);
+
+                    // Get female count - CORRECTED: your column is 'Gender' not 's_sex'
+                    string femaleQuery = "SELECT COUNT(*) FROM seniors WHERE Gender = 'Female'";
+                    int femaleCount = GetCount(connection, femaleQuery);
+
+                    int total = maleCount + femaleCount;
+
+                    if (total > 0)
+                    {
+                        distribution.Add(new GenderData
+                        {
+                            Gender = "Male",
+                            Count = maleCount,
+                            Percentage = Math.Round((maleCount / (double)total) * 100, 1)
+                        });
+
+                        distribution.Add(new GenderData
+                        {
+                            Gender = "Female",
+                            Count = femaleCount,
+                            Percentage = Math.Round((femaleCount / (double)total) * 100, 1)
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting gender distribution: {ex.Message}");
+            }
+
+            return distribution;
+        }
+
+        private List<ZoneData> GetZoneDistribution()
+        {
+            var distribution = new List<ZoneData>();
+            var colors = new[] { "#4e73df", "#1cc88a", "#36b9cc", "#f6c23e", "#e74a3b", "#858796", "#5a5c69" };
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    for (int i = 1; i <= 7; i++)
+                    {
+                        string query = $"SELECT COUNT(*) FROM seniors WHERE Zone = {i}";
+                        int count = GetCount(connection, query);
+
+                        distribution.Add(new ZoneData
+                        {
+                            Zone = $"Zone {i}",
+                            Count = count,
+                            Color = colors[i - 1]
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting zone distribution: {ex.Message}");
+            }
+
+            return distribution;
+        }
+
+        private List<AgeGroupData> GetAgeDistribution()
+        {
+            var distribution = new List<AgeGroupData>();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    distribution.Add(new AgeGroupData
+                    {
+                        AgeGroup = "60-69",
+                        Count = GetCount(connection,
+                            "SELECT COUNT(*) FROM seniors WHERE Age >= 60 AND Age <= 69")
+                    });
+
+                    distribution.Add(new AgeGroupData
+                    {
+                        AgeGroup = "70-79",
+                        Count = GetCount(connection,
+                            "SELECT COUNT(*) FROM seniors WHERE Age >= 70 AND Age <= 79")
+                    });
+
+                    distribution.Add(new AgeGroupData
+                    {
+                        AgeGroup = "80-89",
+                        Count = GetCount(connection,
+                            "SELECT COUNT(*) FROM seniors WHERE Age >= 80 AND Age <= 89")
+                    });
+
+                    distribution.Add(new AgeGroupData
+                    {
+                        AgeGroup = "90+",
+                        Count = GetCount(connection,
+                            "SELECT COUNT(*) FROM seniors WHERE Age >= 90")
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting age distribution: {ex.Message}");
+            }
+
+            return distribution;
+        }
+
+        private List<EventTypeData> GetEventTypeDistribution()
+        {
+            var distribution = new List<EventTypeData>();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // Check if IsDeleted column exists
+                    bool hasIsDeletedColumn = CheckColumnExists(connection, "events", "IsDeleted");
+                    string condition = hasIsDeletedColumn ? " AND IsDeleted = 0" : "";
+
+                    var eventTypes = new[]
+                    {
+                        new { Type = "Medical Mission", Icon = "fa-stethoscope" },
+                        new { Type = "Assistance Program", Icon = "fa-hand-holding-heart" },
+                        new { Type = "Community Gathering", Icon = "fa-users" },
+                        new { Type = "Wellness Activity", Icon = "fa-heartbeat" },
+                        new { Type = "Educational", Icon = "fa-graduation-cap" },
+                        new { Type = "Social", Icon = "fa-glass-cheers" }
+                    };
+
+                    foreach (var eventType in eventTypes)
+                    {
+                        string query = $"SELECT COUNT(*) FROM events WHERE EventType = '{eventType.Type}'{condition}";
+                        int count = GetCount(connection, query);
+
+                        distribution.Add(new EventTypeData
+                        {
+                            EventType = eventType.Type,
+                            Count = count,
+                            Icon = eventType.Icon
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting event type distribution: {ex.Message}");
+            }
+
+            return distribution;
+        }
+
+        private List<CivilStatusData> GetCivilStatusDistribution()
+        {
+            var distribution = new List<CivilStatusData>();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    var statuses = new[] { "Single", "Married", "Widowed", "Separated", "Divorced" };
+
+                    foreach (var status in statuses)
+                    {
+                        string query = $"SELECT COUNT(*) FROM seniors WHERE CivilStatus = '{status}'";
+                        int count = GetCount(connection, query);
+
+                        distribution.Add(new CivilStatusData
+                        {
+                            Status = status,
+                            Count = count
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting civil status distribution: {ex.Message}");
+            }
+
+            return distribution;
+        }
+
+        private List<SeniorBasicInfo> GetRecentSeniors(int limit = 10)
+        {
+            var seniors = new List<SeniorBasicInfo>();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // CORRECTED: Using your actual column names
+                    string query = @"
+                        SELECT Id, CONCAT(FirstName, ' ', LastName) as FullName, Age, Zone, Status, CreatedAt 
+                        FROM seniors 
+                        ORDER BY CreatedAt DESC 
+                        LIMIT @Limit";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Limit", limit);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                seniors.Add(new SeniorBasicInfo
+                                {
+                                    Id = reader.GetInt32("Id"),
+                                    Name = reader.GetString("FullName"),
+                                    Age = reader.GetInt32("Age"),
+                                    Zone = reader.GetString("Zone"),
+                                    Status = reader.GetString("Status"),
+                                    RegisteredDate = reader.GetDateTime("CreatedAt")
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting recent seniors: {ex.Message}");
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+            }
+
+            return seniors;
+        }
+
+        private List<EventBasicInfo> GetUpcomingEventsList(int limit = 5)
+        {
+            var events = new List<EventBasicInfo>();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // Check if IsDeleted column exists
+                    bool hasIsDeletedColumn = CheckColumnExists(connection, "events", "IsDeleted");
+                    string condition = hasIsDeletedColumn ? " AND IsDeleted = 0" : "";
+
+                    string query = @"
+                        SELECT Id, Title, EventType, EventDate, Location, Status
+                        FROM events 
+                        WHERE EventDate >= CURDATE()" + condition + @"
+                        ORDER BY EventDate ASC 
+                        LIMIT @Limit";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Limit", limit);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                events.Add(new EventBasicInfo
+                                {
+                                    Id = reader.GetInt32("Id"),
+                                    Title = reader.GetString("Title"),
+                                    EventType = reader.GetString("EventType"),
+                                    EventDate = reader.GetDateTime("EventDate"),
+                                    Location = reader.GetString("Location"),
+                                    Status = reader.GetString("Status")
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting upcoming events: {ex.Message}");
+            }
+
+            return events;
+        }
+
+        // ADMIN DASHBOARD METHODS (using DashboardViewModel)
+        private SeniorStats GetSeniorStatsForDashboard()
+        {
+            return GetSeniorStatsForStaff(); // Same method for both dashboards
+        }
+
+        private EventStats GetEventStatsForDashboard()
+        {
+            var stats = new EventStats();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // Check if IsDeleted column exists
+                    bool hasIsDeletedColumn = CheckColumnExists(connection, "events", "IsDeleted");
+
+                    // Base query condition
+                    string condition = hasIsDeletedColumn ? " WHERE IsDeleted = 0" : "";
+
+                    // Get total events
+                    stats.TotalEvents = GetCount(connection, $"SELECT COUNT(*) FROM events{condition}");
+
+                    // Get upcoming events (next 30 days)
+                    string upcomingCondition = hasIsDeletedColumn ?
+                        " WHERE EventDate >= CURDATE() AND EventDate <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) AND IsDeleted = 0" :
+                        " WHERE EventDate >= CURDATE() AND EventDate <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)";
+                    stats.UpcomingEvents = GetCount(connection, $"SELECT COUNT(*) FROM events{upcomingCondition}");
+
+                    // Get today's events
+                    string todayCondition = hasIsDeletedColumn ?
+                        " WHERE DATE(EventDate) = CURDATE() AND IsDeleted = 0" :
+                        " WHERE DATE(EventDate) = CURDATE()";
+                    stats.TodayEvents = GetCount(connection, $"SELECT COUNT(*) FROM events{todayCondition}");
+
+                    // Get event status counts
+                    string statusBase = $"SELECT COUNT(*) FROM events WHERE Status = '{{0}}'";
+                    if (hasIsDeletedColumn)
+                    {
+                        statusBase += " AND IsDeleted = 0";
+                    }
+
+                    stats.ScheduledEvents = GetCount(connection, string.Format(statusBase, "Scheduled"));
+                    stats.OngoingEvents = GetCount(connection, string.Format(statusBase, "Ongoing"));
+                    stats.CompletedEvents = GetCount(connection, string.Format(statusBase, "Completed"));
+                    stats.CancelledEvents = GetCount(connection, string.Format(statusBase, "Cancelled"));
+
+                    // Get event type counts
+                    string typeBase = $"SELECT COUNT(*) FROM events WHERE EventType = '{{0}}'";
+                    if (hasIsDeletedColumn)
+                    {
+                        typeBase += " AND IsDeleted = 0";
+                    }
+
+                    stats.MedicalCount = GetCount(connection, string.Format(typeBase, "Medical Mission"));
+                    stats.AssistanceCount = GetCount(connection, string.Format(typeBase, "Assistance Program"));
+                    stats.CommunityCount = GetCount(connection, string.Format(typeBase, "Community Gathering"));
+                    stats.WellnessCount = GetCount(connection, string.Format(typeBase, "Wellness Activity"));
+                    stats.EducationalCount = GetCount(connection, string.Format(typeBase, "Educational"));
+                    stats.SocialCount = GetCount(connection, string.Format(typeBase, "Social"));
+
+                    // Get attendance and capacity
+                    string attendanceQuery = "SELECT SUM(AttendanceCount) FROM events";
+                    string capacityQuery = "SELECT SUM(MaxCapacity) FROM events";
+
+                    if (hasIsDeletedColumn)
+                    {
+                        attendanceQuery += " WHERE IsDeleted = 0";
+                        capacityQuery += " WHERE IsDeleted = 0";
+                    }
+
+                    stats.TotalAttendance = SafeGetInt(connection, attendanceQuery);
+                    stats.TotalCapacity = SafeGetInt(connection, capacityQuery);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting event stats for dashboard: {ex.Message}");
+            }
+
+            return stats;
+        }
+
+        // EXISTING AJAX METHODS (for both dashboards)
         [HttpGet]
         public JsonResult GetDashboardStats()
         {
             try
             {
-                var stats = GetDashboardStatistics();
-                return Json(new { success = true, stats = stats });
+                var viewModel = new DashboardViewModel
+                {
+                    SeniorStats = GetSeniorStatsForDashboard(),
+                    EventStats = GetEventStatsForDashboard(),
+                    RecentActivities = GetRecentActivities()
+                };
+                return Json(new { success = true, stats = viewModel });
             }
             catch (Exception ex)
             {
@@ -76,6 +710,210 @@ namespace SeniorManagement.Controllers
             }
         }
 
+        // HELPER METHODS
+        private List<ActivityLog> GetRecentActivities()
+        {
+            var activities = new List<ActivityLog>();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    string query = @"SELECT Id, UserName, UserRole, Action, Details, IpAddress, CreatedAt
+                                   FROM activity_logs 
+                                   ORDER BY CreatedAt DESC 
+                                   LIMIT 10";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            activities.Add(new ActivityLog
+                            {
+                                Id = reader.GetInt32("Id"),
+                                UserName = reader.GetString("UserName"),
+                                UserRole = reader.GetString("UserRole"),
+                                Action = reader.GetString("Action"),
+                                Details = reader.IsDBNull(reader.GetOrdinal("Details")) ? "" : reader.GetString("Details"),
+                                IpAddress = reader.IsDBNull(reader.GetOrdinal("IpAddress")) ? "" : reader.GetString("IpAddress"),
+                                CreatedAt = reader.GetDateTime("CreatedAt")
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting activities: {ex.Message}");
+                Debug.WriteLine($"DEBUG - Activities Error: {ex.Message}");
+            }
+
+            return activities;
+        }
+
+        private List<Notification> GetUserNotifications(string userId, string userRole)
+        {
+            var notifications = new List<Notification>();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    string query = @"
+                        SELECT Id, UserId, UserName, UserRole, Type, Title, Message, Url, IsRead, CreatedAt
+                        FROM notifications 
+                        WHERE (UserId = @UserId OR UserId = 'all')
+                        ORDER BY CreatedAt DESC 
+                        LIMIT 20";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@UserId", userId);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                notifications.Add(new Notification
+                                {
+                                    Id = reader.GetInt32("Id"),
+                                    UserId = reader.GetString("UserId"),
+                                    UserName = reader.GetString("UserName"),
+                                    UserRole = reader.GetString("UserRole"),
+                                    Type = reader.GetString("Type"),
+                                    Title = reader.GetString("Title"),
+                                    Message = reader.GetString("Message"),
+                                    Url = reader.IsDBNull(reader.GetOrdinal("Url")) ? "" : reader.GetString("Url"),
+                                    IsRead = reader.GetBoolean("IsRead"),
+                                    CreatedAt = reader.GetDateTime("CreatedAt")
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting notifications: {ex.Message}");
+            }
+
+            return notifications;
+        }
+
+        private UserProfile GetUserProfile(string userId)
+        {
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+                    string query = "SELECT Id, Name, Username, Email, Phone, Role, IsAdmin, IsActive, CreatedAt FROM users WHERE Id = @Id";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", userId);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                return new UserProfile
+                                {
+                                    Id = reader.GetInt32("Id"),
+                                    Name = reader.GetString("Name"),
+                                    Username = reader.GetString("Username"),
+                                    Email = reader.GetString("Email"),
+                                    Phone = reader.IsDBNull(reader.GetOrdinal("Phone")) ? "" : reader.GetString("Phone"),
+                                    Role = reader.GetString("Role"),
+                                    IsAdmin = reader.GetBoolean("IsAdmin"),
+                                    IsActive = reader.GetBoolean("IsActive"),
+                                    CreatedAt = reader.GetDateTime("CreatedAt")
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting user profile: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        private int GetCount(MySqlConnection connection, string query)
+        {
+            try
+            {
+                using (var cmd = new MySqlCommand(query, connection))
+                {
+                    var result = cmd.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        return Convert.ToInt32(result);
+                    }
+                    return 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetCount for query: {query} - {ex.Message}");
+                return 0;
+            }
+        }
+
+        private int SafeGetInt(MySqlConnection connection, string query)
+        {
+            try
+            {
+                using (var cmd = new MySqlCommand(query, connection))
+                {
+                    var result = cmd.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        return Convert.ToInt32(result);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in SafeGetInt for query: {query} - {ex.Message}");
+            }
+            return 0;
+        }
+
+        private bool CheckColumnExists(MySqlConnection connection, string tableName, string columnName)
+        {
+            try
+            {
+                string query = @"
+                    SELECT COUNT(*) 
+                    FROM information_schema.columns 
+                    WHERE table_name = @TableName 
+                    AND column_name = @ColumnName
+                    AND table_schema = DATABASE()";
+
+                using (var cmd = new MySqlCommand(query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@TableName", tableName);
+                    cmd.Parameters.AddWithValue("@ColumnName", columnName);
+                    var result = cmd.ExecuteScalar();
+                    return Convert.ToInt32(result) > 0;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // EXISTING METHODS (keep as is)
         [HttpGet]
         public JsonResult GetNotifications()
         {
@@ -430,266 +1268,9 @@ namespace SeniorManagement.Controllers
         {
             return View();
         }
-
-        // Helper Methods
-
-        private DashboardStatistics GetDashboardStatistics()
-        {
-            var stats = new DashboardStatistics();
-
-            try
-            {
-                using (var connection = _dbHelper.GetConnection())
-                {
-                    connection.Open();
-
-                    // 1. Total Seniors (excluding deleted)
-                    string totalSeniorsQuery = "SELECT COUNT(*) FROM seniors WHERE IsDeleted = 0";
-                    using (var cmd = new MySqlCommand(totalSeniorsQuery, connection))
-                    {
-                        stats.TotalSeniors = Convert.ToInt32(cmd.ExecuteScalar());
-                    }
-
-                    // 2. Active Seniors (active status and not deleted)
-                    string activeQuery = "SELECT COUNT(*) FROM seniors WHERE Status = 'Active' AND IsDeleted = 0";
-                    using (var cmd = new MySqlCommand(activeQuery, connection))
-                    {
-                        stats.ActiveSeniors = Convert.ToInt32(cmd.ExecuteScalar());
-                    }
-
-                    // 3. Male Count (not deleted)
-                    string maleQuery = "SELECT COUNT(*) FROM seniors WHERE s_sex = 'Male' AND IsDeleted = 0";
-                    using (var cmd = new MySqlCommand(maleQuery, connection))
-                    {
-                        stats.MaleCount = Convert.ToInt32(cmd.ExecuteScalar());
-                    }
-
-                    // 4. Female Count (not deleted)
-                    string femaleQuery = "SELECT COUNT(*) FROM seniors WHERE s_sex = 'Female' AND IsDeleted = 0";
-                    using (var cmd = new MySqlCommand(femaleQuery, connection))
-                    {
-                        stats.FemaleCount = Convert.ToInt32(cmd.ExecuteScalar());
-                    }
-
-                    // 5. Recent registrations (last 7 days, not deleted)
-                    string recentRegQuery = @"
-                        SELECT COUNT(*) 
-                        FROM seniors 
-                        WHERE CreatedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY) 
-                        AND IsDeleted = 0";
-                    using (var cmd = new MySqlCommand(recentRegQuery, connection))
-                    {
-                        var result = cmd.ExecuteScalar();
-                        stats.RecentRegistrations = result != null ? Convert.ToInt32(result) : 0;
-                    }
-
-                    // 6. Total Users
-                    string usersQuery = "SELECT COUNT(*) FROM users";
-                    using (var cmd = new MySqlCommand(usersQuery, connection))
-                    {
-                        stats.TotalUsers = Convert.ToInt32(cmd.ExecuteScalar());
-                    }
-
-                    // 7. Active Users
-                    string activeUsersQuery = "SELECT COUNT(*) FROM users WHERE IsActive = TRUE";
-                    using (var cmd = new MySqlCommand(activeUsersQuery, connection))
-                    {
-                        stats.ActiveUsers = Convert.ToInt32(cmd.ExecuteScalar());
-                    }
-
-                    // 8. Upcoming Events (next 30 days, not deleted)
-                    string eventsQuery = @"
-                        SELECT COUNT(*) 
-                        FROM events 
-                        WHERE EventDate >= CURDATE() 
-                        AND EventDate <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
-                        AND IsDeleted = 0";
-                    using (var cmd = new MySqlCommand(eventsQuery, connection))
-                    {
-                        var result = cmd.ExecuteScalar();
-                        stats.UpcomingEvents = result != null ? Convert.ToInt32(result) : 0;
-                    }
-
-                    // 9. Pending Actions
-                    stats.PendingActions = GetPendingActionsCount(connection);
-
-                    // 10. Today's date for display
-                    stats.CurrentDate = DateTime.Now.ToString("dddd, MMMM dd, yyyy");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error getting dashboard statistics: {ex.Message}");
-                Debug.WriteLine($"DEBUG - Error: {ex.Message}");
-                Debug.WriteLine($"DEBUG - Stack trace: {ex.StackTrace}");
-            }
-
-            return stats;
-        }
-
-        private List<Models.ActivityLog> GetRecentActivities()
-        {
-            var activities = new List<Models.ActivityLog>();
-
-            try
-            {
-                using (var connection = _dbHelper.GetConnection())
-                {
-                    connection.Open();
-
-                    string query = @"SELECT Id, UserName, UserRole, Action, Details, IpAddress, CreatedAt
-                                   FROM activity_logs 
-                                   ORDER BY CreatedAt DESC 
-                                   LIMIT 10";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            activities.Add(new Models.ActivityLog
-                            {
-                                Id = reader.GetInt32("Id"),
-                                UserName = reader.GetString("UserName"),
-                                UserRole = reader.GetString("UserRole"),
-                                Action = reader.GetString("Action"),
-                                Details = reader.IsDBNull(reader.GetOrdinal("Details")) ? "" : reader.GetString("Details"),
-                                IpAddress = reader.IsDBNull(reader.GetOrdinal("IpAddress")) ? "" : reader.GetString("IpAddress"),
-                                CreatedAt = reader.GetDateTime("CreatedAt")
-                            });
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error getting activities: {ex.Message}");
-                Debug.WriteLine($"DEBUG - Activities Error: {ex.Message}");
-            }
-
-            return activities;
-        }
-
-        private List<Notification> GetUserNotifications(string userId, string userRole)
-        {
-            var notifications = new List<Notification>();
-
-            try
-            {
-                using (var connection = _dbHelper.GetConnection())
-                {
-                    connection.Open();
-
-                    // Get notifications for this user OR notifications for all users (if user is staff/admin)
-                    string query = @"
-                        SELECT Id, UserId, UserName, UserRole, Type, Title, Message, Url, IsRead, CreatedAt
-                        FROM notifications 
-                        WHERE (UserId = @UserId OR UserId = 'all')
-                        ORDER BY CreatedAt DESC 
-                        LIMIT 20";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@UserId", userId);
-
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                notifications.Add(new Notification
-                                {
-                                    Id = reader.GetInt32("Id"),
-                                    UserId = reader.GetString("UserId"),
-                                    UserName = reader.GetString("UserName"),
-                                    UserRole = reader.GetString("UserRole"),
-                                    Type = reader.GetString("Type"),
-                                    Title = reader.GetString("Title"),
-                                    Message = reader.GetString("Message"),
-                                    Url = reader.IsDBNull(reader.GetOrdinal("Url")) ? "" : reader.GetString("Url"),
-                                    IsRead = reader.GetBoolean("IsRead"),
-                                    CreatedAt = reader.GetDateTime("CreatedAt")
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error getting notifications: {ex.Message}");
-            }
-
-            return notifications;
-        }
-
-        private UserProfile GetUserProfile(string userId)
-        {
-            try
-            {
-                using (var connection = _dbHelper.GetConnection())
-                {
-                    connection.Open();
-                    string query = "SELECT Id, Name, Username, Email, Phone, Role, IsAdmin, IsActive, CreatedAt FROM users WHERE Id = @Id";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@Id", userId);
-
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                return new UserProfile
-                                {
-                                    Id = reader.GetInt32("Id"),
-                                    Name = reader.GetString("Name"),
-                                    Username = reader.GetString("Username"),
-                                    Email = reader.GetString("Email"),
-                                    Phone = reader.IsDBNull(reader.GetOrdinal("Phone")) ? "" : reader.GetString("Phone"),
-                                    Role = reader.GetString("Role"),
-                                    IsAdmin = reader.GetBoolean("IsAdmin"),
-                                    IsActive = reader.GetBoolean("IsActive"),
-                                    CreatedAt = reader.GetDateTime("CreatedAt")
-                                };
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error getting user profile: {ex.Message}");
-            }
-
-            return null;
-        }
-
-        private int GetPendingActionsCount(MySqlConnection connection)
-        {
-            string query = @"
-                SELECT (
-                    (SELECT COUNT(*) FROM seniors WHERE NeedsReview = 1 AND IsDeleted = 0) +
-                    (SELECT COUNT(*) FROM events WHERE NeedsReview = 1 AND IsDeleted = 0)
-                ) as PendingCount";
-
-            using (var cmd = new MySqlCommand(query, connection))
-            {
-                var result = cmd.ExecuteScalar();
-                return result != null ? Convert.ToInt32(result) : 0;
-            }
-        }
-
-        private int GetCount(MySqlConnection connection, string query)
-        {
-            using (var cmd = new MySqlCommand(query, connection))
-            {
-                var result = cmd.ExecuteScalar();
-                return result != null ? Convert.ToInt32(result) : 0;
-            }
-        }
     }
 
-    // Helper Classes
+    // HELPER CLASSES
     public class DashboardStatistics
     {
         public int TotalSeniors { get; set; }

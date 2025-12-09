@@ -6,6 +6,9 @@ using MySql.Data.MySqlClient;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace SeniorManagement.Controllers
 {
@@ -21,7 +24,7 @@ namespace SeniorManagement.Controllers
             _activityHelper = activityHelper;
         }
 
-        // Senior Records Page - View All Seniors (excluding deleted)
+        // Senior Records Page - View All Active Seniors
         public IActionResult Index()
         {
             var seniors = GetAllActiveSeniors();
@@ -35,69 +38,139 @@ namespace SeniorManagement.Controllers
             return View(new Senior());
         }
 
-        // CREATE SENIOR - POST (Handle form submission)
+        // CREATE SENIOR - POST (Handle form submission - FIXED VERSION)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateSenior(Senior senior)
         {
-            if (!ModelState.IsValid)
-            {
-                TempData["ErrorMessage"] = "Please correct the validation errors and try again.";
-                return View(senior);
-            }
+            // Clear any existing model errors
+            ModelState.Clear();
 
             try
             {
-                // Calculate age from DOB
-                senior.s_age = CalculateAge(senior.s_dob);
-                senior.CreatedAt = DateTime.Now;
-                senior.UpdatedAt = DateTime.Now;
-                senior.Status = "Active";
-                senior.IsDeleted = false;
-
-                // Ensure optional fields are properly set
-                senior.s_health_problems_option ??= "No";
-                senior.s_maintenance_option ??= "No";
-                senior.s_disability_option ??= "No";
-                senior.s_visual_option ??= "No";
-                senior.s_hearing_option ??= "No";
-                senior.s_emotional_option ??= "No";
-
-                // Process children list to text format
-                if (senior.ChildrenList != null && senior.ChildrenList.Any(c => !string.IsNullOrWhiteSpace(c.Name)))
+                // Validate 12-digit SCCN number
+                if (string.IsNullOrEmpty(senior.SeniorId) || !IsValidSCCNNumber(senior.SeniorId))
                 {
-                    senior.s_children = FormatChildrenText(senior.ChildrenList);
+                    ModelState.AddModelError("SeniorId", "Senior ID must be exactly 12 digits (SCCN number)");
+                }
+                else
+                {
+                    // Check if SCCN already exists
+                    if (CheckSeniorIdExists(senior.SeniorId))
+                    {
+                        ModelState.AddModelError("SeniorId", "This SCCN number is already registered. Please use a different SCCN number.");
+                    }
                 }
 
+                // Validate First Name
+                if (string.IsNullOrEmpty(senior.FirstName))
+                {
+                    ModelState.AddModelError("FirstName", "First Name is required.");
+                }
+                else if (senior.FirstName.Length > 100)
+                {
+                    ModelState.AddModelError("FirstName", "First Name cannot exceed 100 characters.");
+                }
+
+                // Validate Last Name
+                if (string.IsNullOrEmpty(senior.LastName))
+                {
+                    ModelState.AddModelError("LastName", "Last Name is required.");
+                }
+                else if (senior.LastName.Length > 100)
+                {
+                    ModelState.AddModelError("LastName", "Last Name cannot exceed 100 characters.");
+                }
+
+                // Validate Gender
+                if (string.IsNullOrEmpty(senior.Gender))
+                {
+                    ModelState.AddModelError("Gender", "Gender is required.");
+                }
+
+                // Validate Age
+                if (senior.Age < 60 || senior.Age > 120)
+                {
+                    ModelState.AddModelError("Age", "Age must be between 60 and 120 years.");
+                }
+
+                // Validate Zone
+                if (senior.Zone < 1 || senior.Zone > 7)
+                {
+                    ModelState.AddModelError("Zone", "Zone must be between 1 and 7.");
+                }
+
+                // Validate Middle Initial (if provided)
+                if (!string.IsNullOrEmpty(senior.MiddleInitial) && senior.MiddleInitial.Length > 1)
+                {
+                    ModelState.AddModelError("MiddleInitial", "Middle Initial must be 1 character.");
+                }
+
+                // Validate Contact Number format (if provided)
+                if (!string.IsNullOrEmpty(senior.ContactNumber) && senior.ContactNumber.Length > 20)
+                {
+                    ModelState.AddModelError("ContactNumber", "Contact Number cannot exceed 20 characters.");
+                }
+
+                // If there are validation errors, return to view
+                if (!ModelState.IsValid)
+                {
+                    TempData["ErrorMessage"] = "Please correct the validation errors below.";
+                    return View(senior);
+                }
+
+                // Calculate age from BirthDate if provided
+                if (senior.BirthDate.HasValue)
+                {
+                    // Recalculate age to ensure accuracy
+                    senior.Age = CalculateAge(senior.BirthDate.Value);
+
+                    // Double-check age validation
+                    if (senior.Age < 60 || senior.Age > 120)
+                    {
+                        ModelState.AddModelError("Age", "Age calculated from birth date must be between 60 and 120 years.");
+                        TempData["ErrorMessage"] = "Invalid birth date. Age must be between 60 and 120.";
+                        return View(senior);
+                    }
+                }
+
+                // Set default values
+                senior.Status = "Active";
+                senior.Barangay = "Sampaguita"; // Fixed barangay
+                senior.CreatedAt = DateTime.Now;
+                senior.UpdatedAt = DateTime.Now;
+
+                // If BirthDate is not provided but Age is, estimate BirthDate
+                if (!senior.BirthDate.HasValue && senior.Age > 0)
+                {
+                    senior.BirthDate = DateTime.Now.AddYears(-senior.Age);
+                }
+
+                // Save to database
                 int newSeniorId = InsertSeniorIntoDatabase(senior);
 
                 if (newSeniorId > 0)
                 {
-                    // Handle maintenance medicines if any
-                    if (senior.MaintenanceMedicines != null && senior.MaintenanceMedicines.Any(m => !string.IsNullOrWhiteSpace(m.MedicineName)))
-                    {
-                        InsertMaintenanceMedicines(newSeniorId, senior.MaintenanceMedicines);
-                    }
-
                     // Log the activity
                     await _activityHelper.LogActivityAsync(
                         "Create Senior",
-                        $"Created new senior record: {senior.s_firstName} {senior.s_lastName} (ID: {newSeniorId})"
+                        $"Created new senior record: {senior.FirstName} {senior.LastName} (SCCN: {senior.SeniorId})"
                     );
 
-                    TempData["SuccessMessage"] = "Senior record created successfully!";
+                    TempData["SuccessMessage"] = $"Senior record created successfully! SCCN: {senior.SeniorId}";
                     return RedirectToAction("Index");
                 }
                 else
                 {
-                    TempData["ErrorMessage"] = "Error creating senior record. Please try again.";
+                    TempData["ErrorMessage"] = "Error creating senior record in database. Please try again.";
                 }
             }
             catch (Exception ex)
             {
                 await _activityHelper.LogErrorAsync(ex.Message, "Create Senior");
-                TempData["ErrorMessage"] = $"An error occurred while creating the senior record: {ex.Message}";
+                TempData["ErrorMessage"] = $"An error occurred: {ex.Message}";
                 Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
             }
 
             return View(senior);
@@ -114,15 +187,6 @@ namespace SeniorManagement.Controllers
                 return RedirectToAction("Index");
             }
 
-            // Load maintenance medicines for this senior
-            senior.MaintenanceMedicines = GetMaintenanceMedicines(id);
-
-            // Parse children from text field
-            if (!string.IsNullOrEmpty(senior.s_children))
-            {
-                senior.ChildrenList = ParseChildrenFromText(senior.s_children);
-            }
-
             return View(senior);
         }
 
@@ -131,41 +195,75 @@ namespace SeniorManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditSenior(Senior senior)
         {
-            if (!ModelState.IsValid)
-            {
-                TempData["ErrorMessage"] = "Please correct the validation errors and try again.";
-                return View(senior);
-            }
+            ModelState.Clear();
 
             try
             {
-                // Recalculate age from DOB
-                senior.s_age = CalculateAge(senior.s_dob);
-                senior.UpdatedAt = DateTime.Now;
-
-                // Ensure optional fields are properly set
-                senior.s_health_problems_option ??= "No";
-                senior.s_maintenance_option ??= "No";
-                senior.s_disability_option ??= "No";
-                senior.s_visual_option ??= "No";
-                senior.s_hearing_option ??= "No";
-                senior.s_emotional_option ??= "No";
-
-                // Process children list to text format
-                if (senior.ChildrenList != null && senior.ChildrenList.Any(c => !string.IsNullOrWhiteSpace(c.Name)))
+                // Validate 12-digit SCCN number
+                if (string.IsNullOrEmpty(senior.SeniorId) || !IsValidSCCNNumber(senior.SeniorId))
                 {
-                    senior.s_children = FormatChildrenText(senior.ChildrenList);
+                    ModelState.AddModelError("SeniorId", "Senior ID must be exactly 12 digits (SCCN number)");
+                }
+                else
+                {
+                    // Check if SeniorId already exists (excluding current record)
+                    if (CheckSeniorIdExists(senior.SeniorId, senior.Id))
+                    {
+                        ModelState.AddModelError("SeniorId", "This SCCN number is already registered. Please use a different SCCN number.");
+                    }
+                }
+
+                // Recalculate age from BirthDate if provided
+                if (senior.BirthDate.HasValue)
+                {
+                    senior.Age = CalculateAge(senior.BirthDate.Value);
+                }
+
+                senior.UpdatedAt = DateTime.Now;
+                senior.Barangay = "Sampaguita"; // Fixed barangay
+
+                // Validate First Name
+                if (string.IsNullOrEmpty(senior.FirstName))
+                {
+                    ModelState.AddModelError("FirstName", "First Name is required.");
+                }
+
+                // Validate Last Name
+                if (string.IsNullOrEmpty(senior.LastName))
+                {
+                    ModelState.AddModelError("LastName", "Last Name is required.");
+                }
+
+                // Validate Gender
+                if (string.IsNullOrEmpty(senior.Gender))
+                {
+                    ModelState.AddModelError("Gender", "Gender is required.");
+                }
+
+                // Validate Zone is between 1-7
+                if (senior.Zone < 1 || senior.Zone > 7)
+                {
+                    ModelState.AddModelError("Zone", "Zone must be between 1 and 7.");
+                }
+
+                // Validate Age is between 60-120
+                if (senior.Age < 60 || senior.Age > 120)
+                {
+                    ModelState.AddModelError("Age", "Age must be between 60 and 120 years.");
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    TempData["ErrorMessage"] = "Please correct the validation errors and try again.";
+                    return View(senior);
                 }
 
                 if (UpdateSeniorInDatabase(senior))
                 {
-                    // Handle maintenance medicines
-                    UpdateMaintenanceMedicines(senior.Id, senior.MaintenanceMedicines);
-
                     // Log the activity
                     await _activityHelper.LogActivityAsync(
                         "Edit Senior",
-                        $"Updated senior record: {senior.s_firstName} {senior.s_lastName} (ID: {senior.Id})"
+                        $"Updated senior record: {senior.FirstName} {senior.LastName} (SCCN: {senior.SeniorId})"
                     );
 
                     TempData["SuccessMessage"] = "Senior record updated successfully!";
@@ -179,14 +277,15 @@ namespace SeniorManagement.Controllers
             catch (Exception ex)
             {
                 await _activityHelper.LogErrorAsync(ex.Message, "Edit Senior");
-                TempData["ErrorMessage"] = $"An error occurred while updating the senior record. Please try again.";
+                TempData["ErrorMessage"] = $"An error occurred while updating the senior record: {ex.Message}";
                 Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
             }
 
             return View(senior);
         }
 
-        // Soft Delete Senior (Archive)
+        // Archive Senior - POST
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ArchiveSenior(int id)
@@ -199,17 +298,28 @@ namespace SeniorManagement.Controllers
 
                     // Get senior details before archiving
                     var senior = GetSeniorById(id);
+                    if (senior == null)
+                    {
+                        TempData["ErrorMessage"] = "Senior record not found.";
+                        return RedirectToAction("Index");
+                    }
+
+                    // Check if already archived
+                    if (senior.Status == "Archived")
+                    {
+                        TempData["ErrorMessage"] = "Senior is already archived.";
+                        return RedirectToAction("Index");
+                    }
 
                     string query = @"UPDATE seniors 
-                                   SET IsDeleted = 1, 
-                                       DeletedAt = @DeletedAt,
-                                       Status = 'Archived'
+                                   SET Status = 'Archived',
+                                       UpdatedAt = @UpdatedAt
                                    WHERE Id = @Id";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
                         cmd.Parameters.AddWithValue("@Id", id);
-                        cmd.Parameters.AddWithValue("@DeletedAt", DateTime.Now);
+                        cmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
 
                         int rowsAffected = cmd.ExecuteNonQuery();
 
@@ -218,7 +328,7 @@ namespace SeniorManagement.Controllers
                             // Log the activity
                             await _activityHelper.LogActivityAsync(
                                 "Archive Senior",
-                                $"Archived senior record: {senior?.s_firstName} {senior?.s_lastName} (ID: {id})"
+                                $"Archived senior record: {senior.FirstName} {senior.LastName} (SCCN: {senior.SeniorId})"
                             );
 
                             TempData["SuccessMessage"] = "Senior record archived successfully!";
@@ -240,7 +350,7 @@ namespace SeniorManagement.Controllers
             return RedirectToAction("Index");
         }
 
-        // Restore Archived Senior
+        // Restore Archived Senior - POST
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RestoreSenior(int id)
@@ -253,16 +363,28 @@ namespace SeniorManagement.Controllers
 
                     // Get senior details before restoring
                     var senior = GetSeniorById(id);
+                    if (senior == null)
+                    {
+                        TempData["ErrorMessage"] = "Senior record not found.";
+                        return RedirectToAction("ArchivedSeniors");
+                    }
+
+                    // Check if actually archived
+                    if (senior.Status != "Archived")
+                    {
+                        TempData["ErrorMessage"] = "Senior is not archived.";
+                        return RedirectToAction("ArchivedSeniors");
+                    }
 
                     string query = @"UPDATE seniors 
-                                   SET IsDeleted = 0, 
-                                       DeletedAt = NULL,
-                                       Status = 'Active'
+                                   SET Status = 'Active',
+                                       UpdatedAt = @UpdatedAt
                                    WHERE Id = @Id";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
                         cmd.Parameters.AddWithValue("@Id", id);
+                        cmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
 
                         int rowsAffected = cmd.ExecuteNonQuery();
 
@@ -271,7 +393,7 @@ namespace SeniorManagement.Controllers
                             // Log the activity
                             await _activityHelper.LogActivityAsync(
                                 "Restore Senior",
-                                $"Restored senior record: {senior?.s_firstName} {senior?.s_lastName} (ID: {id})"
+                                $"Restored senior record: {senior.FirstName} {senior.LastName} (SCCN: {senior.SeniorId})"
                             );
 
                             TempData["SuccessMessage"] = "Senior record restored successfully!";
@@ -290,17 +412,47 @@ namespace SeniorManagement.Controllers
                 TempData["ErrorMessage"] = "Error restoring senior record. Please try again.";
             }
 
-            return RedirectToAction("DeletedSeniors");
+            return RedirectToAction("ArchivedSeniors");
         }
 
-        // View Deleted Seniors
-        public IActionResult DeletedSeniors()
+        // View Archived Seniors
+        public IActionResult ArchivedSeniors()
         {
-            var seniors = GetDeletedSeniors();
+            var seniors = GetArchivedSeniors();
             return View(seniors);
         }
 
-        // Insert new senior into database
+        // View Senior Details
+        [HttpGet]
+        public IActionResult ViewSenior(int id)
+        {
+            var senior = GetSeniorById(id);
+            if (senior == null)
+            {
+                TempData["ErrorMessage"] = "Senior record not found.";
+                return RedirectToAction("Index");
+            }
+
+            return View(senior);
+        }
+
+        // ============ HELPER METHODS ============
+
+        // Validate 12-digit SCCN number
+        private bool IsValidSCCNNumber(string seniorId)
+        {
+            if (string.IsNullOrWhiteSpace(seniorId))
+                return false;
+
+            // Must be exactly 12 digits
+            if (seniorId.Length != 12)
+                return false;
+
+            // Must contain only digits
+            return Regex.IsMatch(seniorId, @"^\d{12}$");
+        }
+
+        // Insert new senior into database (FIXED VERSION)
         private int InsertSeniorIntoDatabase(Senior senior)
         {
             try
@@ -310,132 +462,71 @@ namespace SeniorManagement.Controllers
                     connection.Open();
 
                     string query = @"INSERT INTO seniors 
-                    (s_firstName, s_middleName, s_lastName, s_sex, s_dob, s_age, s_contact, 
-                     s_barangay, s_guardian_zone, s_religion, s_bloodtype,
-                     s_health_problems_option, s_health_problems,
-                     s_maintenance_option, s_maintenance,
-                     s_disability_option, s_disability,
-                     s_visual_option, s_visual,
-                     s_hearing_option, s_hearing,
-                     s_emotional_option, s_emotional,
-                     s_spouse, s_spouse_age, s_spouse_occupation, s_spouse_contact, s_children,
-                     s_guardian_name, s_guardian_relationship, s_guardian_relationship_other, 
-                     s_guardian_contact, s_guardian_address,
-                     Status, CreatedAt, UpdatedAt, IsDeleted)
+                    (SeniorId, FirstName, LastName, MiddleInitial, Gender, Age, 
+                     BirthDate, ContactNumber, Zone, Barangay, CivilStatus,
+                     Status, CreatedAt, UpdatedAt)
                     VALUES 
-                    (@FirstName, @MiddleName, @LastName, @Sex, @Dob, @Age, @Contact,
-                     @Barangay, @GuardianZone, @Religion, @BloodType,
-                     @HealthProblemsOption, @HealthProblems,
-                     @MaintenanceOption, @Maintenance,
-                     @DisabilityOption, @Disability,
-                     @VisualOption, @Visual,
-                     @HearingOption, @Hearing,
-                     @EmotionalOption, @Emotional,
-                     @Spouse, @SpouseAge, @SpouseOccupation, @SpouseContact, @Children,
-                     @GuardianName, @GuardianRelationship, @GuardianRelationshipOther, 
-                     @GuardianContact, @GuardianAddress,
-                     @Status, @CreatedAt, @UpdatedAt, @IsDeleted);
+                    (@SeniorId, @FirstName, @LastName, @MiddleInitial, @Gender, @Age,
+                     @BirthDate, @ContactNumber, @Zone, @Barangay, @CivilStatus,
+                     @Status, @CreatedAt, @UpdatedAt);
                     SELECT LAST_INSERT_ID();";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
-                        // Personal Information
-                        cmd.Parameters.AddWithValue("@FirstName", senior.s_firstName ?? "");
-                        cmd.Parameters.AddWithValue("@MiddleName", string.IsNullOrEmpty(senior.s_middleName) ? DBNull.Value : senior.s_middleName);
-                        cmd.Parameters.AddWithValue("@LastName", senior.s_lastName ?? "");
-                        cmd.Parameters.AddWithValue("@Sex", senior.s_sex ?? "");
-                        cmd.Parameters.AddWithValue("@Dob", senior.s_dob);
-                        cmd.Parameters.AddWithValue("@Age", senior.s_age);
-                        cmd.Parameters.AddWithValue("@Contact", string.IsNullOrEmpty(senior.s_contact) ? DBNull.Value : senior.s_contact);
-                        cmd.Parameters.AddWithValue("@Barangay", string.IsNullOrEmpty(senior.s_barangay) ? DBNull.Value : senior.s_barangay);
-                        cmd.Parameters.AddWithValue("@GuardianZone", string.IsNullOrEmpty(senior.s_guardian_zone) ? DBNull.Value : senior.s_guardian_zone);
-                        cmd.Parameters.AddWithValue("@Religion", string.IsNullOrEmpty(senior.s_religion) ? DBNull.Value : senior.s_religion);
-                        cmd.Parameters.AddWithValue("@BloodType", string.IsNullOrEmpty(senior.s_bloodtype) ? DBNull.Value : senior.s_bloodtype);
+                        // Basic Information - Ensure no null values
+                        cmd.Parameters.AddWithValue("@SeniorId", senior.SeniorId ?? "");
+                        cmd.Parameters.AddWithValue("@FirstName", senior.FirstName ?? "");
+                        cmd.Parameters.AddWithValue("@LastName", senior.LastName ?? "");
+                        cmd.Parameters.AddWithValue("@MiddleInitial",
+                            string.IsNullOrEmpty(senior.MiddleInitial) ? DBNull.Value : senior.MiddleInitial.Trim());
+                        cmd.Parameters.AddWithValue("@Gender", senior.Gender ?? "");
+                        cmd.Parameters.AddWithValue("@Age", senior.Age);
 
-                        // Health Information
-                        cmd.Parameters.AddWithValue("@HealthProblemsOption", senior.s_health_problems_option ?? "No");
-                        cmd.Parameters.AddWithValue("@HealthProblems", string.IsNullOrEmpty(senior.s_health_problems) ? DBNull.Value : senior.s_health_problems);
-                        cmd.Parameters.AddWithValue("@MaintenanceOption", senior.s_maintenance_option ?? "No");
-                        cmd.Parameters.AddWithValue("@Maintenance", string.IsNullOrEmpty(senior.s_maintenance) ? DBNull.Value : senior.s_maintenance);
-                        cmd.Parameters.AddWithValue("@DisabilityOption", senior.s_disability_option ?? "No");
-                        cmd.Parameters.AddWithValue("@Disability", string.IsNullOrEmpty(senior.s_disability) ? DBNull.Value : senior.s_disability);
-                        cmd.Parameters.AddWithValue("@VisualOption", senior.s_visual_option ?? "No");
-                        cmd.Parameters.AddWithValue("@Visual", string.IsNullOrEmpty(senior.s_visual) ? DBNull.Value : senior.s_visual);
-                        cmd.Parameters.AddWithValue("@HearingOption", senior.s_hearing_option ?? "No");
-                        cmd.Parameters.AddWithValue("@Hearing", string.IsNullOrEmpty(senior.s_hearing) ? DBNull.Value : senior.s_hearing);
-                        cmd.Parameters.AddWithValue("@EmotionalOption", senior.s_emotional_option ?? "No");
-                        cmd.Parameters.AddWithValue("@Emotional", string.IsNullOrEmpty(senior.s_emotional) ? DBNull.Value : senior.s_emotional);
+                        // Handle nullable BirthDate
+                        if (senior.BirthDate.HasValue)
+                        {
+                            cmd.Parameters.AddWithValue("@BirthDate", senior.BirthDate.Value);
+                        }
+                        else
+                        {
+                            cmd.Parameters.AddWithValue("@BirthDate", DBNull.Value);
+                        }
 
-                        // Family Information
-                        cmd.Parameters.AddWithValue("@Spouse", string.IsNullOrEmpty(senior.s_spouse) ? DBNull.Value : senior.s_spouse);
-                        cmd.Parameters.AddWithValue("@SpouseAge", senior.s_spouse_age.HasValue ? (object)senior.s_spouse_age.Value : DBNull.Value);
-                        cmd.Parameters.AddWithValue("@SpouseOccupation", string.IsNullOrEmpty(senior.s_spouse_occupation) ? DBNull.Value : senior.s_spouse_occupation);
-                        cmd.Parameters.AddWithValue("@SpouseContact", string.IsNullOrEmpty(senior.s_spouse_contact) ? DBNull.Value : senior.s_spouse_contact);
-                        cmd.Parameters.AddWithValue("@Children", string.IsNullOrEmpty(senior.s_children) ? DBNull.Value : senior.s_children);
-
-                        // Guardian/Emergency Contact
-                        cmd.Parameters.AddWithValue("@GuardianName", string.IsNullOrEmpty(senior.s_guardian_name) ? DBNull.Value : senior.s_guardian_name);
-                        cmd.Parameters.AddWithValue("@GuardianRelationship", string.IsNullOrEmpty(senior.s_guardian_relationship) ? DBNull.Value : senior.s_guardian_relationship);
-                        cmd.Parameters.AddWithValue("@GuardianRelationshipOther", string.IsNullOrEmpty(senior.s_guardian_relationship_other) ? DBNull.Value : senior.s_guardian_relationship_other);
-                        cmd.Parameters.AddWithValue("@GuardianContact", string.IsNullOrEmpty(senior.s_guardian_contact) ? DBNull.Value : senior.s_guardian_contact);
-                        cmd.Parameters.AddWithValue("@GuardianAddress", string.IsNullOrEmpty(senior.s_guardian_address) ? DBNull.Value : senior.s_guardian_address);
+                        cmd.Parameters.AddWithValue("@ContactNumber",
+                            string.IsNullOrEmpty(senior.ContactNumber) ? DBNull.Value : senior.ContactNumber.Trim());
+                        cmd.Parameters.AddWithValue("@Zone", senior.Zone);
+                        cmd.Parameters.AddWithValue("@Barangay", senior.Barangay ?? "Sampaguita");
+                        cmd.Parameters.AddWithValue("@CivilStatus",
+                            string.IsNullOrEmpty(senior.CivilStatus) ? DBNull.Value : senior.CivilStatus);
 
                         // System Fields
                         cmd.Parameters.AddWithValue("@Status", senior.Status ?? "Active");
                         cmd.Parameters.AddWithValue("@CreatedAt", senior.CreatedAt);
                         cmd.Parameters.AddWithValue("@UpdatedAt", senior.UpdatedAt);
-                        cmd.Parameters.AddWithValue("@IsDeleted", senior.IsDeleted);
 
                         var result = cmd.ExecuteScalar();
                         return result != null ? Convert.ToInt32(result) : 0;
                     }
                 }
             }
+            catch (MySqlException mysqlEx)
+            {
+                Console.WriteLine($"MySQL Error inserting senior: {mysqlEx.Message}");
+                Console.WriteLine($"Error Number: {mysqlEx.Number}");
+                Console.WriteLine($"SQL State: {mysqlEx.SqlState}");
+                TempData["ErrorMessage"] = $"Database error: {mysqlEx.Message}";
+                return 0;
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error inserting senior: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"Detailed error: {ex.ToString()}");
+                TempData["ErrorMessage"] = $"Error: {ex.Message}";
                 return 0;
             }
         }
 
-        // Insert maintenance medicines for a new senior
-        private void InsertMaintenanceMedicines(int seniorId, List<MaintenanceMedicine> medicines)
-        {
-            try
-            {
-                using (var connection = _dbHelper.GetConnection())
-                {
-                    connection.Open();
-
-                    foreach (var medicine in medicines.Where(m => !string.IsNullOrWhiteSpace(m.MedicineName)))
-                    {
-                        string query = @"INSERT INTO maintenance_medicines 
-                                        (SeniorId, MedicineName, Dosage, Schedule, Instructions, CreatedAt, UpdatedAt) 
-                                        VALUES (@SeniorId, @MedicineName, @Dosage, @Schedule, @Instructions, @CreatedAt, @UpdatedAt)";
-
-                        using (var cmd = new MySqlCommand(query, connection))
-                        {
-                            cmd.Parameters.AddWithValue("@SeniorId", seniorId);
-                            cmd.Parameters.AddWithValue("@MedicineName", medicine.MedicineName);
-                            cmd.Parameters.AddWithValue("@Dosage", medicine.Dosage);
-                            cmd.Parameters.AddWithValue("@Schedule", medicine.Schedule);
-                            cmd.Parameters.AddWithValue("@Instructions", string.IsNullOrWhiteSpace(medicine.Instructions) ? DBNull.Value : (object)medicine.Instructions);
-                            cmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
-                            cmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
-
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error inserting maintenance medicines: {ex.Message}");
-            }
-        }
-
-        // Get all active seniors (excluding deleted)
+        // Get all active seniors
         private List<Senior> GetAllActiveSeniors()
         {
             var seniors = new List<Senior>();
@@ -446,8 +537,8 @@ namespace SeniorManagement.Controllers
                 {
                     connection.Open();
                     string query = @"SELECT * FROM seniors 
-                                   WHERE IsDeleted = 0 
-                                   ORDER BY s_lastName, s_firstName";
+                                   WHERE Status = 'Active' 
+                                   ORDER BY LastName, FirstName";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     using (var reader = cmd.ExecuteReader())
@@ -461,15 +552,15 @@ namespace SeniorManagement.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting seniors: {ex.Message}");
+                Console.WriteLine($"Error getting active seniors: {ex.Message}");
                 TempData["ErrorMessage"] = "Error loading senior records.";
             }
 
             return seniors;
         }
 
-        // Get deleted seniors
-        private List<Senior> GetDeletedSeniors()
+        // Get archived seniors
+        private List<Senior> GetArchivedSeniors()
         {
             var seniors = new List<Senior>();
 
@@ -479,8 +570,8 @@ namespace SeniorManagement.Controllers
                 {
                     connection.Open();
                     string query = @"SELECT * FROM seniors 
-                                   WHERE IsDeleted = 1 
-                                   ORDER BY DeletedAt DESC";
+                                   WHERE Status = 'Archived' 
+                                   ORDER BY LastName, FirstName";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     using (var reader = cmd.ExecuteReader())
@@ -494,7 +585,7 @@ namespace SeniorManagement.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting deleted seniors: {ex.Message}");
+                Console.WriteLine($"Error getting archived seniors: {ex.Message}");
                 TempData["ErrorMessage"] = "Error loading archived records.";
             }
 
@@ -533,148 +624,26 @@ namespace SeniorManagement.Controllers
             return null;
         }
 
-        // Get maintenance medicines for a senior
-        private List<MaintenanceMedicine> GetMaintenanceMedicines(int seniorId)
-        {
-            var medicines = new List<MaintenanceMedicine>();
-
-            try
-            {
-                using (var connection = _dbHelper.GetConnection())
-                {
-                    connection.Open();
-                    string query = @"SELECT * FROM maintenance_medicines 
-                                   WHERE SeniorId = @SeniorId 
-                                   ORDER BY MedicineName";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@SeniorId", seniorId);
-
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                medicines.Add(new MaintenanceMedicine
-                                {
-                                    Id = reader.GetInt32("Id"),
-                                    SeniorId = reader.GetInt32("SeniorId"),
-                                    MedicineName = reader.GetString("MedicineName"),
-                                    Dosage = reader.IsDBNull(reader.GetOrdinal("Dosage")) ? "" : reader.GetString("Dosage"),
-                                    Schedule = reader.IsDBNull(reader.GetOrdinal("Schedule")) ? "" : reader.GetString("Schedule"),
-                                    Instructions = reader.IsDBNull(reader.GetOrdinal("Instructions")) ? "" : reader.GetString("Instructions"),
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error getting maintenance medicines: {ex.Message}");
-            }
-
-            return medicines;
-        }
-
-        // Update maintenance medicines
-        private void UpdateMaintenanceMedicines(int seniorId, List<MaintenanceMedicine> medicines)
-        {
-            try
-            {
-                using (var connection = _dbHelper.GetConnection())
-                {
-                    connection.Open();
-
-                    // First, delete existing medicines for this senior
-                    string deleteQuery = "DELETE FROM maintenance_medicines WHERE SeniorId = @SeniorId";
-                    using (var deleteCmd = new MySqlCommand(deleteQuery, connection))
-                    {
-                        deleteCmd.Parameters.AddWithValue("@SeniorId", seniorId);
-                        deleteCmd.ExecuteNonQuery();
-                    }
-
-                    // Then insert new ones if any
-                    if (medicines != null && medicines.Any(m => !string.IsNullOrWhiteSpace(m.MedicineName)))
-                    {
-                        foreach (var medicine in medicines.Where(m => !string.IsNullOrWhiteSpace(m.MedicineName)))
-                        {
-                            string insertQuery = @"INSERT INTO maintenance_medicines 
-                                                (SeniorId, MedicineName, Dosage, Schedule, Instructions, CreatedAt, UpdatedAt) 
-                                                VALUES (@SeniorId, @MedicineName, @Dosage, @Schedule, @Instructions, @CreatedAt, @UpdatedAt)";
-
-                            using (var insertCmd = new MySqlCommand(insertQuery, connection))
-                            {
-                                insertCmd.Parameters.AddWithValue("@SeniorId", seniorId);
-                                insertCmd.Parameters.AddWithValue("@MedicineName", medicine.MedicineName);
-                                insertCmd.Parameters.AddWithValue("@Dosage", medicine.Dosage);
-                                insertCmd.Parameters.AddWithValue("@Schedule", medicine.Schedule);
-                                insertCmd.Parameters.AddWithValue("@Instructions", string.IsNullOrWhiteSpace(medicine.Instructions) ? DBNull.Value : (object)medicine.Instructions);
-                                insertCmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
-                                insertCmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
-
-                                insertCmd.ExecuteNonQuery();
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error updating maintenance medicines: {ex.Message}");
-            }
-        }
-
         // Helper method to map reader to Senior object
         private Senior MapSeniorFromReader(MySqlDataReader reader)
         {
             return new Senior
             {
                 Id = reader.GetInt32("Id"),
-                s_firstName = reader.GetString("s_firstName"),
-                s_middleName = reader.IsDBNull(reader.GetOrdinal("s_middleName")) ? "" : reader.GetString("s_middleName"),
-                s_lastName = reader.GetString("s_lastName"),
-                s_sex = reader.GetString("s_sex"),
-                s_dob = reader.GetDateTime("s_dob"),
-                s_age = reader.GetInt32("s_age"),
-                s_contact = reader.IsDBNull(reader.GetOrdinal("s_contact")) ? "" : reader.GetString("s_contact"),
-                s_barangay = reader.IsDBNull(reader.GetOrdinal("s_barangay")) ? "" : reader.GetString("s_barangay"),
-                s_guardian_zone = reader.IsDBNull(reader.GetOrdinal("s_guardian_zone")) ? "" : reader.GetString("s_guardian_zone"),
-                s_religion = reader.IsDBNull(reader.GetOrdinal("s_religion")) ? "" : reader.GetString("s_religion"),
-                s_bloodtype = reader.IsDBNull(reader.GetOrdinal("s_bloodtype")) ? "" : reader.GetString("s_bloodtype"),
+                SeniorId = reader.GetString("SeniorId"),
+                FirstName = reader.GetString("FirstName"),
+                LastName = reader.GetString("LastName"),
+                MiddleInitial = reader.IsDBNull(reader.GetOrdinal("MiddleInitial")) ? "" : reader.GetString("MiddleInitial"),
+                Gender = reader.GetString("Gender"),
+                Age = reader.GetInt32("Age"),
+                BirthDate = reader.IsDBNull(reader.GetOrdinal("BirthDate")) ? (DateTime?)null : reader.GetDateTime("BirthDate"),
+                ContactNumber = reader.IsDBNull(reader.GetOrdinal("ContactNumber")) ? "" : reader.GetString("ContactNumber"),
+                Zone = reader.GetInt32("Zone"),
+                Barangay = reader.GetString("Barangay"),
+                CivilStatus = reader.IsDBNull(reader.GetOrdinal("CivilStatus")) ? "" : reader.GetString("CivilStatus"),
                 Status = reader.GetString("Status"),
                 CreatedAt = reader.GetDateTime("CreatedAt"),
-                UpdatedAt = reader.GetDateTime("UpdatedAt"),
-                DeletedAt = reader.IsDBNull(reader.GetOrdinal("DeletedAt")) ? (DateTime?)null : reader.GetDateTime("DeletedAt"),
-                IsDeleted = reader.GetBoolean("IsDeleted"),
-
-                // Health Information
-                s_health_problems_option = reader.IsDBNull(reader.GetOrdinal("s_health_problems_option")) ? "No" : reader.GetString("s_health_problems_option"),
-                s_health_problems = reader.IsDBNull(reader.GetOrdinal("s_health_problems")) ? "" : reader.GetString("s_health_problems"),
-                s_maintenance_option = reader.IsDBNull(reader.GetOrdinal("s_maintenance_option")) ? "No" : reader.GetString("s_maintenance_option"),
-                s_maintenance = reader.IsDBNull(reader.GetOrdinal("s_maintenance")) ? "" : reader.GetString("s_maintenance"),
-                s_disability_option = reader.IsDBNull(reader.GetOrdinal("s_disability_option")) ? "No" : reader.GetString("s_disability_option"),
-                s_disability = reader.IsDBNull(reader.GetOrdinal("s_disability")) ? "" : reader.GetString("s_disability"),
-                s_visual_option = reader.IsDBNull(reader.GetOrdinal("s_visual_option")) ? "No" : reader.GetString("s_visual_option"),
-                s_visual = reader.IsDBNull(reader.GetOrdinal("s_visual")) ? "" : reader.GetString("s_visual"),
-                s_hearing_option = reader.IsDBNull(reader.GetOrdinal("s_hearing_option")) ? "No" : reader.GetString("s_hearing_option"),
-                s_hearing = reader.IsDBNull(reader.GetOrdinal("s_hearing")) ? "" : reader.GetString("s_hearing"),
-                s_emotional_option = reader.IsDBNull(reader.GetOrdinal("s_emotional_option")) ? "No" : reader.GetString("s_emotional_option"),
-                s_emotional = reader.IsDBNull(reader.GetOrdinal("s_emotional")) ? "" : reader.GetString("s_emotional"),
-
-                // Family Information
-                s_spouse = reader.IsDBNull(reader.GetOrdinal("s_spouse")) ? "" : reader.GetString("s_spouse"),
-                s_spouse_age = reader.IsDBNull(reader.GetOrdinal("s_spouse_age")) ? null : (int?)reader.GetInt32("s_spouse_age"),
-                s_spouse_occupation = reader.IsDBNull(reader.GetOrdinal("s_spouse_occupation")) ? "" : reader.GetString("s_spouse_occupation"),
-                s_spouse_contact = reader.IsDBNull(reader.GetOrdinal("s_spouse_contact")) ? "" : reader.GetString("s_spouse_contact"),
-                s_children = reader.IsDBNull(reader.GetOrdinal("s_children")) ? "" : reader.GetString("s_children"),
-
-                // Guardian/Emergency Contact
-                s_guardian_name = reader.IsDBNull(reader.GetOrdinal("s_guardian_name")) ? "" : reader.GetString("s_guardian_name"),
-                s_guardian_relationship = reader.IsDBNull(reader.GetOrdinal("s_guardian_relationship")) ? "" : reader.GetString("s_guardian_relationship"),
-                s_guardian_relationship_other = reader.IsDBNull(reader.GetOrdinal("s_guardian_relationship_other")) ? "" : reader.GetString("s_guardian_relationship_other"),
-                s_guardian_contact = reader.IsDBNull(reader.GetOrdinal("s_guardian_contact")) ? "" : reader.GetString("s_guardian_contact"),
-                s_guardian_address = reader.IsDBNull(reader.GetOrdinal("s_guardian_address")) ? "" : reader.GetString("s_guardian_address")
+                UpdatedAt = reader.GetDateTime("UpdatedAt")
             };
         }
 
@@ -688,67 +657,33 @@ namespace SeniorManagement.Controllers
                     connection.Open();
 
                     string query = @"UPDATE seniors 
-                                   SET s_firstName = @FirstName, s_middleName = @MiddleName, s_lastName = @LastName, 
-                                       s_sex = @Sex, s_dob = @Dob, s_age = @Age, s_contact = @Contact,
-                                       s_barangay = @Barangay, s_guardian_zone = @GuardianZone, s_religion = @Religion, 
-                                       s_bloodtype = @BloodType,
-                                       s_health_problems_option = @HealthProblemsOption, s_health_problems = @HealthProblems,
-                                       s_maintenance_option = @MaintenanceOption, s_maintenance = @Maintenance,
-                                       s_disability_option = @DisabilityOption, s_disability = @Disability,
-                                       s_visual_option = @VisualOption, s_visual = @Visual,
-                                       s_hearing_option = @HearingOption, s_hearing = @Hearing,
-                                       s_emotional_option = @EmotionalOption, s_emotional = @Emotional,
-                                       s_spouse = @Spouse, s_spouse_age = @SpouseAge, s_spouse_occupation = @SpouseOccupation,
-                                       s_spouse_contact = @SpouseContact, s_children = @Children,
-                                       s_guardian_name = @GuardianName, s_guardian_relationship = @GuardianRelationship,
-                                       s_guardian_relationship_other = @GuardianRelationshipOther, s_guardian_contact = @GuardianContact,
-                                       s_guardian_address = @GuardianAddress,
+                                   SET SeniorId = @SeniorId,
+                                       FirstName = @FirstName,
+                                       LastName = @LastName,
+                                       MiddleInitial = @MiddleInitial,
+                                       Gender = @Gender,
+                                       Age = @Age,
+                                       BirthDate = @BirthDate,
+                                       ContactNumber = @ContactNumber,
+                                       Zone = @Zone,
+                                       CivilStatus = @CivilStatus,
                                        UpdatedAt = @UpdatedAt
                                    WHERE Id = @Id";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
-                        // Personal Information
+                        // Basic Information
                         cmd.Parameters.AddWithValue("@Id", senior.Id);
-                        cmd.Parameters.AddWithValue("@FirstName", senior.s_firstName ?? "");
-                        cmd.Parameters.AddWithValue("@MiddleName", string.IsNullOrEmpty(senior.s_middleName) ? DBNull.Value : senior.s_middleName);
-                        cmd.Parameters.AddWithValue("@LastName", senior.s_lastName ?? "");
-                        cmd.Parameters.AddWithValue("@Sex", senior.s_sex ?? "");
-                        cmd.Parameters.AddWithValue("@Dob", senior.s_dob);
-                        cmd.Parameters.AddWithValue("@Age", senior.s_age);
-                        cmd.Parameters.AddWithValue("@Contact", string.IsNullOrEmpty(senior.s_contact) ? DBNull.Value : senior.s_contact);
-                        cmd.Parameters.AddWithValue("@Barangay", string.IsNullOrEmpty(senior.s_barangay) ? DBNull.Value : senior.s_barangay);
-                        cmd.Parameters.AddWithValue("@GuardianZone", string.IsNullOrEmpty(senior.s_guardian_zone) ? DBNull.Value : senior.s_guardian_zone);
-                        cmd.Parameters.AddWithValue("@Religion", string.IsNullOrEmpty(senior.s_religion) ? DBNull.Value : senior.s_religion);
-                        cmd.Parameters.AddWithValue("@BloodType", string.IsNullOrEmpty(senior.s_bloodtype) ? DBNull.Value : senior.s_bloodtype);
-
-                        // Health Information
-                        cmd.Parameters.AddWithValue("@HealthProblemsOption", senior.s_health_problems_option ?? "No");
-                        cmd.Parameters.AddWithValue("@HealthProblems", string.IsNullOrEmpty(senior.s_health_problems) ? DBNull.Value : senior.s_health_problems);
-                        cmd.Parameters.AddWithValue("@MaintenanceOption", senior.s_maintenance_option ?? "No");
-                        cmd.Parameters.AddWithValue("@Maintenance", string.IsNullOrEmpty(senior.s_maintenance) ? DBNull.Value : senior.s_maintenance);
-                        cmd.Parameters.AddWithValue("@DisabilityOption", senior.s_disability_option ?? "No");
-                        cmd.Parameters.AddWithValue("@Disability", string.IsNullOrEmpty(senior.s_disability) ? DBNull.Value : senior.s_disability);
-                        cmd.Parameters.AddWithValue("@VisualOption", senior.s_visual_option ?? "No");
-                        cmd.Parameters.AddWithValue("@Visual", string.IsNullOrEmpty(senior.s_visual) ? DBNull.Value : senior.s_visual);
-                        cmd.Parameters.AddWithValue("@HearingOption", senior.s_hearing_option ?? "No");
-                        cmd.Parameters.AddWithValue("@Hearing", string.IsNullOrEmpty(senior.s_hearing) ? DBNull.Value : senior.s_hearing);
-                        cmd.Parameters.AddWithValue("@EmotionalOption", senior.s_emotional_option ?? "No");
-                        cmd.Parameters.AddWithValue("@Emotional", string.IsNullOrEmpty(senior.s_emotional) ? DBNull.Value : senior.s_emotional);
-
-                        // Family Information
-                        cmd.Parameters.AddWithValue("@Spouse", string.IsNullOrEmpty(senior.s_spouse) ? DBNull.Value : senior.s_spouse);
-                        cmd.Parameters.AddWithValue("@SpouseAge", senior.s_spouse_age.HasValue ? (object)senior.s_spouse_age.Value : DBNull.Value);
-                        cmd.Parameters.AddWithValue("@SpouseOccupation", string.IsNullOrEmpty(senior.s_spouse_occupation) ? DBNull.Value : senior.s_spouse_occupation);
-                        cmd.Parameters.AddWithValue("@SpouseContact", string.IsNullOrEmpty(senior.s_spouse_contact) ? DBNull.Value : senior.s_spouse_contact);
-                        cmd.Parameters.AddWithValue("@Children", string.IsNullOrEmpty(senior.s_children) ? DBNull.Value : senior.s_children);
-
-                        // Guardian/Emergency Contact
-                        cmd.Parameters.AddWithValue("@GuardianName", string.IsNullOrEmpty(senior.s_guardian_name) ? DBNull.Value : senior.s_guardian_name);
-                        cmd.Parameters.AddWithValue("@GuardianRelationship", string.IsNullOrEmpty(senior.s_guardian_relationship) ? DBNull.Value : senior.s_guardian_relationship);
-                        cmd.Parameters.AddWithValue("@GuardianRelationshipOther", string.IsNullOrEmpty(senior.s_guardian_relationship_other) ? DBNull.Value : senior.s_guardian_relationship_other);
-                        cmd.Parameters.AddWithValue("@GuardianContact", string.IsNullOrEmpty(senior.s_guardian_contact) ? DBNull.Value : senior.s_guardian_contact);
-                        cmd.Parameters.AddWithValue("@GuardianAddress", string.IsNullOrEmpty(senior.s_guardian_address) ? DBNull.Value : senior.s_guardian_address);
+                        cmd.Parameters.AddWithValue("@SeniorId", senior.SeniorId ?? "");
+                        cmd.Parameters.AddWithValue("@FirstName", senior.FirstName ?? "");
+                        cmd.Parameters.AddWithValue("@LastName", senior.LastName ?? "");
+                        cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrEmpty(senior.MiddleInitial) ? DBNull.Value : senior.MiddleInitial);
+                        cmd.Parameters.AddWithValue("@Gender", senior.Gender ?? "");
+                        cmd.Parameters.AddWithValue("@Age", senior.Age);
+                        cmd.Parameters.AddWithValue("@BirthDate", senior.BirthDate.HasValue ? (object)senior.BirthDate.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue("@ContactNumber", string.IsNullOrEmpty(senior.ContactNumber) ? DBNull.Value : senior.ContactNumber);
+                        cmd.Parameters.AddWithValue("@Zone", senior.Zone);
+                        cmd.Parameters.AddWithValue("@CivilStatus", string.IsNullOrEmpty(senior.CivilStatus) ? DBNull.Value : senior.CivilStatus);
 
                         cmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
 
@@ -774,48 +709,141 @@ namespace SeniorManagement.Controllers
             return age;
         }
 
-        // Parse children from text format
-        private List<Child> ParseChildrenFromText(string childrenText)
+        // Check if SeniorId already exists (FIXED VERSION)
+        private bool CheckSeniorIdExists(string seniorId, int excludeId = 0)
         {
-            var children = new List<Child>();
+            if (string.IsNullOrEmpty(seniorId))
+                return false;
 
-            if (string.IsNullOrEmpty(childrenText))
-                return children;
-
-            var lines = childrenText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (var line in lines)
+            try
             {
-                var child = new Child();
-                // Simple parsing - you can enhance this based on your format
-                child.Name = line.Trim();
-                children.Add(child);
-            }
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+                    string query = "SELECT COUNT(*) FROM seniors WHERE SeniorId = @SeniorId";
 
-            return children;
+                    if (excludeId > 0)
+                    {
+                        query += " AND Id != @ExcludeId";
+                    }
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@SeniorId", seniorId.Trim());
+                        if (excludeId > 0)
+                        {
+                            cmd.Parameters.AddWithValue("@ExcludeId", excludeId);
+                        }
+
+                        object result = cmd.ExecuteScalar();
+                        if (result != null && result != DBNull.Value)
+                        {
+                            int count = Convert.ToInt32(result);
+                            return count > 0;
+                        }
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking SeniorId: {ex.Message}");
+                return false;
+            }
         }
 
-        // Format children list to text
-        private string FormatChildrenText(List<Child> children)
+        // AJAX endpoint to check SCCN number availability
+        [HttpGet]
+        public JsonResult CheckSeniorIdAvailable(string seniorId, int excludeId = 0)
         {
-            if (children == null || !children.Any())
-                return null;
-
-            var lines = new List<string>();
-            foreach (var child in children.Where(c => !string.IsNullOrWhiteSpace(c.Name)))
+            try
             {
-                var parts = new List<string> { child.Name };
+                // First validate format
+                if (!IsValidSCCNNumber(seniorId))
+                {
+                    return Json(new
+                    {
+                        available = false,
+                        validFormat = false,
+                        message = "SCCN number must be exactly 12 digits (numbers only)"
+                    });
+                }
 
-                if (child.Age.HasValue)
-                    parts.Add($"Age: {child.Age}");
+                bool exists = CheckSeniorIdExists(seniorId, excludeId);
+                return Json(new
+                {
+                    available = !exists,
+                    validFormat = true,
+                    message = exists ? "SCCN number already registered" : "SCCN number available"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    available = false,
+                    validFormat = false,
+                    error = ex.Message
+                });
+            }
+        }
 
-                if (!string.IsNullOrWhiteSpace(child.Relationship))
-                    parts.Add($"({child.Relationship})");
+        // Search seniors by SCCN or name
+        [HttpGet]
+        public JsonResult SearchSeniors(string searchTerm, string status = "Active")
+        {
+            var seniors = new List<Senior>();
 
-                lines.Add(string.Join(" ", parts));
+            try
+            {
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    using (var connection = _dbHelper.GetConnection())
+                    {
+                        connection.Open();
+                        string query = @"SELECT * FROM seniors 
+                                       WHERE Status = @Status
+                                       AND (SeniorId LIKE @SearchTerm 
+                                           OR FirstName LIKE @SearchTerm 
+                                           OR LastName LIKE @SearchTerm
+                                           OR CONCAT(FirstName, ' ', LastName) LIKE @SearchTerm)
+                                       ORDER BY LastName, FirstName
+                                       LIMIT 20";
+
+                        using (var cmd = new MySqlCommand(query, connection))
+                        {
+                            cmd.Parameters.AddWithValue("@Status", status);
+                            cmd.Parameters.AddWithValue("@SearchTerm", $"%{searchTerm}%");
+
+                            using (var reader = cmd.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    seniors.Add(MapSeniorFromReader(reader));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error searching seniors: {ex.Message}");
             }
 
-            return string.Join("\n", lines);
+            return Json(new { success = true, data = seniors });
+        }
+
+        // Get SCCN format example
+        [HttpGet]
+        public JsonResult GetSCCNFormatExample()
+        {
+            return Json(new
+            {
+                example = "202312340001",
+                format = "12 digits (numbers only)",
+                pattern = "XXXXXXXXXXXX"
+            });
         }
     }
 }

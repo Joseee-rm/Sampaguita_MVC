@@ -1,15 +1,21 @@
-﻿using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using System.Globalization;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using SeniorManagement.Helpers;
 using SeniorManagement.Hubs;
-using SeniorManagement.Models;
+using SeniorManagement.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-// Remove .AddRazorRuntimeCompilation() if you don't have the package installed
-// If you want it, install: Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation
-// Then uncomment: .AddRazorRuntimeCompilation()
+
+// Add Razor Runtime Compilation for Development (requires NuGet package)
+if (builder.Environment.IsDevelopment())
+{
+    // Make sure you have this NuGet package installed:
+    // Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation
+    builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
+}
 
 // Add SignalR (for real-time activity updates)
 builder.Services.AddSignalR();
@@ -17,11 +23,11 @@ builder.Services.AddSignalR();
 // Add session support
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromHours(8); // Increased to 8 hours
+    options.IdleTimeout = TimeSpan.FromHours(8);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
     options.Cookie.SameSite = SameSiteMode.Strict;
-    options.Cookie.Name = ".SeniorManagement.Session"; // Add a specific name
+    options.Cookie.Name = ".SeniorManagement.Session";
 });
 
 // Add authentication
@@ -31,12 +37,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/Account/Login";
         options.AccessDeniedPath = "/Account/AccessDenied";
         options.LogoutPath = "/Account/Logout";
-        options.ExpireTimeSpan = TimeSpan.FromHours(8); // Match session timeout
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.Cookie.SameSite = SameSiteMode.Strict;
-        options.Cookie.Name = ".SeniorManagement.Auth"; // Add a specific name
+        options.Cookie.Name = ".SeniorManagement.Auth";
     });
 
 // Add authorization
@@ -44,16 +50,27 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy =>
         policy.RequireRole("Administrator"));
+
+    // Add financial management policy if needed
+    options.AddPolicy("FinancialManager", policy =>
+        policy.RequireRole("Administrator", "FinancialManager", "Treasurer"));
 });
 
-// Register your services - IMPORTANT: Register ActivityLogController here
+// Register Database Helper
 builder.Services.AddScoped<DatabaseHelper>();
-builder.Services.AddScoped<AuthHelper>();
-builder.Services.AddScoped<ActivityHelper>();
-builder.Services.AddScoped<SeniorManagement.Controllers.ActivityLogController>();
 
-// Add HTTP context accessor - Make sure this is before other services that need it
+// Register Auth Helper
+builder.Services.AddScoped<AuthHelper>();
+
+// Register Activity Helper  
+builder.Services.AddScoped<ActivityHelper>();
+
+// Register Monthly Contributions Repository
+builder.Services.AddScoped<IMonthlyContributionRepository, MonthlyContributionRepository>();
+
+// Add HTTP context accessor
 builder.Services.AddHttpContextAccessor();
+
 
 // Add logging configuration
 builder.Logging.ClearProviders();
@@ -71,7 +88,6 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Home/Error");
-    // Only use HSTS in production
     app.UseHsts();
 }
 
@@ -80,7 +96,7 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// Add session middleware - MUST come before UseAuthentication
+// Add session middleware
 app.UseSession();
 
 // Add authentication & authorization
@@ -90,7 +106,6 @@ app.UseAuthorization();
 // Custom middleware to ensure session is available for logging
 app.Use(async (context, next) =>
 {
-    // Ensure session is available before processing
     await context.Session.LoadAsync();
 
     // Set security headers
@@ -101,94 +116,37 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// Create logs directory on startup
+var webRootPath = app.Environment.WebRootPath;
+var logsDir = Path.Combine(webRootPath, "logs", "contributions");
+if (!Directory.Exists(logsDir))
+{
+    Directory.CreateDirectory(logsDir);
+    Console.WriteLine($"Created logs directory: {logsDir}");
+}
+
 // Map controllers
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
 
-// Add additional routes for common pages
+// Map Dues controller routes
 app.MapControllerRoute(
-    name: "dashboard",
-    pattern: "Dashboard",
-    defaults: new { controller = "Home", action = "Index" });
-
-app.MapControllerRoute(
-    name: "adminDashboard",
-    pattern: "Admin/Dashboard",
-    defaults: new { controller = "Admin", action = "Dashboard" });
+    name: "dues",
+    pattern: "Dues/{action=Index}/{id?}",
+    defaults: new { controller = "Dues" });
 
 // Add SignalR hub endpoint
 app.MapHub<ActivityHub>("/activityHub");
 
-// Add a test endpoint for debugging
-app.MapGet("/test-logging", async (context) =>
+// Test endpoint
+app.MapGet("/test", async (context) =>
 {
-    var serviceProvider = context.RequestServices;
-    try
-    {
-        // Test activity logging
-        var activityHelper = serviceProvider.GetRequiredService<ActivityHelper>();
-        await activityHelper.LogActivityAsync("Test", "Testing logging system from Program.cs");
-
-        await context.Response.WriteAsync("Test logging completed successfully!");
-    }
-    catch (Exception ex)
-    {
-        await context.Response.WriteAsync($"Error: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}");
-    }
+    await context.Response.WriteAsync("Senior Management System is running!");
 });
 
-// Add another test endpoint for ActivityLogController
-app.MapGet("/test-activity-controller", async (context) =>
-{
-    var serviceProvider = context.RequestServices;
-    try
-    {
-        using (var scope = serviceProvider.CreateScope())
-        {
-            var controller = scope.ServiceProvider.GetRequiredService<SeniorManagement.Controllers.ActivityLogController>();
-            await controller.LogActivityAsync("Test Controller", "Testing ActivityLogController directly");
-        }
-
-        await context.Response.WriteAsync("ActivityLogController test completed!");
-    }
-    catch (Exception ex)
-    {
-        await context.Response.WriteAsync($"Error: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}");
-    }
-});
-
-// Add health check endpoint
-app.MapGet("/health", async (context) =>
-{
-    var serviceProvider = context.RequestServices;
-    try
-    {
-        // Test database connection
-        var dbHelper = serviceProvider.GetRequiredService<DatabaseHelper>();
-        using (var connection = dbHelper.GetConnection())
-        {
-            await connection.OpenAsync();
-            await connection.CloseAsync();
-        }
-
-        context.Response.StatusCode = 200;
-        await context.Response.WriteAsync("Healthy");
-    }
-    catch (Exception ex)
-    {
-        context.Response.StatusCode = 500;
-        await context.Response.WriteAsync($"Unhealthy: {ex.Message}");
-    }
-});
-
-// Add middleware to handle SignalR CORS if needed
-app.UseCors(policy =>
-{
-    policy.WithOrigins("https://localhost:5001", "http://localhost:5000")
-          .AllowAnyHeader()
-          .AllowAnyMethod()
-          .AllowCredentials();
-});
+// Startup message
+Console.WriteLine("Senior Management System Started Successfully!");
+Console.WriteLine($"Environment: {app.Environment.EnvironmentName}");
 
 app.Run();

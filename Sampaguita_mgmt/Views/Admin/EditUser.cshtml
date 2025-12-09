@@ -36,27 +36,17 @@
     }
 
     /* Form Styles */
-    .form-control, .form-select {
+    .form-control {
         border-radius: 8px;
         border: 2px solid #e9ecef;
         padding: 10px 15px;
         transition: all 0.3s ease;
     }
 
-        .form-control:focus, .form-select:focus {
+        .form-control:focus {
             border-color: #667eea;
             box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
         }
-
-    .form-check-input:checked {
-        background-color: #667eea;
-        border-color: #667eea;
-    }
-
-    .form-check-input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-    }
 
     .card {
         border: none;
@@ -71,25 +61,6 @@
         border: none;
         padding: 20px;
         border-radius: 15px 15px 0 0 !important;
-    }
-
-    /* Badge Styles */
-    .badge-active {
-        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        color: white;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-size: 14px;
-        display: inline-block;
-    }
-
-    .badge-inactive {
-        background: linear-gradient(135deg, #868f96 0%, #596164 100%);
-        color: white;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-size: 14px;
-        display: inline-block;
     }
 
     .text-danger {
@@ -126,6 +97,8 @@
             <input type="hidden" asp-for="Id" />
             <input type="hidden" asp-for="CreatedAt" />
             <input type="hidden" asp-for="IsActive" />
+            <input type="hidden" asp-for="Role" />
+            <input type="hidden" asp-for="IsAdmin" />
 
             <div class="row">
                 <div class="col-md-6">
@@ -144,60 +117,6 @@
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label asp-for="Role" class="form-label">Role *</label>
-                        <select asp-for="Role" class="form-select" id="RoleSelect" required>
-                            <option value="">-- Select Role --</option>
-                            <option value="Administrator">Administrator</option>
-                            <option value="Staff">Staff</option>
-                        </select>
-                        <span asp-validation-for="Role" class="text-danger"></span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label class="form-label">Admin Privileges</label>
-                        <div class="form-check mt-2">
-                            <input asp-for="IsAdmin" class="form-check-input" id="IsAdminCheckbox" />
-                            <label asp-for="IsAdmin" class="form-check-label">
-                                Grant administrator privileges
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- User Information (Readonly) -->
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label class="form-label">User Status</label>
-                        <div>
-                            @if (Model.IsActive)
-                            {
-                                <span class="badge-active">
-                                    <i class="fas fa-check-circle"></i> Active
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="badge-inactive">
-                                    <i class="fas fa-times-circle"></i> Inactive
-                                </span>
-                            }
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label class="form-label">Created Date</label>
-                        <input type="text" class="form-control" value="@Model.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")" readonly />
-                    </div>
-                </div>
-            </div>
-
             <div class="form-group mt-4">
                 <button type="submit" class="btn-primary btn-save me-2" id="submitBtn">
                     <i class="fas fa-save"></i> Update User
@@ -212,48 +131,14 @@
 
 @section Scripts {
     <script>
-        // Set initial values for dropdown and checkbox
-        document.addEventListener('DOMContentLoaded', function() {
-            const roleSelect = document.getElementById('RoleSelect');
-            const isAdminCheckbox = document.getElementById('IsAdminCheckbox');
-
-            // Set the selected role
-            roleSelect.value = '@Model.Role';
-
-            // Set checkbox based on role
-            if ('@Model.Role' === 'Administrator') {
-                isAdminCheckbox.checked = true;
-            } else {
-                isAdminCheckbox.checked = false;
-            }
-
-            // Sync role and checkbox
-            roleSelect.addEventListener('change', function() {
-                if (this.value === 'Administrator') {
-                    isAdminCheckbox.checked = true;
-                } else if (this.value === 'Staff') {
-                    isAdminCheckbox.checked = false;
-                }
-            });
-
-            isAdminCheckbox.addEventListener('change', function() {
-                if (this.checked) {
-                    roleSelect.value = 'Administrator';
-                } else {
-                    roleSelect.value = 'Staff';
-                }
-            });
-        });
-
         // Form validation and submission
         document.getElementById('editUserForm').addEventListener('submit', function(e) {
             const name = document.getElementById('Name').value.trim();
             const username = document.getElementById('Username').value.trim();
-            const role = document.getElementById('RoleSelect').value;
             const submitBtn = document.getElementById('submitBtn');
 
             // Basic validation
-            if (!name || !username || !role) {
+            if (!name || !username) {
                 e.preventDefault();
                 alert('Please fill in all required fields.');
                 return false;

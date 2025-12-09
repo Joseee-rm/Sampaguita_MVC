@@ -1,412 +1,615 @@
 ﻿@model List<SeniorManagement.Models.Event>
 @{
-    // Safe admin check
-    bool isAdmin = false;
-    if (User.Identity.IsAuthenticated)
+    ViewData["Title"] = "";
+    bool isAdmin = ViewBag.IsAdmin as bool? ?? false;
+    bool isStaff = ViewBag.IsStaff as bool? ?? false;
+
+    // Helper functions
+    string FormatTime(TimeSpan timeSpan)
     {
-        isAdmin = User.IsInRole("Administrator");
-    }
-    // Also check ViewBag if it was set in controller
-    if (ViewBag.IsAdmin != null)
-    {
-        bool viewBagAdmin;
-        if (bool.TryParse(ViewBag.IsAdmin.ToString(), out viewBagAdmin))
+        try
         {
-            isAdmin = isAdmin || viewBagAdmin;
+            var time = DateTime.Today.Add(timeSpan);
+            return time.ToString("h:mm tt");
         }
+        catch
+        {
+            return timeSpan.ToString(@"hh\:mm");
+        }
+    }
+
+    string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Scheduled" => "badge bg-primary",
+            "Ongoing" => "badge bg-warning text-dark",
+            "Completed" => "badge bg-success",
+            "Cancelled" => "badge bg-danger",
+            _ => "badge bg-secondary"
+        };
+    }
+
+    // Helper for filter selection
+    string IsSelected(string current, string expected)
+    {
+        return current == expected ? "selected" : "";
     }
 }
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Events - Senior Management</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .card {
-            border: none;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .badge-event {
-            padding: 0.5em 1em;
-            border-radius: 20px;
-            font-weight: 500;
-        }
-
-        .status-scheduled {
-            background-color: #0dcaf0;
-            color: white;
-        }
-
-        .status-ongoing {
-            background-color: #ffc107;
-            color: black;
-        }
-
-        .status-completed {
-            background-color: #198754;
-            color: white;
-        }
-
-        .status-cancelled {
-            background-color: #dc3545;
-            color: white;
-        }
-
-        .attendance-progress {
-            height: 8px;
-            border-radius: 4px;
-            margin-top: 5px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Main Content -->
-            <main class="col-md-12 ms-sm-auto px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">
-                        <i class="fas fa-calendar-alt me-2"></i>Events Management
-                    </h1>
-                    @if (isAdmin)
-                    {
-                        <div class="btn-toolbar mb-2 mb-md-0">
-                            <a href="@Url.Action("Create", "Event")" class="btn btn-primary">
-                                <i class="fas fa-plus me-1"></i> Create New Event
-                            </a>
-                        </div>
-                    }
-                </div>
-
-                <!-- Messages -->
-                @if (!string.IsNullOrEmpty(ViewBag.Error))
-                {
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-circle me-2"></i>@ViewBag.Error
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
-
-                @if (TempData["SuccessMessage"] != null)
-                {
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
-
-                @if (TempData["ErrorMessage"] != null)
-                {
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i>@TempData["ErrorMessage"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
-
-                <!-- Filter Section -->
-                <div class="card mb-4">
-                    <div class="card-body">
-                        <form method="get" class="row g-3">
-                            <div class="col-md-4">
-                                <label for="status" class="form-label">Status</label>
-                                <select class="form-select" id="status" name="status">
-                                    <option value="">All Status</option>
-                                    <option value="Scheduled" selected='@(Context.Request.Query["status"] == "Scheduled")'>Scheduled</option>
-                                    <option value="Ongoing" selected='@(Context.Request.Query["status"] == "Ongoing")'>Ongoing</option>
-                                    <option value="Completed" selected='@(Context.Request.Query["status"] == "Completed")'>Completed</option>
-                                    <option value="Cancelled" selected='@(Context.Request.Query["status"] == "Cancelled")'>Cancelled</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="type" class="form-label">Event Type</label>
-                                <select class="form-select" id="type" name="type">
-                                    <option value="">All Types</option>
-                                    <option value="Medical Mission" selected='@(Context.Request.Query["type"] == "Medical Mission")'>Medical Mission</option>
-                                    <option value="Assistance Program" selected='@(Context.Request.Query["type"] == "Assistance Program")'>Assistance Program</option>
-                                    <option value="Wellness Activity" selected='@(Context.Request.Query["type"] == "Wellness Activity")'>Wellness Activity</option>
-                                    <option value="Community Gathering" selected='@(Context.Request.Query["type"] == "Community Gathering")'>Community Gathering</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary me-2">
-                                    <i class="fas fa-filter me-1"></i> Filter
-                                </button>
-                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
-                                    <i class="fas fa-redo me-1"></i> Clear
-                                </a>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Events Table -->
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-list me-2"></i>Events List
-                            <span class="badge bg-light text-dark ms-2">@Model.Count events</span>
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        @if (Model.Any())
-                        {
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Event Title</th>
-                                            <th>Type</th>
-                                            <th>Date & Time</th>
-                                            <th>Location</th>
-                                            <th>Attendance</th>
-                                            <th>Status</th>
-                                            @if (isAdmin)
-                                            {
-                                                <th>Actions</th>
-                                            }
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var eventItem in Model)
-                                        {
-                                            var attendancePercentage = eventItem.MaxCapacity.HasValue && eventItem.MaxCapacity.Value > 0
-                                            ? (int)Math.Round((double)eventItem.AttendanceCount / eventItem.MaxCapacity.Value * 100)
-                                            : 0;
-                                            var isFull = eventItem.MaxCapacity.HasValue && eventItem.AttendanceCount >= eventItem.MaxCapacity.Value;
-
-                                            <tr>
-                                                <td>
-                                                    <div class="fw-bold">@eventItem.EventTitle</div>
-                                                    <small class="text-muted">
-                                                        @(eventItem.EventDescription?.Length > 50 ?
-                                                                                                        eventItem.EventDescription.Substring(0, 50) + "..." :
-                                                                                                        eventItem.EventDescription)
-                                            </small>
-                                            <div class="mt-1">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-user me-1"></i>@eventItem.OrganizedBy
-                                                </small>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-info">@eventItem.EventType</span>
-                                        </td>
-                                        <td>
-                                            <div class="fw-bold">@eventItem.EventDate.ToString("MMM dd, yyyy")</div>
-                                            <small class="text-muted">@eventItem.TimeFormatted</small>
-                                        </td>
-                                        <td>@eventItem.EventLocation</td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="me-3 text-center">
-                                                    <div class="fw-bold fs-5">@eventItem.AttendanceCount</div>
-                                                    @if (eventItem.MaxCapacity.HasValue)
-                                                            {
-                                                                <small class="text-muted">/@eventItem.MaxCapacity</small>
-                                                            }
-                                                        </div>
-                                                        @if (eventItem.MaxCapacity.HasValue)
-                                                        {
-                                                            <div class="flex-grow-1">
-                                                                <div class="progress attendance-progress">
-                                                                    <div class="progress-bar
-                                                                                    @(attendancePercentage >= 90 ? "bg-danger" :
-                                                                                                                                                   attendancePercentage >= 70 ? "bg-warning" : "bg-success")"
-                                                             role="progressbar"
-                                                             style="width: @(attendancePercentage)%">
-                                                        </div>
-                                                    </div>
-                                                    <small class="text-muted">@attendancePercentage% full</small>
-                                                    @if (isFull)
-                                                                {
-                                                                    <span class="badge bg-danger ms-1">Full</span>
-                                                                }
-                                                            </div>
-                                                        }
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    @{
-                                                        var statusClass = eventItem.Status switch
-                                                        {
-                                                            "Scheduled" => "status-scheduled",
-                                                            "Ongoing" => "status-ongoing",
-                                                            "Completed" => "status-completed",
-                                                            "Cancelled" => "status-cancelled",
-                                                            _ => "bg-secondary"
-                                                        };
-                                                    }
-                                                    <span class="badge @statusClass">@eventItem.Status</span>
-                                                </td>
-                                                @if (isAdmin)
-                                                {
-                                                    <td>
-                                                        <div class="btn-group btn-group-sm">
-                                                            <a href="@Url.Action("Edit", "Event", new { id = eventItem.Id })"
-                                                               class="btn btn-outline-primary" title="Edit">
-                                                                <i class="fas fa-edit"></i>
-                                                            </a>
-                                                            <button type="button"
-                                                                    class="btn btn-outline-warning archive-btn"
-                                                                    data-event-id="@eventItem.Id"
-                                                                    data-event-title="@eventItem.EventTitle"
-                                                                    title="Archive">
-                                                                <i class="fas fa-archive"></i>
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                }
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="text-center py-5">
-                                <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
-                                <h4 class="text-muted">No Events Found</h4>
-                                <p class="text-muted">There are no events matching your criteria.</p>
-                                @if (isAdmin)
-                                {
-                                    <a href="@Url.Action("Create", "Event")" class="btn btn-primary">
-                                        <i class="fas fa-plus me-1"></i> Create Your First Event
-                                    </a>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
-
-                <!-- Archived Events Link (Admin only) -->
-                @if (isAdmin && Model.Any(e => e.IsDeleted))
-                {
-                    <div class="mt-4">
-                        <a href="@Url.Action("Archived", "Event")" class="btn btn-outline-secondary">
-                            <i class="fas fa-archive me-1"></i> View Archived Events (@Model.Count(e => e.IsDeleted))
-                        </a>
-                    </div>
-                }
-            </main>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0"><i class="fas fa-calendar-alt me-2 text-primary"></i>Events Management</h1>
+            <p class="text-muted mb-0">Create, manage, and track all events</p>
+        </div>
+        <div>
+            <a href="@Url.Action("Create", "Event")" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-2"></i>Create New Event
+            </a>
+            <a href="@Url.Action("Archived", "Event")" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-archive me-2"></i>Archived Events
+            </a>
         </div>
     </div>
 
-    <!-- Bootstrap & jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <script>
-        $(document).ready(function() {
-            // Archive button click
-            $('.archive-btn').click(function() {
-                const eventId = $(this).data('event-id');
-                const eventTitle = $(this).data('event-title');
-
-                Swal.fire({
-                    title: 'Archive Event',
-                    html: `<p>Are you sure you want to archive <strong>"${eventTitle}"</strong>?</p>
-                           <p class="text-muted small">Archived events can be restored from the Archived Events page.</p>`,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ffc107',
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Yes, archive it!',
-                    cancelButtonText: 'Cancel'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // Submit archive form
-                        const form = $('<form>', {
-                            'method': 'post',
-                            'action': '@Url.Action("Archive", "Event")/' + eventId
-                        });
-
-                        const token = $('input[name="__RequestVerificationToken"]').val();
-                        $('<input>').attr({
-                            type: 'hidden',
-                            name: '__RequestVerificationToken',
-                            value: token
-                        }).appendTo(form);
-
-                        form.appendTo('body').submit();
-                    }
-                });
-            });
-
-            // Update attendance
-            window.updateAttendance = function(eventId, change) {
-                const currentCount = parseInt($(`.attendance-count[data-event-id="${eventId}"]`).text());
-                const newCount = currentCount + change;
-                const maxCapacity = parseInt($(`.attendance-count[data-event-id="${eventId}"]`).data('max-capacity'));
-
-                if (newCount < 0) return;
-                if (maxCapacity > 0 && newCount > maxCapacity) return;
-
-                // Send AJAX request
-                $.ajax({
-                    url: '@Url.Action("UpdateAttendance", "Event")/' + eventId,
-                    type: 'POST',
-                    data: { count: newCount },
-                    headers: {
-                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function() {
-                        $(`.attendance-count[data-event-id="${eventId}"]`).text(newCount);
-                        // Update progress bar if exists
-                        if (maxCapacity > 0) {
-                            const percentage = Math.round((newCount / maxCapacity) * 100);
-                            $(`.progress-bar[data-event-id="${eventId}"]`).css('width', percentage + '%');
-                            $(`.attendance-percentage[data-event-id="${eventId}"]`).text(percentage + '%');
+    <!-- Search and Filters Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <!-- Search Box -->
+                <div class="col-md-4">
+                    <label class="form-label">Search Events</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" name="search" class="form-control"
+                               placeholder="Search by title, description, location, or organizer..."
+                               value="@ViewBag.SearchQuery">
+                        @if (!string.IsNullOrEmpty(ViewBag.SearchQuery))
+                        {
+                            <a href="@Url.Action("Index", new { status = ViewBag.SelectedStatus, type = ViewBag.SelectedType, dateFilter = ViewBag.SelectedDateFilter })"
+                               class="btn btn-outline-secondary" title="Clear Search">
+                                <i class="fas fa-times"></i>
+                            </a>
                         }
-                    }
-                });
-            };
+                    </div>
+                </div>
 
-            // Status dropdown change
-            $('.status-dropdown').change(function() {
-                const eventId = $(this).data('event-id');
-                const newStatus = $(this).val();
-                const originalStatus = $(this).data('original-status');
-
-                if (newStatus === originalStatus) return;
-
-                Swal.fire({
-                    title: 'Update Status',
-                    text: `Change status from "${originalStatus}" to "${newStatus}"?`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Update',
-                    cancelButtonText: 'Cancel'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '@Url.Action("UpdateStatus", "Event")/' + eventId,
-                            type: 'POST',
-                            data: { status: newStatus },
-                            headers: {
-                                'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                            },
-                            success: function() {
-                                location.reload();
+                <!-- Status Filter -->
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        @{
+                            var statuses = new[] { "Scheduled", "Ongoing", "Completed", "Cancelled" };
+                            foreach (var status in statuses)
+                            {
+                                if (ViewBag.SelectedStatus == status)
+                                {
+                                    <option value="@status" selected>@status</option>
+                                }
+                                else
+                                {
+                                    <option value="@status">@status</option>
+                                }
                             }
-                        });
-                    } else {
-                        $(this).val(originalStatus);
+                        }
+                    </select>
+                </div>
+
+                <!-- Type Filter -->
+                <div class="col-md-2">
+                    <label class="form-label">Event Type</label>
+                    <select name="type" class="form-select">
+                        <option value="">All Types</option>
+                        @{
+                            var types = new[] { "Medical Mission", "Assistance Program", "Wellness Activity", "Community Gathering", "Educational", "Social" };
+                            foreach (var type in types)
+                            {
+                                if (ViewBag.SelectedType == type)
+                                {
+                                    <option value="@type" selected>@type</option>
+                                }
+                                else
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+
+                <!-- Date Filter -->
+                <div class="col-md-2">
+                    <label class="form-label">Date Filter</label>
+                    <select name="dateFilter" class="form-select">
+                        <option value="">All Dates</option>
+                        @{
+                            var dateFilters = new Dictionary<string, string>
+                                                {
+                                                {"today", "Today"},
+                                                {"tomorrow", "Tomorrow"},
+                                                {"thisweek", "This Week"},
+                                                {"nextweek", "Next Week"},
+                                                {"thismonth", "This Month"},
+                                                {"nextmonth", "Next Month"},
+                                                {"past", "Past Events"},
+                                                {"upcoming", "Upcoming"}
+                                                };
+
+                            foreach (var filter in dateFilters)
+                            {
+                                if (ViewBag.SelectedDateFilter == filter.Key)
+                                {
+                                    <option value="@filter.Key" selected>@filter.Value</option>
+                                }
+                                else
+                                {
+                                    <option value="@filter.Key">@filter.Value</option>
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i> Apply Filters
+                        </button>
+                        @if (!string.IsNullOrEmpty(ViewBag.SearchQuery) || !string.IsNullOrEmpty(ViewBag.SelectedStatus) || !string.IsNullOrEmpty(ViewBag.SelectedType) || !string.IsNullOrEmpty(ViewBag.SelectedDateFilter))
+                        {
+                            <a href="@Url.Action("Index", "Event")" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> Clear All
+                            </a>
+                        }
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small">Total Events</div>
+                            <div class="h4">@Model.Count</div>
+                        </div>
+                        <i class="fas fa-calendar fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small">Upcoming</div>
+                            <div class="h4">@Model.Count(e => e.EventDate >= DateTime.Today && e.Status == "Scheduled")</div>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small">Ongoing</div>
+                            <div class="h4">@Model.Count(e => e.Status == "Ongoing")</div>
+                        </div>
+                        <i class="fas fa-play-circle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-info text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small">Completed</div>
+                            <div class="h4">@Model.Count(e => e.Status == "Completed")</div>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Events Table -->
+    <div class="card shadow">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>All Events</h5>
+                @if (!string.IsNullOrEmpty(ViewBag.SearchQuery) || !string.IsNullOrEmpty(ViewBag.SelectedStatus) || !string.IsNullOrEmpty(ViewBag.SelectedType) || !string.IsNullOrEmpty(ViewBag.SelectedDateFilter))
+                {
+                    <div>
+                        <span class="badge bg-info">
+                            <i class="fas fa-filter me-1"></i>Filtered Results
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Event Title</th>
+                                <th>Type</th>
+                                <th>Date & Time</th>
+                                <th>Location</th>
+                                <th>Attendance</th>
+                                <th>Status</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var eventItem in Model)
+                            {
+                                var isFull = eventItem.MaxCapacity.HasValue && eventItem.AttendanceCount >= eventItem.MaxCapacity.Value;
+                                var attendancePercentage = eventItem.MaxCapacity.HasValue && eventItem.MaxCapacity.Value > 0
+                                ? (int)Math.Round((double)eventItem.AttendanceCount / eventItem.MaxCapacity.Value * 100)
+                                : 0;
+
+                                <tr data-event-id="@eventItem.Id">
+                                    <td>
+                                        <div class="fw-bold text-primary">@eventItem.EventTitle</div>
+                                        <small class="text-muted">
+                                            @(eventItem.EventDescription?.Length > 50 ?
+                                                                                eventItem.EventDescription.Substring(0, 50) + "..." :
+                                                                                eventItem.EventDescription)
+                                </small>
+                                <div><small class="text-muted">By: @eventItem.OrganizedBy</small></div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">@eventItem.EventType</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold">@eventItem.EventDate.ToString("MMM dd, yyyy")</div>
+                                <small class="text-muted">@FormatTime(eventItem.EventTime)</small>
+                            </td>
+                            <td>@eventItem.EventLocation</td>
+                            <td>
+                                <div class="attendance-control">
+                                    <div class="d-flex align-items-center">
+                                        <button class="btn btn-sm btn-outline-secondary attendance-btn minus"
+                                                onclick="updateAttendance(@eventItem.Id, -1)"
+                                                @if (eventItem.AttendanceCount <= 0)
+                                                        {
+                                                            <text>disabled</text>
+                                                        }
+        >
+                                                            <i class="fas fa-minus"></i>
+                                                        </button>
+
+                                                <div class="text-center mx-2">
+                                                    <div class="fw-bold attendance-count"
+                                                         data-id="@eventItem.Id"
+                                                         data-max="@eventItem.MaxCapacity">
+                                                        @eventItem.AttendanceCount
+                                                        @if (eventItem.MaxCapacity.HasValue)
+                                                        {
+                                                            <small class="text-muted">/@eventItem.MaxCapacity</small>
+                                                        }
+                                                    </div>
+
+                                                    @if (eventItem.MaxCapacity.HasValue && eventItem.MaxCapacity.Value > 0)
+                                                    {
+                                                        <div class="progress mt-1" style="height: 4px; width: 60px;">
+                                                            <div class="progress-bar
+                                                                             @(attendancePercentage >= 90 ? "bg-danger" :
+                                                                                                                                    attendancePercentage >= 70 ? "bg-warning" : "bg-success")"
+                                                     style="width: @(attendancePercentage)%">
+                                                </div>
+                                            </div>
+                                                                                        }
+                                                </div>
+
+                                                <button class="btn btn-sm btn-outline-secondary attendance-btn plus"
+                                                        onclick="updateAttendance(@eventItem.Id, 1)"
+                                                        @if (isFull)
+                                                        {
+                                                            <text>disabled</text>
+                                                        }
+        >
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                            </div>
+
+                                            @if (eventItem.MaxCapacity.HasValue)
+                                            {
+                                                <small class="text-muted d-block mt-1 text-center">
+                                                    @attendancePercentage% full
+                                                    @if (isFull)
+                                                    {
+                                                        <span class="badge bg-danger ms-1">Full</span>
+                                                    }
+                                                </small>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <select class="form-select form-select-sm status-select"
+                                                    data-event-id="@eventItem.Id"
+                                                    style="width: 120px;"
+                                                    onchange="updateEventStatus(@eventItem.Id, this.value)">
+                                                @{
+                                                    var eventStatuses = new[] { "Scheduled", "Ongoing", "Completed", "Cancelled" };
+                                                    foreach (var status in eventStatuses)
+                                                    {
+                                                        if (eventItem.Status == status)
+                                                        {
+                                                            <option value="@status" selected>@status</option>
+                                                        }
+                                                        else
+                                                        {
+                                                            <option value="@status">@status</option>
+                                                        }
+                                                    }
+                                                }
+                                            </select>
+                                            <span class="badge @GetStatusBadgeClass(eventItem.Status) ms-2">
+                                                @eventItem.Status
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="@Url.Action("Edit", "Event", new { id = eventItem.Id })"
+                                               class="btn btn-warning" title="Edit Event">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button class="btn btn-danger archive-btn"
+                                                    onclick="archiveEvent(@eventItem.Id, '@eventItem.EventTitle.Replace("'", "\\'")')"
+                                                    title="Archive Event">
+                                                <i class="fas fa-archive"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination/Results Info -->
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            Showing @Model.Count events
+                            @if (!string.IsNullOrEmpty(ViewBag.SearchQuery))
+                            {
+                                <span>for "<strong>@ViewBag.SearchQuery</strong>"</span>
+                            }
+                        </small>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    @if (!string.IsNullOrEmpty(ViewBag.SearchQuery) || !string.IsNullOrEmpty(ViewBag.SelectedStatus) || !string.IsNullOrEmpty(ViewBag.SelectedType) || !string.IsNullOrEmpty(ViewBag.SelectedDateFilter))
+                    {
+                        <i class="fas fa-search fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No Events Found</h4>
+                        <p class="text-muted">No events match your current filters.</p>
+                        <a href="@Url.Action("Index", "Event")" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i> Clear Filters
+                        </a>
                     }
-                });
+                    else
+                    {
+                        <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No Events Found</h4>
+                        <p class="text-muted">Get started by creating your first event!</p>
+                        <a href="@Url.Action("Create", "Event")" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i> Create New Event
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Get anti-forgery token
+        function getToken() {
+            return $('input[name="__RequestVerificationToken"]').val();
+        }
+
+        function updateAttendance(eventId, change) {
+            $.ajax({
+                url: '@Url.Action("UpdateAttendance", "Event")',
+                type: 'POST',
+                data: {
+                    id: eventId,
+                    count: change,
+                    __RequestVerificationToken: getToken()
+                },
+                success: function (response) {
+                    if (response.success) {
+                        const row = $(`tr[data-event-id="${eventId}"]`);
+                        const display = row.find('.attendance-count');
+
+                        // Update display
+                        const max = display.data('max');
+                        display.html(response.attendance + (max ? '/' + max : ''));
+
+                        // Update progress bar and UI
+                        if (max) {
+                            const progressBar = row.find('.progress-bar');
+                            progressBar.css('width', response.percentage + '%');
+                            progressBar.removeClass('bg-success bg-warning bg-danger')
+                                .addClass(response.percentage >= 90 ? 'bg-danger' :
+                                          response.percentage >= 70 ? 'bg-warning' : 'bg-success');
+
+                            // Update percentage text
+                            const percentageText = row.find('.text-muted').first();
+                            percentageText.html(response.percentage + '% full' +
+                                (response.isFull ? ' <span class="badge bg-danger ms-1">Full</span>' : ''));
+
+                            // Enable/disable buttons
+                            row.find('.plus').prop('disabled', response.isFull);
+                        }
+
+                        row.find('.minus').prop('disabled', response.attendance <= 0);
+
+                        showSuccess(response.message);
+                    } else {
+                        showError(response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    showError('Error updating attendance: ' + error);
+                }
             });
-        });
+        }
+
+        function updateEventStatus(eventId, newStatus) {
+            $.ajax({
+                url: '@Url.Action("UpdateStatus", "Event")',
+                type: 'POST',
+                data: {
+                    id: eventId,
+                    status: newStatus,
+                    __RequestVerificationToken: getToken()
+                },
+                success: function (response) {
+                    if (response.success) {
+                        const row = $(`tr[data-event-id="${eventId}"]`);
+                        const badge = row.find('.badge').last();
+
+                        // Update badge
+                        badge.removeClass('bg-primary bg-warning bg-success bg-danger bg-secondary')
+                            .addClass(getStatusClass(newStatus))
+                            .text(newStatus);
+
+                        showSuccess(response.message);
+                    } else {
+                        showError(response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    showError('Error updating status: ' + error);
+                }
+            });
+        }
+
+        function archiveEvent(eventId, eventTitle) {
+            Swal.fire({
+                title: 'Archive Event',
+                html: `<p>Are you sure you want to archive <strong>${eventTitle}</strong>?</p>
+                       <p class="text-muted small">The event will be moved to archived events.</p>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, archive it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '@Url.Action("Archive", "Event")',
+                        type: 'POST',
+                        data: {
+                            id: eventId,
+                            __RequestVerificationToken: getToken()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                // Remove row from table
+                                $(`tr[data-event-id="${eventId}"]`).fadeOut(300, function() {
+                                    $(this).remove();
+                                    // Show message if no events left
+                                    if ($('tbody tr').length === 0) {
+                                        location.reload();
+                                    }
+                                });
+                                showSuccess('Event archived successfully!');
+                            } else {
+                                showError(response.message);
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            showError('Error archiving event: ' + error);
+                        }
+                    });
+                }
+            });
+        }
+
+        function getStatusClass(status) {
+            switch(status) {
+                case 'Scheduled': return 'bg-primary';
+                case 'Ongoing': return 'bg-warning text-dark';
+                case 'Completed': return 'bg-success';
+                case 'Cancelled': return 'bg-danger';
+                default: return 'bg-secondary';
+            }
+        }
+
+        function showSuccess(message) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: message,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        }
+
+        function showError(message) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: message,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true
+            });
+        }
+
+        // Show messages from TempData
+        @if (TempData["SuccessMessage"] != null)
+        {
+                <text>
+                $(document).ready(function() {
+                    showSuccess('@Html.Raw(TempData["SuccessMessage"])');
+                });
+                </text>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+                <text>
+                $(document).ready(function() {
+                    showError('@Html.Raw(TempData["ErrorMessage"])');
+                });
+                </text>
+        }
     </script>
-</body>
-</html>
+}

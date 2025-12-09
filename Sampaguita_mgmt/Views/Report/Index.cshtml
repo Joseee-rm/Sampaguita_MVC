@@ -5,399 +5,625 @@
 
 <div class="container-fluid">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-2 text-gray-800">Senior Citizens Reports</h1>
-            <p class="mb-0">Comprehensive analytics and insights about senior citizens data</p>
+            <h1 class="h3 mb-2 text-gray-800">Comprehensive Reports</h1>
+            <p class="mb-0">View and export senior citizens and events data</p>
         </div>
-        <div class="btn-group">
-            <button class="btn btn-outline-primary" onclick="exportToPdf()">
-                <i class="fas fa-download me-2"></i>Export PDF
-            </button>
-            <button class="btn btn-outline-success" onclick="exportToExcel()">
-                <i class="fas fa-file-excel me-2"></i>Export Excel
-            </button>
-            <button class="btn btn-primary" onclick="window.print()">
-                <i class="fas fa-print me-2"></i>Print Report
-            </button>
+        <div>
+            <span class="text-muted small">
+                <i class="fas fa-calendar me-1"></i>@DateTime.Now.ToString("MMMM dd, yyyy")
+            </span>
         </div>
     </div>
 
-   <!-- Print-only title (visible only when printing) -->
-    <div class="print-only" style="display: none;">
-        <h1 class="text-center">Senior Citizens Report</h1>
-        <p class="text-center">Generated on: @DateTime.Now.ToString("MMMM dd, yyyy")</p>
-        <hr class="my-3">
-    </div> 
+    <!-- Senior Citizens Report Section -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-users me-2"></i>Senior Citizens Registry
+            </h6>
+            <span class="badge bg-info">@Model.TotalSeniors Seniors</span>
+        </div>
+        <div class="card-body">
+            <!-- Senior Filter Section -->
+            <div class="mb-4">
+                <form method="get" class="row g-3">
+                    <input type="hidden" name="eventStatus" value="@Model.SelectedEventStatus" />
+                    <input type="hidden" name="eventType" value="@Model.SelectedEventType" />
+                    <input type="hidden" name="eventDateFilter" value="@Model.SelectedEventDateFilter" />
+                    <input type="hidden" name="eventSearch" value="@Model.EventSearchTerm" />
+                    <input type="hidden" name="fromDate" value="@Model.SelectedFromDate" />
+                    <input type="hidden" name="toDate" value="@Model.SelectedToDate" />
 
-    <!-- Summary Cards -->
-    <div class="row mb-4 page-break-inside-avoid">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Seniors
+                    <!-- Status Filter -->
+                    <div class="col-md-3">
+                        <label class="small font-weight-bold">Status</label>
+                        <select class="form-control form-control-sm" name="status">
+                            <option value="">All Status</option>
+                            <option value="Active" selected="@(Model.SelectedStatus == "Active")">Active</option>
+                            <option value="Archived" selected="@(Model.SelectedStatus == "Archived")">Archived</option>
+                        </select>
+                    </div>
+
+                    <!-- Zone Filter -->
+                    <div class="col-md-2">
+                        <label class="small font-weight-bold">Zone</label>
+                        <select class="form-control form-control-sm" name="zone">
+                            <option value="">All Zones</option>
+                            @for (int i = 1; i <= 7; i++)
+                            {
+                                <option value="@i" selected="@(Model.SelectedZoneFilter == i.ToString())">Zone @i</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Gender Filter -->
+                    <div class="col-md-2">
+                        <label class="small font-weight-bold">Gender</label>
+                        <select class="form-control form-control-sm" name="gender">
+                            <option value="">All Genders</option>
+                            <option value="Male" selected="@(Model.SelectedGender == "Male")">Male</option>
+                            <option value="Female" selected="@(Model.SelectedGender == "Female")">Female</option>
+                        </select>
+                    </div>
+
+                    <!-- Civil Status Filter -->
+                    <div class="col-md-3">
+                        <label class="small font-weight-bold">Civil Status</label>
+                        <select class="form-control form-control-sm" name="civilStatus">
+                            <option value="">All Status</option>
+                            <option value="Single" selected="@(Model.SelectedCivilStatus == "Single")">Single</option>
+                            <option value="Married" selected="@(Model.SelectedCivilStatus == "Married")">Married</option>
+                            <option value="Widowed" selected="@(Model.SelectedCivilStatus == "Widowed")">Widowed</option>
+                            <option value="Separated" selected="@(Model.SelectedCivilStatus == "Separated")">Separated</option>
+                        </select>
+                    </div>
+
+                    <!-- Age Range Filter -->
+                    <div class="col-md-2">
+                        <label class="small font-weight-bold">Age Range</label>
+                        <select class="form-control form-control-sm" name="ageRange">
+                            <option value="">All Ages</option>
+                            <option value="60-69" selected="@(Model.SelectedAgeRange == "60-69")">60-69</option>
+                            <option value="70-79" selected="@(Model.SelectedAgeRange == "70-79")">70-79</option>
+                            <option value="80-89" selected="@(Model.SelectedAgeRange == "80-89")">80-89</option>
+                            <option value="90+" selected="@(Model.SelectedAgeRange == "90+")">90+</option>
+                        </select>
+                    </div>
+
+                    <!-- Month/Year Registered Filter -->
+                    <div class="col-md-3">
+                        <label class="small font-weight-bold">Month/Year Registered</label>
+                        <select class="form-control form-control-sm" name="monthYear">
+                            <option value="">All Months</option>
+                            @foreach (var monthYear in Model.AvailableMonthsYears)
+                            {
+                                var displayText = DateTime.ParseExact($"{monthYear}-01", "yyyy-MM-dd", null).ToString("MMMM yyyy");
+                                <option value="@monthYear" selected="@(Model.SelectedMonthYear == monthYear)">@displayText</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Search by Name or SCCN -->
+                    <div class="col-md-5">
+                        <label class="small font-weight-bold">Search by Name or SCCN</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" name="seniorSearch"
+                                   value="@Model.SeniorSearchTerm" placeholder="Search by name or SCCN number...">
+                            <div class="input-group-append">
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalSeniors</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-gray-300"></i>
                         </div>
                     </div>
-                </div>
+
+                    <!-- Filter Buttons -->
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-sm btn-primary mr-2">
+                            <i class="fas fa-filter me-1"></i> Apply Filters
+                        </button>
+                        @if (!string.IsNullOrEmpty(Model.SelectedStatus) || !string.IsNullOrEmpty(Model.SelectedZoneFilter) || 
+                           !string.IsNullOrEmpty(Model.SelectedGender) || !string.IsNullOrEmpty(Model.SelectedCivilStatus) ||
+                           !string.IsNullOrEmpty(Model.SelectedAgeRange) || !string.IsNullOrEmpty(Model.SelectedMonthYear) ||
+                           !string.IsNullOrEmpty(Model.SeniorSearchTerm))
+                        {
+                            <a href="@Url.Action("Index", "Report", new {
+                                eventStatus = Model.SelectedEventStatus,
+                                eventType = Model.SelectedEventType,
+                                eventDateFilter = Model.SelectedEventDateFilter,
+                                eventSearch = Model.EventSearchTerm,
+                                fromDate = Model.SelectedFromDate,
+                                toDate = Model.SelectedToDate
+                            })" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-times me-1"></i> Clear Senior Filters
+                            </a>
+                        }
+                    </div>
+                </form>
+
+                <!-- Results Summary -->
+                @if (!string.IsNullOrEmpty(Model.SelectedStatus) || !string.IsNullOrEmpty(Model.SelectedZoneFilter) || 
+                   !string.IsNullOrEmpty(Model.SelectedGender) || !string.IsNullOrEmpty(Model.SelectedCivilStatus) ||
+                   !string.IsNullOrEmpty(Model.SelectedAgeRange) || !string.IsNullOrEmpty(Model.SelectedMonthYear))
+                {
+                    <div class="mt-3">
+                        <span class="badge badge-info">Showing @Model.SeniorList.Count senior records</span>
+                        @if (!string.IsNullOrEmpty(Model.SelectedStatus))
+                        {
+                            <span class="badge badge-secondary ml-2">Status: @Model.SelectedStatus</span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.SelectedZoneFilter))
+                        {
+                            <span class="badge badge-secondary ml-2">Zone: @Model.SelectedZoneFilter</span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.SelectedGender))
+                        {
+                            <span class="badge badge-secondary ml-2">Gender: @Model.SelectedGender</span>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Senior Table -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>SCCN Number</th>
+                            <th>Full Name</th>
+                            <th>Gender</th>
+                            <th>Age</th>
+                            <th>Zone</th>
+                            <th>Civil Status</th>
+                            <th>Contact Number</th>
+                            <th>Status</th>
+                            <th>Registered On</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.SeniorList.Any())
+                        {
+                            @foreach (var senior in Model.SeniorList)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="badge badge-info">@senior.FormattedSCCN</span>
+                                    </td>
+                                    <td>@senior.CompleteName</td>
+                                    <td>@senior.Gender</td>
+                                    <td>@senior.Age</td>
+                                    <td>Zone @senior.Zone</td>
+                                    <td>
+                                        @if (string.IsNullOrEmpty(senior.CivilStatus))
+                                        {
+                                            <span class="text-muted">Not specified</span>
+                                        }
+                                        else
+                                        {
+                                            @senior.CivilStatus
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (string.IsNullOrEmpty(senior.ContactNumber))
+                                        {
+                                            <span class="text-muted">N/A</span>
+                                        }
+                                        else
+                                        {
+                                            @senior.ContactNumber
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge @(senior.Status == "Active" ? "badge-success" : "badge-warning")">
+                                            @senior.Status
+                                        </span>
+                                    </td>
+                                    <td>@senior.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-3">
+                                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted mb-0">No senior records found</p>
+                                    @if (!string.IsNullOrEmpty(Model.SelectedStatus) || !string.IsNullOrEmpty(Model.SelectedZoneFilter) || 
+                                       !string.IsNullOrEmpty(Model.SelectedGender) || !string.IsNullOrEmpty(Model.SelectedCivilStatus) ||
+                                       !string.IsNullOrEmpty(Model.SelectedAgeRange) || !string.IsNullOrEmpty(Model.SelectedMonthYear) ||
+                                       !string.IsNullOrEmpty(Model.SeniorSearchTerm))
+                                    {
+                                        <a href="@Url.Action("Index", "Report", new {
+                                            eventStatus = Model.SelectedEventStatus,
+                                            eventType = Model.SelectedEventType,
+                                            eventDateFilter = Model.SelectedEventDateFilter,
+                                            eventSearch = Model.EventSearchTerm,
+                                            fromDate = Model.SelectedFromDate,
+                                            toDate = Model.SelectedToDate
+                                        })" class="btn btn-sm btn-outline-primary mt-2">
+                                            <i class="fas fa-times me-1"></i> Clear Senior Filters
+                                        </a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="small text-muted">
+                    Total Records: @Model.SeniorList.Count
+                </span>
+                @if (Model.SeniorList.Any())
+                {
+                    <a href="@Url.Action("ExportSeniorTable", "Report", new {
+                        status = Model.SelectedStatus,
+                        zone = Model.SelectedZoneFilter,
+                        gender = Model.SelectedGender,
+                        civilStatus = Model.SelectedCivilStatus,
+                        ageRange = Model.SelectedAgeRange,
+                        monthYear = Model.SelectedMonthYear,
+                        seniorSearch = Model.SeniorSearchTerm
+                    })" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> Export Senior Table Data
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Active Seniors
+    <!-- Events Report Section -->
+    <div class="card shadow">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-calendar-alt me-2"></i>Events Report
+            </h6>
+            <span class="badge bg-info">@Model.TotalEvents Events</span>
+        </div>
+        <div class="card-body">
+            <!-- Event Filter Section -->
+            <div class="mb-4">
+                <form method="get" class="row g-3">
+                    <input type="hidden" name="status" value="@Model.SelectedStatus" />
+                    <input type="hidden" name="zone" value="@Model.SelectedZoneFilter" />
+                    <input type="hidden" name="gender" value="@Model.SelectedGender" />
+                    <input type="hidden" name="civilStatus" value="@Model.SelectedCivilStatus" />
+                    <input type="hidden" name="ageRange" value="@Model.SelectedAgeRange" />
+                    <input type="hidden" name="monthYear" value="@Model.SelectedMonthYear" />
+                    <input type="hidden" name="seniorSearch" value="@Model.SeniorSearchTerm" />
+
+                    <!-- Event Status Filter -->
+                    <div class="col-md-3">
+                        <label class="small font-weight-bold">Event Status</label>
+                        <select class="form-control form-control-sm" name="eventStatus">
+                            <option value="">All Status</option>
+                            <option value="Scheduled" selected="@(Model.SelectedEventStatus == "Scheduled")">Scheduled</option>
+                            <option value="Ongoing" selected="@(Model.SelectedEventStatus == "Ongoing")">Ongoing</option>
+                            <option value="Completed" selected="@(Model.SelectedEventStatus == "Completed")">Completed</option>
+                            <option value="Cancelled" selected="@(Model.SelectedEventStatus == "Cancelled")">Cancelled</option>
+                        </select>
+                    </div>
+
+                    <!-- Event Type Filter -->
+                    <div class="col-md-3">
+                        <label class="small font-weight-bold">Event Type</label>
+                        <select class="form-control form-control-sm" name="eventType">
+                            <option value="">All Types</option>
+                            <option value="Medical Mission" selected="@(Model.SelectedEventType == "Medical Mission")">Medical Mission</option>
+                            <option value="Assistance Program" selected="@(Model.SelectedEventType == "Assistance Program")">Assistance Program</option>
+                            <option value="Wellness Activity" selected="@(Model.SelectedEventType == "Wellness Activity")">Wellness Activity</option>
+                            <option value="Community Gathering" selected="@(Model.SelectedEventType == "Community Gathering")">Community Gathering</option>
+                            <option value="Educational" selected="@(Model.SelectedEventType == "Educational")">Educational</option>
+                            <option value="Social" selected="@(Model.SelectedEventType == "Social")">Social</option>
+                        </select>
+                    </div>
+
+                    <!-- Event Date Filter -->
+                    <div class="col-md-3">
+                        <label class="small font-weight-bold">Date Filter</label>
+                        <select class="form-control form-control-sm" name="eventDateFilter">
+                            <option value="">All Dates</option>
+                            <option value="today" selected="@(Model.SelectedEventDateFilter == "today")">Today</option>
+                            <option value="tomorrow" selected="@(Model.SelectedEventDateFilter == "tomorrow")">Tomorrow</option>
+                            <option value="thisweek" selected="@(Model.SelectedEventDateFilter == "thisweek")">This Week</option>
+                            <option value="nextweek" selected="@(Model.SelectedEventDateFilter == "nextweek")">Next Week</option>
+                            <option value="thismonth" selected="@(Model.SelectedEventDateFilter == "thismonth")">This Month</option>
+                            <option value="nextmonth" selected="@(Model.SelectedEventDateFilter == "nextmonth")">Next Month</option>
+                            <option value="past" selected="@(Model.SelectedEventDateFilter == "past")">Past Events</option>
+                            <option value="upcoming" selected="@(Model.SelectedEventDateFilter == "upcoming")">Upcoming</option>
+                        </select>
+                    </div>
+
+                    <!-- Date Range -->
+                    <div class="col-md-3">
+                        <label class="small font-weight-bold">From Date</label>
+                        <input type="date" class="form-control form-control-sm" name="fromDate" value="@Model.SelectedFromDate" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small font-weight-bold">To Date</label>
+                        <input type="date" class="form-control form-control-sm" name="toDate" value="@Model.SelectedToDate" />
+                    </div>
+
+                    <!-- Event Search -->
+                    <div class="col-md-5">
+                        <label class="small font-weight-bold">Search Events</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" name="eventSearch"
+                                   value="@Model.EventSearchTerm" placeholder="Search by title, location, or organizer...">
+                            <div class="input-group-append">
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.ActiveSeniors</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Male
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.MaleCount</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-male fa-2x text-gray-300"></i>
-                        </div>
+                    <!-- Filter Buttons -->
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-sm btn-primary mr-2">
+                            <i class="fas fa-filter me-1"></i> Apply Filters
+                        </button>
+                        @if (!string.IsNullOrEmpty(Model.SelectedEventStatus) || !string.IsNullOrEmpty(Model.SelectedEventType) || 
+                           !string.IsNullOrEmpty(Model.SelectedEventDateFilter) || !string.IsNullOrEmpty(Model.EventSearchTerm) ||
+                           !string.IsNullOrEmpty(Model.SelectedFromDate) || !string.IsNullOrEmpty(Model.SelectedToDate))
+                        {
+                            <a href="@Url.Action("Index", "Report", new {
+                                status = Model.SelectedStatus,
+                                zone = Model.SelectedZoneFilter,
+                                gender = Model.SelectedGender,
+                                civilStatus = Model.SelectedCivilStatus,
+                                ageRange = Model.SelectedAgeRange,
+                                monthYear = Model.SelectedMonthYear,
+                                seniorSearch = Model.SeniorSearchTerm
+                            })" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-times me-1"></i> Clear Event Filters
+                            </a>
+                        }
                     </div>
-                </div>
-            </div>
-        </div>
+                </form>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Female
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.FemaleCount</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-female fa-2x text-gray-300"></i>
-                        </div>
+                <!-- Results Summary -->
+                @if (!string.IsNullOrEmpty(Model.SelectedEventStatus) || !string.IsNullOrEmpty(Model.SelectedEventType) || 
+                   !string.IsNullOrEmpty(Model.SelectedEventDateFilter) || !string.IsNullOrEmpty(Model.SelectedFromDate) ||
+                   !string.IsNullOrEmpty(Model.SelectedToDate))
+                {
+                    <div class="mt-3">
+                        <span class="badge badge-info">Showing @Model.EventList.Count event records</span>
+                        @if (!string.IsNullOrEmpty(Model.SelectedEventStatus))
+                        {
+                            <span class="badge badge-secondary ml-2">Status: @Model.SelectedEventStatus</span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.SelectedEventType))
+                        {
+                            <span class="badge badge-secondary ml-2">Type: @Model.SelectedEventType</span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.SelectedFromDate))
+                        {
+                            <span class="badge badge-secondary ml-2">From: @Model.SelectedFromDate</span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.SelectedToDate))
+                        {
+                            <span class="badge badge-secondary ml-2">To: @Model.SelectedToDate</span>
+                        }
                     </div>
-                </div>
+                }
             </div>
-        </div>
-    </div>
 
-    <!-- Charts Section -->
-    <div class="row page-break-inside-avoid">
-        <!-- Gender Distribution -->
-        <div class="col-xl-6 col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-primary">Gender Distribution</h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-pie pt-4 pb-2">
-                        <canvas id="genderChart" width="400" height="200"></canvas>
-                    </div>
-                    <div class="mt-4 text-center small">
-                        <span class="mr-2">
-                            <i class="fas fa-circle text-primary"></i> Male: @Model.MaleCount
-                        </span>
-                        <span class="mr-2">
-                            <i class="fas fa-circle text-success"></i> Female: @Model.FemaleCount
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Age Group Distribution -->
-        <div class="col-xl-6 col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Age Group Distribution</h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-bar">
-                        <canvas id="ageGroupChart" width="400" height="200"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row page-break-inside-avoid">
-        <!-- Barangay Distribution -->
-        <div class="col-xl-6 col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Distribution by Barangay</h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-bar">
-                        <canvas id="barangayChart" width="400" height="250"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Health Conditions -->
-        <div class="col-xl-6 col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Health Conditions Overview</h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-bar">
-                        <canvas id="healthChart" width="400" height="250"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Detailed Statistics -->
-    <div class="row page-break-inside-avoid">
-        <div class="col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Disability Statistics</h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-pie pt-4 pb-2">
-                        <canvas id="disabilityChart" width="400" height="200"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Report Summary</h6>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <tbody>
+            <!-- Events Table with Attendance -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Event Title</th>
+                            <th>Type</th>
+                            <th>Date & Time</th>
+                            <th>Location</th>
+                            <th>Organized By</th>
+                            <th>Max Capacity</th>
+                            <th>Attendance</th>
+                            <th>Attendance %</th>
+                            <th>Available Slots</th>
+                            <th>Status</th>
+                            <th>Created On</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.EventList.Any())
+                        {
+                            @foreach (var eventItem in Model.EventList)
+                            {
                                 <tr>
-                                    <td><strong>Report Generated</strong></td>
-                                    <td>@Model.ReportDate.ToString("MMMM dd, yyyy hh:mm tt")</td>
+                                    <td>@eventItem.EventTitle</td>
+                                    <td>
+                                        <span class="badge bg-info">@eventItem.EventType</span>
+                                    </td>
+                                    <td>@eventItem.EventDateTime</td>
+                                    <td>@eventItem.EventLocation</td>
+                                    <td>@eventItem.OrganizedBy</td>
+                                    <td>
+                                        @if (eventItem.MaxCapacity.HasValue)
+                                        {
+                                            <span>@eventItem.MaxCapacity</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No Limit</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="@(eventItem.IsFull ? "text-danger font-weight-bold" : "")">@eventItem.AttendanceCount</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge @GetAttendanceBadgeClass(eventItem.AttendancePercentage)">
+                                            @eventItem.AttendancePercentage
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (eventItem.AvailableSlots == -1)
+                                        {
+                                            <span class="text-muted">Unlimited</span>
+                                        }
+                                        else if (eventItem.AvailableSlots == 0)
+                                        {
+                                            <span class="text-danger font-weight-bold">FULL</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-success">@eventItem.AvailableSlots</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge @GetEventStatusBadgeClass(eventItem.Status)">
+                                            @eventItem.Status
+                                        </span>
+                                    </td>
+                                    <td>@eventItem.CreatedAt.ToString("MMM dd, yyyy")</td>
                                 </tr>
-                                <tr>
-                                    <td><strong>Total Records</strong></td>
-                                    <td>@Model.TotalSeniors</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Active Records</strong></td>
-                                    <td>@Model.ActiveSeniors</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Gender Ratio (M:F)</strong></td>
-                                    <td>@Model.MaleCount : @Model.FemaleCount</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Most Populated Barangay</strong></td>
-                                    <td>@(Model.SeniorsByBarangay.OrderByDescending(x => x.Value).FirstOrDefault().Key ?? "N/A")</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="11" class="text-center py-3">
+                                    <i class="fas fa-calendar-times fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted mb-0">No event records found</p>
+                                    @if (!string.IsNullOrEmpty(Model.SelectedEventStatus) || !string.IsNullOrEmpty(Model.SelectedEventType) || 
+                                       !string.IsNullOrEmpty(Model.SelectedEventDateFilter) || !string.IsNullOrEmpty(Model.EventSearchTerm) ||
+                                       !string.IsNullOrEmpty(Model.SelectedFromDate) || !string.IsNullOrEmpty(Model.SelectedToDate))
+                                    {
+                                        <a href="@Url.Action("Index", "Report", new {
+                                            status = Model.SelectedStatus,
+                                            zone = Model.SelectedZoneFilter,
+                                            gender = Model.SelectedGender,
+                                            civilStatus = Model.SelectedCivilStatus,
+                                            ageRange = Model.SelectedAgeRange,
+                                            monthYear = Model.SelectedMonthYear,
+                                            seniorSearch = Model.SeniorSearchTerm
+                                        })" class="btn btn-sm btn-outline-primary mt-2">
+                                            <i class="fas fa-times me-1"></i> Clear Event Filters
+                                        </a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
-
-    <!-- Print Footer -->
-    <div class="print-footer no-print">
-        <p>Senior Management System - Page 1 of 1</p>
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="small text-muted">
+                    Total Records: @Model.EventList.Count
+                </span>
+                @if (Model.EventList.Any())
+                {
+                    <a href="@Url.Action("ExportEventTable", "Report", new {
+                        eventStatus = Model.SelectedEventStatus,
+                        eventType = Model.SelectedEventType,
+                        eventDateFilter = Model.SelectedEventDateFilter,
+                        eventSearch = Model.EventSearchTerm,
+                        fromDate = Model.SelectedFromDate,
+                        toDate = Model.SelectedToDate
+                    })" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> Export Event Table Data
+                    </a>
+                }
+            </div>
+        </div>
     </div>
 </div>
 
+@functions {
+    string GetEventStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Scheduled" => "badge-primary",
+            "Ongoing" => "badge-warning",
+            "Completed" => "badge-success",
+            "Cancelled" => "badge-danger",
+            _ => "badge-secondary"
+        };
+    }
+
+    string GetAttendanceBadgeClass(string percentage)
+    {
+        if (percentage == "N/A" || percentage == "No Limit")
+            return "badge-secondary";
+        
+        if (percentage.Contains("100%"))
+            return "badge-danger";
+        
+        if (percentage.Contains("90") || percentage.Contains("80"))
+            return "badge-warning";
+        
+        if (percentage.Contains("70") || percentage.Contains("60"))
+            return "badge-info";
+        
+        return "badge-success";
+    }
+}
+
+@section Styles {
+    <style>
+        .badge-primary { background-color: #007bff; }
+        .badge-success { background-color: #28a745; }
+        .badge-warning { background-color: #ffc107; color: #212529; }
+        .badge-danger { background-color: #dc3545; }
+        .badge-info { background-color: #17a2b8; }
+        .badge-secondary { background-color: #6c757d; }
+        
+        .table th {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .table td {
+            vertical-align: middle;
+        }
+        
+        .card {
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-header {
+            background-color: #f8f9fa;
+        }
+    </style>
+}
+
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Show print-only elements when printing
-        window.addEventListener('beforeprint', function() {
-            document.querySelectorAll('.print-only').forEach(el => {
-                el.style.display = 'block';
+        // Auto-submit form when filter changes (except search fields)
+        document.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', function() {
+                // Don't auto-submit if it's a search-related field
+                if (!this.name.includes('Search')) {
+                    this.form.submit();
+                }
             });
         });
 
-        window.addEventListener('afterprint', function() {
-            document.querySelectorAll('.print-only').forEach(el => {
-                el.style.display = 'none';
+        // Auto-submit date range changes
+        document.querySelectorAll('input[type="date"]').forEach(input => {
+            input.addEventListener('change', function() {
+                if (this.value) {
+                    this.form.submit();
+                }
             });
         });
 
-        // Initialize charts
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeCharts();
+        // Keyboard shortcut for search focus
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                const searchInput = document.querySelector('input[name="seniorSearch"]');
+                if (searchInput) searchInput.focus();
+            }
         });
-
-        function initializeCharts() {
-            // Gender Distribution Chart
-            var genderCtx = document.getElementById('genderChart').getContext('2d');
-            var genderChart = new Chart(genderCtx, {
-                type: 'pie',
-                data: {
-                    labels: ['Male', 'Female'],
-                    datasets: [{
-                        data: [@Model.MaleCount, @Model.FemaleCount],
-                        backgroundColor: ['#4e73df', '#1cc88a'],
-                        hoverBackgroundColor: ['#2e59d9', '#17a673'],
-                        hoverBorderColor: "rgba(234, 236, 244, 1)",
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-
-            // Age Group Distribution Chart
-            var ageGroupCtx = document.getElementById('ageGroupChart').getContext('2d');
-            var ageGroupChart = new Chart(ageGroupCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['60-69', '70-79', '80-89', '90+'],
-                    datasets: [{
-                        label: 'Number of Seniors',
-                        data: [
-                            @Model.SeniorsByAgeGroup["60-69"],
-                            @Model.SeniorsByAgeGroup["70-79"],
-                            @Model.SeniorsByAgeGroup["80-89"],
-                            @Model.SeniorsByAgeGroup["90+"]
-                        ],
-                        backgroundColor: '#4e73df',
-                        hoverBackgroundColor: '#2e59d9',
-                        borderColor: '#4e73df',
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0
-                            }
-                        }
-                    }
-                }
-            });
-
-            // Barangay Distribution Chart
-            var barangayCtx = document.getElementById('barangayChart').getContext('2d');
-            var barangayChart = new Chart(barangayCtx, {
-                type: 'bar',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.SeniorsByBarangay.Keys)),
-                    datasets: [{
-                        label: 'Number of Seniors',
-                        data: @Html.Raw(Json.Serialize(Model.SeniorsByBarangay.Values)),
-                        backgroundColor: '#1cc88a',
-                        hoverBackgroundColor: '#17a673',
-                        borderColor: '#1cc88a',
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0
-                            }
-                        }
-                    }
-                }
-            });
-
-            // Health Conditions Chart
-            var healthCtx = document.getElementById('healthChart').getContext('2d');
-            var healthChart = new Chart(healthCtx, {
-                type: 'bar',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.HealthConditions.Keys)),
-                    datasets: [{
-                        label: 'Number of Cases',
-                        data: @Html.Raw(Json.Serialize(Model.HealthConditions.Values)),
-                        backgroundColor: '#f6c23e',
-                        hoverBackgroundColor: '#dda20a',
-                        borderColor: '#f6c23e',
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0
-                            }
-                        }
-                    }
-                }
-            });
-
-            // Disability Chart
-            var disabilityCtx = document.getElementById('disabilityChart').getContext('2d');
-            var disabilityChart = new Chart(disabilityCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.Disabilities.Keys)),
-                    datasets: [{
-                        data: @Html.Raw(Json.Serialize(Model.Disabilities.Values)),
-                        backgroundColor: ['#e74a3b', '#36b9cc'],
-                        hoverBackgroundColor: ['#d52a1a', '#2c9faf'],
-                        hoverBorderColor: "rgba(234, 236, 244, 1)",
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-
-        function exportToPdf() {
-            // Implement PDF export
-            alert('PDF export feature coming soon!');
-        }
-
-        function exportToExcel() {
-            // Implement Excel export
-            alert('Excel export feature coming soon!');
-        }
     </script>
 }
