@@ -1,7 +1,7 @@
-﻿@model List<SeniorManagement.Models.MonthlyContribution>
+﻿@model List<SeniorManagement.Models.PensionContribution>
 @using System.Globalization
 @{
-    ViewData["Title"] = "";
+    ViewData["Title"] = "Monthly Pension";
     var currentMonth = DateTime.Now.Month;
     var currentYear = DateTime.Now.Year;
     var selectedMonth = ViewBag.Month != null ? (int)ViewBag.Month : currentMonth;
@@ -57,6 +57,12 @@
         border: none;
     }
 
+    .badge-info {
+        background-color: #36b9cc !important;
+        color: white !important;
+        border: none;
+    }
+
     /* Button styles */
     .btn-success {
         background-color: #1cc88a !important;
@@ -79,6 +85,12 @@
             background-color: #4e73df !important;
             color: white !important;
         }
+
+    .btn-info {
+        background-color: #36b9cc !important;
+        color: white !important;
+        border: none;
+    }
 
     /* Table header background */
     .bg-light {
@@ -114,11 +126,14 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-calendar-check text-primary mr-2"></i>Monthly Contributions
+            <i class="fas fa-money-bill-wave text-info mr-2"></i>Monthly Pension
         </h1>
         <div class="btn-group">
-            <a href="@Url.Action("ViewLogs", "Dues")" class="btn btn-outline-primary">
-                <i class="fas fa-history mr-2"></i>View Logs
+            <a href="@Url.Action("Index", "Dues")" class="btn btn-outline-primary">
+                <i class="fas fa-calendar-check mr-2"></i>Monthly Contributions
+            </a>
+            <a href="@Url.Action("ViewPensionLogs", "Dues")" class="btn btn-outline-primary ml-2">
+                <i class="fas fa-history mr-2"></i>Pension Logs
             </a>
         </div>
     </div>
@@ -134,13 +149,13 @@
         </div>
     }
 
-    <!-- New Seniors Alert -->
-    @if (ViewBag.NewSeniorsCount != null && ViewBag.NewSeniorsCount > 0)
+    <!-- New Pension Seniors Alert -->
+    @if (ViewBag.NewPensionSeniorsCount != null && ViewBag.NewPensionSeniorsCount > 0)
     {
         <div class="alert alert-info alert-dismissible fade show" role="alert">
             <i class="fas fa-info-circle mr-2"></i>
-            <strong>@ViewBag.NewSeniorsCount new senior(s)</strong> have been added to the system.
-            They have been automatically included in this month's contributions.
+            <strong>@ViewBag.NewPensionSeniorsCount new senior(s)</strong> have been added to the pension system.
+            They have been automatically included in this month's pension.
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
@@ -150,12 +165,12 @@
     <!-- Stats Cards -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card border-left-info shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Seniors
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Pensioners
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count</div>
                         </div>
@@ -173,9 +188,9 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Paid
+                                Claimed
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@(ViewBag.PaidCount != null ? ViewBag.PaidCount : 0)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@(ViewBag.ClaimedCount != null ? ViewBag.ClaimedCount : 0)</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-check-circle fa-2x text-gray-300"></i>
@@ -191,9 +206,9 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Not Paid
+                                Not Claimed
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@(ViewBag.UnpaidCount != null ? ViewBag.UnpaidCount : 0)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@(ViewBag.UnclaimedCount != null ? ViewBag.UnclaimedCount : 0)</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-times-circle fa-2x text-gray-300"></i>
@@ -204,15 +219,15 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
+            <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Collected Amount
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Claimed Amount
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">₱@(ViewBag.CollectedAmount != null ? ViewBag.CollectedAmount : 0)</div>
-                            <div class="text-xs text-muted">Total: ₱@(ViewBag.TotalAmount != null ? ViewBag.TotalAmount : 0)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">₱@(ViewBag.ClaimedAmount != null ? ViewBag.ClaimedAmount : 0)</div>
+                            <div class="text-xs text-muted">Total: ₱@(ViewBag.TotalPensionAmount != null ? ViewBag.TotalPensionAmount : 0)</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
@@ -222,23 +237,24 @@
             </div>
         </div>
     </div>
+
     <!-- Filter Form -->
     <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-primary">Filter Contributions</h6>
+            <h6 class="m-0 font-weight-bold text-primary">Filter Pension</h6>
             <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportCsv()">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportPensionCsv()">
                     <i class="fas fa-file-excel mr-1"></i>Export Excel
                 </button>
                 @if (!hasLog)
                 {
-                    <button type="button" class="btn btn-sm btn-success" onclick="saveLog()">
+                    <button type="button" class="btn btn-sm btn-success" onclick="savePensionLog()">
                         <i class="fas fa-save mr-1"></i>Save Log
                     </button>
                 }
                 else
                 {
-                    <button type="button" class="btn btn-sm btn-warning" onclick="updateLog()">
+                    <button type="button" class="btn btn-sm btn-warning" onclick="updatePensionLog()">
                         <i class="fas fa-sync-alt mr-1"></i>Update Log
                     </button>
                 }
@@ -271,24 +287,24 @@
         </div>
     </div>
 
-    <!-- Contributions Table -->
+    <!-- Pension Table -->
     <div class="card shadow">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-primary">
-                Contributions for @monthName @selectedYear
-                <span class="badge badge-primary ml-2">@Model.Count seniors</span>
+                Pension for @monthName @selectedYear
+                <span class="badge badge-primary ml-2">@Model.Count pensioners</span>
             </h6>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="contributionsTable" width="100%" cellspacing="0" style="color: #333333 !important;">
+                <table class="table table-bordered table-hover" id="pensionTable" width="100%" cellspacing="0" style="color: #333333 !important;">
                     <thead class="bg-light" style="color: #333333 !important;">
                         <tr>
                             <th style="color: #333333 !important;">#</th>
                             <th style="color: #333333 !important;">Senior Name</th>
                             <th style="color: #333333 !important;">Zone</th>
                             <th style="color: #333333 !important;">Senior Status</th>
-                            <th style="color: #333333 !important;">Payment Status</th>
+                            <th style="color: #333333 !important;">Claim Status</th>
                             <th style="color: #333333 !important;">Actions</th>
                         </tr>
                     </thead>
@@ -315,18 +331,18 @@
                                         }
                                     </td>
                                     <td style="color: #333333 !important;">
-                                        @if (item.IsPaid)
+                                        @if (item.IsClaimed)
                                         {
                                             <span class="badge badge-success" style="background-color: #1cc88a !important; color: white !important;">
-                                                <i class="fas fa-check mr-1"></i>PAID
+                                                <i class="fas fa-check mr-1"></i>CLAIMED
                                             </span>
                                             <br />
-                                            <small class="text-muted" style="color: #6c757d !important;">@(item.PaidDate?.ToString("MMM dd, yyyy"))</small>
+                                            <small class="text-muted" style="color: #6c757d !important;">@(item.ClaimedDate?.ToString("MMM dd, yyyy"))</small>
                                         }
                                         else
                                         {
                                             <span class="badge badge-danger" style="background-color: #e74a3b !important; color: white !important;">
-                                                <i class="fas fa-times mr-1"></i>NOT PAID
+                                                <i class="fas fa-times mr-1"></i>NOT CLAIMED
                                             </span>
                                         }
                                     </td>
@@ -334,21 +350,21 @@
                                         @if (item.Status == "Active")
                                         {
                                             // For ACTIVE seniors only
-                                            if (!item.IsPaid)
+                                            if (!item.IsClaimed)
                                             {
-                                                // Show "Mark Paid" button for unpaid active seniors
-                                                <button class="btn btn-sm btn-success toggle-payment"
+                                                // Show "Mark Claimed" button for unclaimed active seniors
+                                                <button class="btn btn-sm btn-success toggle-pension"
                                                         data-id="@item.Id"
-                                                        data-paid="false"
+                                                        data-claimed="false"
                                                         style="background-color: #1cc88a !important; color: white !important; border: none; font-weight: 500; padding: 0.25rem 0.5rem;">
-                                                    <i class="fas fa-check mr-1"></i>Mark Paid
+                                                    <i class="fas fa-check mr-1"></i>Mark Claimed
                                                 </button>
                                             }
                                             else
                                             {
-                                                // Show "Paid" text for paid active seniors (no toggle button)
+                                                // Show "Claimed" text for claimed active seniors (no toggle button)
                                                 <span class="text-muted">
-                                                    <i class="fas fa-check-circle text-success mr-1"></i>Paid
+                                                    <i class="fas fa-check-circle text-success mr-1"></i>Claimed
                                                 </span>
                                             }
                                         }
@@ -367,7 +383,7 @@
                             <tr>
                                 <td colspan="6" class="text-center text-muted py-4" style="color: #6c757d !important;">
                                     <i class="fas fa-info-circle fa-2x mb-3"></i>
-                                    <p class="mb-0">No contribution records found for @monthName @selectedYear</p>
+                                    <p class="mb-0">No pension records found for @monthName @selectedYear</p>
                                 </td>
                             </tr>
                         }
@@ -380,34 +396,34 @@
 
 @section Scripts {
     <script>
-        // Toggle Payment Status - Only for marking as Paid
-        $(document).on('click', '.toggle-payment', function () {
+        // Toggle Pension Claim Status - Only for marking as Claimed
+        $(document).on('click', '.toggle-pension', function () {
             var button = $(this);
-            var contributionId = button.data('id');
-            var isPaid = button.data('paid') === 'true';
+            var pensionId = button.data('id');
+            var isClaimed = button.data('claimed') === 'true';
 
-            // Only allow marking as Paid (not Unpaid)
-            if (isPaid) {
-                showAlert('Cannot mark unpaid. Once paid, payment status cannot be changed.', 'warning');
+            // Only allow marking as Claimed (not Unclaimed)
+            if (isClaimed) {
+                showAlert('Cannot mark unclaimed. Once claimed, status cannot be changed.', 'warning');
                 return;
             }
 
             // Show confirmation
-            if (confirm('Are you sure you want to mark this senior as PAID? This action cannot be undone.')) {
+            if (confirm('Are you sure you want to mark this pension as CLAIMED? This action cannot be undone.')) {
                 // Show loading state
                 var originalHtml = button.html();
                 button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Processing...');
 
                 $.ajax({
-                    url: '@Url.Action("TogglePayment", "Dues")',
+                    url: '@Url.Action("TogglePensionClaim", "Dues")',
                     type: 'POST',
-                    data: { id: contributionId },
+                    data: { id: pensionId },
                     success: function (response) {
                         if (response.success) {
                             // Update the row
                             var row = button.closest('tr');
 
-                            // Update payment status badge
+                            // Update claim status badge
                             var currentDate = new Date();
                             var formattedDate = currentDate.toLocaleDateString('en-US', {
                                 month: 'short',
@@ -417,19 +433,19 @@
 
                             row.find('td:nth-child(5)').html(
                                 '<span class="badge badge-success" style="background-color: #1cc88a !important; color: white !important;">' +
-                                '<i class="fas fa-check mr-1"></i>PAID</span><br>' +
+                                '<i class="fas fa-check mr-1"></i>CLAIMED</span><br>' +
                                 '<small class="text-muted" style="color: #6c757d !important;">' + formattedDate + '</small>'
                             );
 
                             // Update actions column
                             row.find('td:nth-child(6)').html(
                                 '<span class="text-muted">' +
-                                '<i class="fas fa-check-circle text-success mr-1"></i>Paid' +
+                                '<i class="fas fa-check-circle text-success mr-1"></i>Claimed' +
                                 '</span>'
                             );
 
                             // Show success message
-                            showAlert('Senior marked as PAID successfully!', 'success');
+                            showAlert('Pension marked as CLAIMED successfully!', 'success');
 
                             // Reload page after 1.5 seconds to update stats
                             setTimeout(function() {
@@ -441,16 +457,16 @@
                         }
                     },
                     error: function (xhr, status, error) {
-                        showAlert('Error updating payment status: ' + error, 'danger');
+                        showAlert('Error updating pension claim status: ' + error, 'danger');
                         button.prop('disabled', false).html(originalHtml);
                     }
                 });
             }
         });
 
-        // Update Log
-        function updateLog() {
-            if (confirm('Are you sure you want to update the log for @monthName @selectedYear? This will overwrite the existing log with current data.')) {
+        // Update Pension Log
+        function updatePensionLog() {
+            if (confirm('Are you sure you want to update the pension log for @monthName @selectedYear? This will overwrite the existing log with current data.')) {
                 var month = @selectedMonth;
                 var year = @selectedYear;
 
@@ -460,36 +476,36 @@
                 updateButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Updating...');
 
                 $.ajax({
-                    url: '@Url.Action("UpdateLog", "Dues")',
+                    url: '@Url.Action("UpdatePensionLog", "Dues")',
                     type: 'POST',
                     data: {
                         month: month,
                         year: year
                     },
                     success: function () {
-                        showAlert('Log updated successfully! The page will reload.', 'success');
+                        showAlert('Pension log updated successfully! The page will reload.', 'success');
                         setTimeout(function() {
                             location.reload();
                         }, 2000);
                     },
                     error: function (xhr, status, error) {
-                        showAlert('Error updating log: ' + error, 'danger');
+                        showAlert('Error updating pension log: ' + error, 'danger');
                         updateButton.prop('disabled', false).html(originalText);
                     }
                 });
             }
         }
 
-        // Export CSV
-        function exportCsv() {
+        // Export Pension CSV
+        function exportPensionCsv() {
             var month = @selectedMonth;
             var year = @selectedYear;
-            window.location.href = '@Url.Action("ExportCsv", "Dues")?month=' + month + '&year=' + year;
+            window.location.href = '@Url.Action("ExportPensionCsv", "Dues")?month=' + month + '&year=' + year;
         }
 
-        // Save Log
-        function saveLog() {
-            if (confirm('Are you sure you want to save a log for @monthName @selectedYear? This will create a permanent record that cannot be deleted.')) {
+        // Save Pension Log
+        function savePensionLog() {
+            if (confirm('Are you sure you want to save a pension log for @monthName @selectedYear? This will create a permanent record that cannot be deleted.')) {
                 var month = @selectedMonth;
                 var year = @selectedYear;
 
@@ -499,20 +515,20 @@
                 saveButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving...');
 
                 $.ajax({
-                    url: '@Url.Action("SaveLog", "Dues")',
+                    url: '@Url.Action("SavePensionLog", "Dues")',
                     type: 'POST',
                     data: {
                         month: month,
                         year: year
                     },
                     success: function () {
-                        showAlert('Log saved successfully! The page will reload.', 'success');
+                        showAlert('Pension log saved successfully! The page will reload.', 'success');
                         setTimeout(function() {
                             location.reload();
                         }, 2000);
                     },
                     error: function (xhr, status, error) {
-                        showAlert('Error saving log: ' + error, 'danger');
+                        showAlert('Error saving pension log: ' + error, 'danger');
                         saveButton.prop('disabled', false).html(originalText);
                     }
                 });
@@ -539,7 +555,7 @@
 
         // Initialize page
         $(document).ready(function() {
-            console.log('Monthly Contributions page loaded');
+            console.log('Monthly Pension page loaded');
             console.log('Selected Month: @selectedMonth, Year: @selectedYear');
             console.log('Has Log: @hasLog');
         });

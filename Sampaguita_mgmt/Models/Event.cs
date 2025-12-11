@@ -1,4 +1,4 @@
-﻿// Models/Event.cs - Complete Fixed Version
+﻿// Models/Event.cs
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -49,7 +49,9 @@ namespace SeniorManagement.Models
         public int AttendanceCount { get; set; } = 0;
 
         [Display(Name = "Status")]
-        public string Status { get; set; } = "Scheduled";
+        [RegularExpression(@"^(Upcoming|Ongoing|Completed|Cancelled)$",
+            ErrorMessage = "Invalid status. Must be Upcoming, Ongoing, Completed, or Cancelled")]
+        public string Status { get; set; } = "Upcoming";
 
         public bool IsDeleted { get; set; } = false;
 
@@ -94,5 +96,15 @@ namespace SeniorManagement.Models
                 }
             }
         }
+
+        // Navigation properties
+        [NotMapped]
+        public List<EventAttendance> Attendances { get; set; } = new List<EventAttendance>();
+
+        [NotMapped]
+        public int PresentCount => Attendances.Count(a => a.AttendanceStatus == "Present");
+
+        [NotMapped]
+        public int AbsentCount => Attendances.Count(a => a.AttendanceStatus == "Absent");
     }
 }

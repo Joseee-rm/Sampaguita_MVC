@@ -22,18 +22,12 @@
     {
         return status switch
         {
-            "Scheduled" => "badge bg-primary",
+            "Upcoming" => "badge bg-primary",
             "Ongoing" => "badge bg-warning text-dark",
             "Completed" => "badge bg-success",
             "Cancelled" => "badge bg-danger",
             _ => "badge bg-secondary"
         };
-    }
-
-    // Helper for filter selection
-    string IsSelected(string current, string expected)
-    {
-        return current == expected ? "selected" : "";
     }
 }
 
@@ -56,7 +50,7 @@
     <!-- Search and Filters Card -->
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <form method="get" class="row g-3">
+            <form method="get" id="filterForm" class="row g-3">
                 <!-- Search Box -->
                 <div class="col-md-4">
                     <label class="form-label">Search Events</label>
@@ -64,13 +58,13 @@
                         <span class="input-group-text"><i class="fas fa-search"></i></span>
                         <input type="text" name="search" class="form-control"
                                placeholder="Search by title, description, location, or organizer..."
-                               value="@ViewBag.SearchQuery">
+                               value="@ViewBag.SearchQuery"
+                               id="searchInput">
                         @if (!string.IsNullOrEmpty(ViewBag.SearchQuery))
                         {
-                            <a href="@Url.Action("Index", new { status = ViewBag.SelectedStatus, type = ViewBag.SelectedType, dateFilter = ViewBag.SelectedDateFilter })"
-                               class="btn btn-outline-secondary" title="Clear Search">
+                            <button type="button" class="btn btn-outline-secondary" onclick="clearSearch()" title="Clear Search">
                                 <i class="fas fa-times"></i>
-                            </a>
+                            </button>
                         }
                     </div>
                 </div>
@@ -78,42 +72,25 @@
                 <!-- Status Filter -->
                 <div class="col-md-2">
                     <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
+                    <select name="status" class="form-select" id="statusSelect">
                         <option value="">All Statuses</option>
-                        @{
-                            var statuses = new[] { "Scheduled", "Ongoing", "Completed", "Cancelled" };
-                            foreach (var status in statuses)
-                            {
-                                if (ViewBag.SelectedStatus == status)
-                                {
-                                    <option value="@status" selected>@status</option>
-                                }
-                                else
-                                {
-                                    <option value="@status">@status</option>
-                                }
-                            }
-                        }
+                        <option value="Upcoming" selected="@(ViewBag.SelectedStatus == "Upcoming")">Upcoming</option>
+                        <option value="Ongoing" selected="@(ViewBag.SelectedStatus == "Ongoing")">Ongoing</option>
+                        <option value="Completed" selected="@(ViewBag.SelectedStatus == "Completed")">Completed</option>
+                        <option value="Cancelled" selected="@(ViewBag.SelectedStatus == "Cancelled")">Cancelled</option>
                     </select>
                 </div>
 
                 <!-- Type Filter -->
                 <div class="col-md-2">
                     <label class="form-label">Event Type</label>
-                    <select name="type" class="form-select">
+                    <select name="type" class="form-select" id="typeSelect">
                         <option value="">All Types</option>
                         @{
-                            var types = new[] { "Medical Mission", "Assistance Program", "Wellness Activity", "Community Gathering", "Educational", "Social" };
+                            var types = new[] { "Medical Mission", "Assistance Program", "Wellness Activity", "Community Gathering", "Educational", "Social", "Birthday Celebration", "Health Checkup", "Food Distribution", "Training Workshop" };
                             foreach (var type in types)
                             {
-                                if (ViewBag.SelectedType == type)
-                                {
-                                    <option value="@type" selected>@type</option>
-                                }
-                                else
-                                {
-                                    <option value="@type">@type</option>
-                                }
+                                <option value="@type" selected="@(ViewBag.SelectedType == type)">@type</option>
                             }
                         }
                     </select>
@@ -122,47 +99,30 @@
                 <!-- Date Filter -->
                 <div class="col-md-2">
                     <label class="form-label">Date Filter</label>
-                    <select name="dateFilter" class="form-select">
+                    <select name="dateFilter" class="form-select" id="dateFilterSelect">
                         <option value="">All Dates</option>
-                        @{
-                            var dateFilters = new Dictionary<string, string>
-                                                {
-                                                {"today", "Today"},
-                                                {"tomorrow", "Tomorrow"},
-                                                {"thisweek", "This Week"},
-                                                {"nextweek", "Next Week"},
-                                                {"thismonth", "This Month"},
-                                                {"nextmonth", "Next Month"},
-                                                {"past", "Past Events"},
-                                                {"upcoming", "Upcoming"}
-                                                };
-
-                            foreach (var filter in dateFilters)
-                            {
-                                if (ViewBag.SelectedDateFilter == filter.Key)
-                                {
-                                    <option value="@filter.Key" selected>@filter.Value</option>
-                                }
-                                else
-                                {
-                                    <option value="@filter.Key">@filter.Value</option>
-                                }
-                            }
-                        }
+                        <option value="today" selected="@(ViewBag.SelectedDateFilter == "today")">Today</option>
+                        <option value="tomorrow" selected="@(ViewBag.SelectedDateFilter == "tomorrow")">Tomorrow</option>
+                        <option value="thisweek" selected="@(ViewBag.SelectedDateFilter == "thisweek")">This Week</option>
+                        <option value="nextweek" selected="@(ViewBag.SelectedDateFilter == "nextweek")">Next Week</option>
+                        <option value="thismonth" selected="@(ViewBag.SelectedDateFilter == "thismonth")">This Month</option>
+                        <option value="nextmonth" selected="@(ViewBag.SelectedDateFilter == "nextmonth")">Next Month</option>
+                        <option value="past" selected="@(ViewBag.SelectedDateFilter == "past")">Past Events</option>
+                        <option value="upcoming" selected="@(ViewBag.SelectedDateFilter == "upcoming")">Upcoming</option>
                     </select>
                 </div>
 
                 <!-- Action Buttons -->
                 <div class="col-md-2 d-flex align-items-end">
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
+                    <div class="d-flex gap-2 w-100">
+                        <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
                         @if (!string.IsNullOrEmpty(ViewBag.SearchQuery) || !string.IsNullOrEmpty(ViewBag.SelectedStatus) || !string.IsNullOrEmpty(ViewBag.SelectedType) || !string.IsNullOrEmpty(ViewBag.SelectedDateFilter))
                         {
-                            <a href="@Url.Action("Index", "Event")" class="btn btn-outline-secondary">
-                                <i class="fas fa-times me-1"></i> Clear All
-                            </a>
+                            <button type="button" class="btn btn-outline-secondary" onclick="clearAllFilters()">
+                                <i class="fas fa-times me-1"></i> Clear
+                            </button>
                         }
                     </div>
                 </div>
@@ -191,7 +151,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="small">Upcoming</div>
-                            <div class="h4">@Model.Count(e => e.EventDate >= DateTime.Today && e.Status == "Scheduled")</div>
+                            <div class="h4">@Model.Count(e => e.Status == "Upcoming")</div>
                         </div>
                         <i class="fas fa-clock fa-2x opacity-50"></i>
                     </div>
@@ -284,62 +244,37 @@
                             </td>
                             <td>@eventItem.EventLocation</td>
                             <td>
-                                <div class="attendance-control">
-                                    <div class="d-flex align-items-center">
-                                        <button class="btn btn-sm btn-outline-secondary attendance-btn minus"
-                                                onclick="updateAttendance(@eventItem.Id, -1)"
-                                                @if (eventItem.AttendanceCount <= 0)
-                                                        {
-                                                            <text>disabled</text>
-                                                        }
-        >
-                                                            <i class="fas fa-minus"></i>
-                                                        </button>
-
-                                                <div class="text-center mx-2">
-                                                    <div class="fw-bold attendance-count"
-                                                         data-id="@eventItem.Id"
-                                                         data-max="@eventItem.MaxCapacity">
-                                                        @eventItem.AttendanceCount
-                                                        @if (eventItem.MaxCapacity.HasValue)
-                                                        {
-                                                            <small class="text-muted">/@eventItem.MaxCapacity</small>
-                                                        }
-                                                    </div>
-
-                                                    @if (eventItem.MaxCapacity.HasValue && eventItem.MaxCapacity.Value > 0)
-                                                    {
-                                                        <div class="progress mt-1" style="height: 4px; width: 60px;">
-                                                            <div class="progress-bar
-                                                                             @(attendancePercentage >= 90 ? "bg-danger" :
-                                                                                                                                    attendancePercentage >= 70 ? "bg-warning" : "bg-success")"
-                                                     style="width: @(attendancePercentage)%">
-                                                </div>
+                                <div class="attendance-info">
+                                    <div class="fw-bold">
+                                        @eventItem.AttendanceCount
+                                        @if (eventItem.MaxCapacity.HasValue)
+                                                {
+                                                    <span class="text-muted">/@eventItem.MaxCapacity</span>
+                                                }
                                             </div>
-                                                                                        }
-                                                </div>
-
-                                                <button class="btn btn-sm btn-outline-secondary attendance-btn plus"
-                                                        onclick="updateAttendance(@eventItem.Id, 1)"
-                                                        @if (isFull)
-                                                        {
-                                                            <text>disabled</text>
-                                                        }
-        >
-                                                            <i class="fas fa-plus"></i>
-                                                        </button>
-                                            </div>
-
-                                            @if (eventItem.MaxCapacity.HasValue)
+                                            @if (eventItem.MaxCapacity.HasValue && eventItem.MaxCapacity.Value > 0)
                                             {
-                                                <small class="text-muted d-block mt-1 text-center">
-                                                    @attendancePercentage% full
-                                                    @if (isFull)
+                                                <div class="progress mt-1" style="height: 6px;">
+                                                    <div class="progress-bar
+                                                                     @(attendancePercentage >= 90 ? "bg-danger" :
+                                                                                                                    attendancePercentage >= 70 ? "bg-warning" : "bg-success")"
+                                             style="width: @(attendancePercentage)%">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">
+                                        @attendancePercentage% full
+                                        @if (isFull)
                                                     {
                                                         <span class="badge bg-danger ms-1">Full</span>
                                                     }
                                                 </small>
                                             }
+                                            <div class="mt-1">
+                                                <a href="@Url.Action("Attendance", "Event", new { id = eventItem.Id })"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-users me-1"></i> Manage
+                                                </a>
+                                            </div>
                                         </div>
                                     </td>
                                     <td>
@@ -347,22 +282,17 @@
                                             <select class="form-select form-select-sm status-select"
                                                     data-event-id="@eventItem.Id"
                                                     style="width: 120px;"
-                                                    onchange="updateEventStatus(@eventItem.Id, this.value)">
-                                                @{
-                                                    var eventStatuses = new[] { "Scheduled", "Ongoing", "Completed", "Cancelled" };
-                                                    foreach (var status in eventStatuses)
+                                                    onchange="updateEventStatus(@eventItem.Id, this.value)"
+                                                    @if (eventItem.Status == "Completed")
                                                     {
-                                                        if (eventItem.Status == status)
-                                                        {
-                                                            <option value="@status" selected>@status</option>
-                                                        }
-                                                        else
-                                                        {
-                                                            <option value="@status">@status</option>
-                                                        }
+                                                        <text>disabled</text>
                                                     }
-                                                }
-                                            </select>
+        >
+                                                        <option value="Upcoming" selected="@(eventItem.Status == "Upcoming")">Upcoming</option>
+                                                        <option value="Ongoing" selected="@(eventItem.Status == "Ongoing")">Ongoing</option>
+                                                        <option value="Completed" selected="@(eventItem.Status == "Completed")">Completed</option>
+                                                        <option value="Cancelled" selected="@(eventItem.Status == "Cancelled")">Cancelled</option>
+                                                    </select>
                                             <span class="badge @GetStatusBadgeClass(eventItem.Status) ms-2">
                                                 @eventItem.Status
                                             </span>
@@ -370,15 +300,26 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm" role="group">
+                                            <a href="@Url.Action("View", "Event", new { id = eventItem.Id })"
+                                               class="btn btn-info" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
                                             <a href="@Url.Action("Edit", "Event", new { id = eventItem.Id })"
                                                class="btn btn-warning" title="Edit Event">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <button class="btn btn-danger archive-btn"
-                                                    onclick="archiveEvent(@eventItem.Id, '@eventItem.EventTitle.Replace("'", "\\'")')"
-                                                    title="Archive Event">
-                                                <i class="fas fa-archive"></i>
-                                            </button>
+                                            <a href="@Url.Action("Attendance", "Event", new { id = eventItem.Id })"
+                                               class="btn btn-success" title="Manage Attendance">
+                                                <i class="fas fa-users"></i>
+                                            </a>
+                                            @if (isAdmin)
+                                            {
+                                                <button class="btn btn-danger archive-btn"
+                                                        onclick="archiveEvent(@eventItem.Id, '@eventItem.EventTitle.Replace("'", "\\'")')"
+                                                        title="Archive Event">
+                                                    <i class="fas fa-archive"></i>
+                                                </button>
+                                            }
                                         </div>
                                     </td>
                                 </tr>
@@ -397,6 +338,20 @@
                                 <span>for "<strong>@ViewBag.SearchQuery</strong>"</span>
                             }
                         </small>
+                        <div>
+                            @if (!string.IsNullOrEmpty(ViewBag.SelectedStatus))
+                            {
+                                <span class="badge bg-primary me-2">Status: @ViewBag.SelectedStatus</span>
+                            }
+                            @if (!string.IsNullOrEmpty(ViewBag.SelectedType))
+                            {
+                                <span class="badge bg-info me-2">Type: @ViewBag.SelectedType</span>
+                            }
+                            @if (!string.IsNullOrEmpty(ViewBag.SelectedDateFilter))
+                            {
+                                <span class="badge bg-success">Date: @ViewBag.SelectedDateFilter</span>
+                            }
+                        </div>
                     </div>
                 </div>
             }
@@ -408,9 +363,9 @@
                         <i class="fas fa-search fa-4x text-muted mb-3"></i>
                         <h4 class="text-muted">No Events Found</h4>
                         <p class="text-muted">No events match your current filters.</p>
-                        <a href="@Url.Action("Index", "Event")" class="btn btn-outline-secondary">
+                        <button class="btn btn-outline-secondary" onclick="clearAllFilters()">
                             <i class="fas fa-times me-1"></i> Clear Filters
-                        </a>
+                        </button>
                     }
                     else
                     {
@@ -430,60 +385,84 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        // Filter form handling
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            // Ensure form submits correctly
+            const form = e.target;
+            const search = document.getElementById('searchInput').value;
+            const status = document.getElementById('statusSelect').value;
+            const type = document.getElementById('typeSelect').value;
+            const dateFilter = document.getElementById('dateFilterSelect').value;
+
+            // Build URL with parameters
+            let url = '@Url.Action("Index", "Event")';
+            let params = [];
+
+            if (search) params.push(`search=${encodeURIComponent(search)}`);
+            if (status) params.push(`status=${encodeURIComponent(status)}`);
+            if (type) params.push(`type=${encodeURIComponent(type)}`);
+            if (dateFilter) params.push(`dateFilter=${encodeURIComponent(dateFilter)}`);
+
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+
+            // Use window.location instead of form submit for better control
+            e.preventDefault();
+            window.location.href = url;
+        });
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterForm').submit();
+        }
+
+        function clearAllFilters() {
+            // Reset all filter inputs
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusSelect').value = '';
+            document.getElementById('typeSelect').value = '';
+            document.getElementById('dateFilterSelect').value = '';
+
+            // Redirect to index without parameters
+            window.location.href = '@Url.Action("Index", "Event")';
+        }
+
         // Get anti-forgery token
         function getToken() {
             return $('input[name="__RequestVerificationToken"]').val();
         }
 
-        function updateAttendance(eventId, change) {
-            $.ajax({
-                url: '@Url.Action("UpdateAttendance", "Event")',
-                type: 'POST',
-                data: {
-                    id: eventId,
-                    count: change,
-                    __RequestVerificationToken: getToken()
-                },
-                success: function (response) {
-                    if (response.success) {
-                        const row = $(`tr[data-event-id="${eventId}"]`);
-                        const display = row.find('.attendance-count');
-
-                        // Update display
-                        const max = display.data('max');
-                        display.html(response.attendance + (max ? '/' + max : ''));
-
-                        // Update progress bar and UI
-                        if (max) {
-                            const progressBar = row.find('.progress-bar');
-                            progressBar.css('width', response.percentage + '%');
-                            progressBar.removeClass('bg-success bg-warning bg-danger')
-                                .addClass(response.percentage >= 90 ? 'bg-danger' :
-                                          response.percentage >= 70 ? 'bg-warning' : 'bg-success');
-
-                            // Update percentage text
-                            const percentageText = row.find('.text-muted').first();
-                            percentageText.html(response.percentage + '% full' +
-                                (response.isFull ? ' <span class="badge bg-danger ms-1">Full</span>' : ''));
-
-                            // Enable/disable buttons
-                            row.find('.plus').prop('disabled', response.isFull);
-                        }
-
-                        row.find('.minus').prop('disabled', response.attendance <= 0);
-
-                        showSuccess(response.message);
+        function updateEventStatus(eventId, newStatus) {
+            if (newStatus === "Cancelled") {
+                Swal.fire({
+                    title: 'Cancel Event',
+                    html: `<p>Are you sure you want to cancel this event?</p>
+                           <p class="text-muted small">Cancelled events will be moved to archive automatically.</p>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, cancel it!',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        performStatusUpdate(eventId, newStatus);
                     } else {
-                        showError(response.message);
+                        // Reset the dropdown to original value
+                        const row = $(`tr[data-event-id="${eventId}"]`);
+                        const currentStatus = row.find('.badge').text();
+                        const dropdown = row.find('.status-select');
+                        dropdown.val(currentStatus);
                     }
-                },
-                error: function (xhr, status, error) {
-                    showError('Error updating attendance: ' + error);
-                }
-            });
+                });
+            } else {
+                performStatusUpdate(eventId, newStatus);
+            }
         }
 
-        function updateEventStatus(eventId, newStatus) {
+        function performStatusUpdate(eventId, newStatus) {
             $.ajax({
                 url: '@Url.Action("UpdateStatus", "Event")',
                 type: 'POST',
@@ -496,19 +475,46 @@
                     if (response.success) {
                         const row = $(`tr[data-event-id="${eventId}"]`);
                         const badge = row.find('.badge').last();
+                        const dropdown = row.find('.status-select');
 
                         // Update badge
                         badge.removeClass('bg-primary bg-warning bg-success bg-danger bg-secondary')
                             .addClass(getStatusClass(newStatus))
                             .text(newStatus);
 
+                        // If archived, remove row
+                        if (response.archived) {
+                            row.fadeOut(300, function() {
+                                $(this).remove();
+                                // Show message if no events left
+                                if ($('tbody tr').length === 0) {
+                                    location.reload();
+                                }
+                            });
+                        }
+
+                        // If status is Completed, disable dropdown
+                        if (newStatus === "Completed") {
+                            dropdown.prop('disabled', true);
+                        }
+
                         showSuccess(response.message);
                     } else {
                         showError(response.message);
+                        // Reset dropdown to current status
+                        const row = $(`tr[data-event-id="${eventId}"]`);
+                        const currentStatus = row.find('.badge').text();
+                        const dropdown = row.find('.status-select');
+                        dropdown.val(currentStatus);
                     }
                 },
                 error: function (xhr, status, error) {
                     showError('Error updating status: ' + error);
+                    // Reset dropdown
+                    const row = $(`tr[data-event-id="${eventId}"]`);
+                    const currentStatus = row.find('.badge').text();
+                    const dropdown = row.find('.status-select');
+                    dropdown.val(currentStatus);
                 }
             });
         }
@@ -559,7 +565,7 @@
 
         function getStatusClass(status) {
             switch(status) {
-                case 'Scheduled': return 'bg-primary';
+                case 'Upcoming': return 'bg-primary';
                 case 'Ongoing': return 'bg-warning text-dark';
                 case 'Completed': return 'bg-success';
                 case 'Cancelled': return 'bg-danger';

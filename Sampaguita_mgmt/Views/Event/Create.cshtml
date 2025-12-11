@@ -7,12 +7,14 @@
     string defaultOrganizer = ViewBag.DefaultOrganizer as string;
     string defaultDate = ViewBag.DefaultDate as string;
     string defaultTime = ViewBag.DefaultTime as string;
+    bool hideStatus = ViewBag.HideStatus as bool? ?? false;
 }
 
 <div class="container mt-4">
     <div class="card shadow">
         <div class="card-header bg-primary text-white">
             <h3 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Create New Event</h3>
+            <small class="opacity-90">New events are automatically set to "Upcoming" status</small>
         </div>
         <div class="card-body">
             <form asp-action="Create" method="post" id="eventForm">
@@ -37,6 +39,10 @@
                                 <option value="Community Gathering">Community Gathering</option>
                                 <option value="Educational">Educational</option>
                                 <option value="Social">Social</option>
+                                <option value="Birthday Celebration">Birthday Celebration</option>
+                                <option value="Health Checkup">Health Checkup</option>
+                                <option value="Food Distribution">Food Distribution</option>
+                                <option value="Training Workshop">Training Workshop</option>
                             </select>
                             <span asp-validation-for="EventType" class="text-danger small"></span>
                         </div>
@@ -78,6 +84,10 @@
                                    placeholder="Enter organizer name"
                                    value="@defaultOrganizer" />
                             <span asp-validation-for="OrganizedBy" class="text-danger small"></span>
+                            @if (isStaff)
+                            {
+                                <small class="text-muted">Automatically filled with your name</small>
+                            }
                         </div>
                     </div>
                 </div>
@@ -87,19 +97,18 @@
                         <div class="form-group mb-3">
                             <label asp-for="MaxCapacity" class="form-label">Maximum Capacity (Optional)</label>
                             <input asp-for="MaxCapacity" type="number" min="0" class="form-control"
-                                   placeholder="Leave empty for unlimited capacity" />
+                                   placeholder="Leave empty for unlimited" id="maxCapacity" />
                             <span asp-validation-for="MaxCapacity" class="text-danger small"></span>
+                            <small class="text-muted">Set to 0 or leave empty for no limit. Use for attendance tracking.</small>
                         </div>
                     </div>
                     <div class="col-md-6">
+                        <!-- Status field removed - always set to "Upcoming" -->
                         <div class="form-group mb-3">
-                            <label asp-for="Status" class="form-label fw-bold">Status</label>
-                            <select asp-for="Status" class="form-select">
-                                <option value="Scheduled">Scheduled</option>
-                                <option value="Ongoing">Ongoing</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Cancelled">Cancelled</option>
-                            </select>
+                            <label class="form-label fw-bold">Status</label>
+                            <input type="text" class="form-control bg-light" value="Upcoming" readonly />
+                            <small class="text-muted">Status is automatically set to "Upcoming" for new events</small>
+                            <input type="hidden" asp-for="Status" value="Upcoming" />
                         </div>
                     </div>
                 </div>
@@ -107,8 +116,47 @@
                 <div class="form-group mb-3">
                     <label asp-for="EventDescription" class="form-label fw-bold">Event Description *</label>
                     <textarea asp-for="EventDescription" class="form-control" rows="4"
-                              placeholder="Enter event description..."></textarea>
+                              placeholder="Enter detailed event description..."></textarea>
                     <span asp-validation-for="EventDescription" class="text-danger small"></span>
+                </div>
+
+                <!-- Attendance Information -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Attendance Tracking Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6><i class="fas fa-check-circle me-2 text-success"></i>Automatic Attendance System</h6>
+                                <p>After creating this event, you will be able to:</p>
+                                <ul>
+                                    <li>Mark seniors as Present or Absent using the attendance page</li>
+                                    <li>Attendance count updates automatically</li>
+                                    <li>Once marked Present, cannot be changed to Absent</li>
+                                    <li>Track attendance by zones and barangays</li>
+                                    <li>Use bulk actions for multiple seniors</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="alert alert-success">
+                                    <h6><i class="fas fa-lightbulb me-2"></i>Tip</h6>
+                                    <p class="mb-0">Set a maximum capacity to track how full your event is getting.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Important Notes:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>All new events are created with status <strong>"Upcoming"</strong></li>
+                        <li>Attendance tracking will be available after event creation</li>
+                        <li>Once status becomes "Confirmed", it cannot be changed</li>
+                        <li>Cancelled events are automatically moved to archive</li>
+                    </ul>
                 </div>
 
                 <div class="form-group">
@@ -161,14 +209,22 @@
                     Swal.fire({
                         icon: 'warning',
                         title: 'Missing Information',
-                        text: 'Please fill in all required fields.',
+                        html: '<p>Please fill in all required fields marked with *</p>' +
+                              '<ul class="text-start">' +
+                              (!eventTitle ? '<li>Event Title</li>' : '') +
+                              (!eventType ? '<li>Event Type</li>' : '') +
+                              (!eventTime ? '<li>Event Time</li>' : '') +
+                              (!eventLocation ? '<li>Event Location</li>' : '') +
+                              (!organizedBy ? '<li>Organized By</li>' : '') +
+                              (!eventDescription ? '<li>Event Description</li>' : '') +
+                              '</ul>',
                         confirmButtonColor: '#3085d6'
                     });
                     return false;
                 }
 
-                // Validate capacity vs attendance
-                const maxCapacity = document.getElementById('MaxCapacity').value;
+                // Validate capacity
+                const maxCapacity = document.getElementById('maxCapacity').value;
                 if (maxCapacity && parseInt(maxCapacity) < 0) {
                     e.preventDefault();
                     Swal.fire({
@@ -182,8 +238,17 @@
 
                 // Show loading
                 const submitBtn = form.querySelector('button[type="submit"]');
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Creating...';
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Creating Event...';
                 submitBtn.disabled = true;
+
+                // Re-enable button if form validation fails
+                setTimeout(() => {
+                    if (!form.checkValidity()) {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }
+                }, 3000);
             });
 
             // Set today's date as default if empty
@@ -201,6 +266,30 @@
                 const hours = nextHour.getHours().toString().padStart(2, '0');
                 const minutes = '00';
                 timeInput.value = `${hours}:${minutes}`;
+            }
+
+            // Auto-capitalize event title
+            const titleInput = document.getElementById('EventTitle');
+            if (titleInput) {
+                titleInput.addEventListener('blur', function() {
+                    this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1);
+                });
+            }
+
+            // Show success message if redirected from another page
+            @if (TempData["SuccessMessage"] != null)
+            {
+                    <text>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: '@TempData["SuccessMessage"]',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    </text>
             }
         });
     </script>

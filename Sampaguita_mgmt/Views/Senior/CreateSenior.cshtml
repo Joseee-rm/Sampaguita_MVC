@@ -18,15 +18,15 @@
                         <!-- SCCN Number Section - MANUAL INPUT -->
                         <div class="section-card mb-4">
                             <div class="section-header">
-                                <h5><i class="fas fa-id-card me-2"></i>SCCN Identification</h5>
+                                <h5><i class="fas fa-id-card me-2"></i>OSCA Identification</h5>
                             </div>
                             <div class="section-body">
                                 <div class="mb-3">
-                                    <label asp-for="SeniorId" class="form-label required">SCCN Number</label>
+                                    <label asp-for="SeniorId" class="form-label required">OSCA Number</label>
                                     <div class="input-group">
                                         <input asp-for="SeniorId"
                                                class="form-control"
-                                               placeholder="Enter 12-digit SCCN number"
+                                               placeholder="Enter 12-digit OSCA number"
                                                maxlength="12"
                                                oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 12)"
                                                required />

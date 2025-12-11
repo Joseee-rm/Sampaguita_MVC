@@ -1019,6 +1019,57 @@
             border-radius: 3px;
         }
 
+        /* Pensions Menu Item */
+        .menu-item.pensions-menu {
+            position: relative;
+        }
+
+            .menu-item.pensions-menu .menu-badge {
+                background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+                color: white;
+                padding: 0.2rem 0.5rem;
+                border-radius: 10px;
+                font-size: 0.7rem;
+                margin-left: auto;
+                white-space: nowrap;
+                font-weight: 600;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+
+            .menu-item.pensions-menu:hover .menu-badge {
+                background: linear-gradient(135deg, #FF8E53, #FF6B6B);
+            }
+
+            .menu-item.pensions-menu.active .menu-badge {
+                background: white;
+                color: #FF6B6B;
+            }
+
+        /* Update the menu-item class to include pensions-menu */
+        .menu-item[href*="Pension"] {
+            position: relative;
+        }
+
+            .menu-item[href*="Pension"] .menu-badge {
+                background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+                color: white;
+                padding: 0.2rem 0.5rem;
+                border-radius: 10px;
+                font-size: 0.7rem;
+                margin-left: auto;
+                white-space: nowrap;
+                font-weight: 600;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+
+        /* For responsive design */
+        @@media screen and (max-width: 767px) {
+            .menu-item[href*="Pension"] .menu-badge {
+                font-size: 0.65rem;
+                padding: 0.15rem 0.4rem;
+            }
+        }
+
         /* ===== PRINT STYLES ===== */
         @@media print {
             .sidebar,
@@ -1112,7 +1163,11 @@
                 <a href="@Url.Action("Index", "Dues")" class="menu-item dues-menu">
                     <i class="fas fa-calendar-check"></i>
                     <span class="menu-text">Monthly Contributions</span>
-                    <small class="menu-badge">₱10/month</small>
+                </a>
+
+                <a href="@Url.Action("Pension", "Dues")" class="menu-item">
+                    <i class="fas fa-money-check-alt"></i>
+                    <span class="menu-text">Pension Management</span>
                 </a>
             }
         </div>

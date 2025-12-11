@@ -25,16 +25,16 @@
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label asp-for="SeniorId" class="form-label">SCCN Number *</label>
+                        <label asp-for="SeniorId" class="form-label">OSCA Number *</label>
                         <div class="input-group">
                             <input asp-for="SeniorId" class="form-control"
-                                   placeholder="Enter 12-digit SCCN number"
+                                   placeholder="Enter 12-digit OSCN number"
                                    required
                                    id="seniorIdInput"
                                    pattern="\d{12}"
                                    maxlength="12"
                                    title="Exactly 12 digits (numbers only)" readonly />
-                            <button type="button" class="btn btn-outline-info" id="formatBtn" title="Format SCCN number">
+                            <button type="button" class="btn btn-outline-info" id="formatBtn" title="Format OSCA number">
                                 <i class="fas fa-magic"></i>
                             </button>
                         </div>
@@ -50,7 +50,7 @@
                 <div class="col-md-6">
                     <div class="alert alert-info">
                         <i class="fas fa-exclamation-circle me-2"></i>
-                        <strong>SCCN Note:</strong> This field cannot be edited once created.
+                        <strong>OSCA Note:</strong> This field cannot be edited once created.
                     </div>
                 </div>
             </div>

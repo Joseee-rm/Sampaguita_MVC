@@ -20,108 +20,105 @@
                 {
                     var isFull = eventItem.MaxCapacity.HasValue && eventItem.AttendanceCount >= eventItem.MaxCapacity.Value;
                     var attendancePercentage = eventItem.MaxCapacity.HasValue && eventItem.MaxCapacity.Value > 0
-                        ? (int)Math.Round((double)eventItem.AttendanceCount / eventItem.MaxCapacity.Value * 100)
-                        : 0;
+                    ? (int)Math.Round((double)eventItem.AttendanceCount / eventItem.MaxCapacity.Value * 100)
+                    : 0;
 
                     <tr data-event-id="@eventItem.Id">
                         <td>
                             <div class="fw-bold text-primary">@eventItem.EventTitle</div>
                             <small class="text-muted">
                                 @(eventItem.EventDescription?.Length > 50 ?
-                                    eventItem.EventDescription.Substring(0, 50) + "..." :
-                                    eventItem.EventDescription)
-                            </small>
-                            <div><small class="text-muted">By: @eventItem.OrganizedBy</small></div>
-                        </td>
-                        <td>
-                            <span class="badge bg-primary">@eventItem.EventType</span>
-                        </td>
-                        <td>
-                            <div class="fw-bold">@eventItem.EventDate.ToString("MMM dd, yyyy")</div>
-                            <small class="text-muted">@eventItem.TimeFormatted</small>
-                        </td>
-                        <td>@eventItem.EventLocation</td>
-                        <td>
-                            <div class="attendance-control">
-                                <div class="d-flex align-items-center">
-                                    <button class="btn btn-sm btn-outline-secondary attendance-btn minus"
-                                            onclick="updateAttendance(@eventItem.Id, -1)"
-                                            @if (eventItem.AttendanceCount <= 0) { <text>disabled</text> }>
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                    
-                                    <div class="text-center mx-2">
-                                        <div class="fw-bold attendance-display" 
-                                             data-id="@eventItem.Id"
-                                             data-max="@eventItem.MaxCapacity"
-                                             style="font-size: 1.1rem;">
-                                            @eventItem.AttendanceCount
-                                            @if (eventItem.MaxCapacity.HasValue)
-                                            {
-                                                <small class="text-muted">/@eventItem.MaxCapacity</small>
-                                            }
-                                        </div>
-                                        
-                                        @if (eventItem.MaxCapacity.HasValue && eventItem.MaxCapacity.Value > 0)
-                                        {
-                                            <div class="progress mt-1" style="height: 4px; width: 60px;">
-                                                <div class="progress-bar 
-                                                     @(attendancePercentage >= 90 ? "bg-danger" : 
-                                                       attendancePercentage >= 70 ? "bg-warning" : "bg-success")"
-                                                     style="width: @(attendancePercentage)%">
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
-                                    
-                                    <button class="btn btn-sm btn-outline-secondary attendance-btn plus"
-                                            onclick="updateAttendance(@eventItem.Id, 1)"
-                                            @if (isFull) { <text>disabled</text> }>
-                                        <i class="fas fa-plus"></i>
-                                    </button>
+                                                        eventItem.EventDescription.Substring(0, 50) + "..." :
+                                                        eventItem.EventDescription)
+                    </small>
+                    <div><small class="text-muted">By: @eventItem.OrganizedBy</small></div>
+                </td>
+                <td>
+                    <span class="badge bg-primary">@eventItem.EventType</span>
+                </td>
+                <td>
+                    <div class="fw-bold">@eventItem.EventDate.ToString("MMM dd, yyyy")</div>
+                    <small class="text-muted">@eventItem.TimeFormatted</small>
+                </td>
+                <td>@eventItem.EventLocation</td>
+                <td>
+                    <div class="attendance-control">
+                        <div class="fw-bold text-center">
+                            @eventItem.AttendanceCount
+                            @if (eventItem.MaxCapacity.HasValue)
+                                    {
+                                        <small class="text-muted">/@eventItem.MaxCapacity</small>
+                                    }
                                 </div>
-                                
-                                @if (eventItem.MaxCapacity.HasValue)
+
+                                @if (eventItem.MaxCapacity.HasValue && eventItem.MaxCapacity.Value > 0)
                                 {
-                                    <small class="text-muted d-block mt-1 text-center">
-                                        @attendancePercentage% full
-                                        @if (isFull)
+                                    <div class="progress mt-1" style="height: 4px;">
+                                        <div class="progress-bar
+                                                         @(attendancePercentage >= 90 ? "bg-danger" :
+                                                                                            attendancePercentage >= 70 ? "bg-warning" : "bg-success")"
+                                 style="width: @(attendancePercentage)%">
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-1 text-center">
+                            @attendancePercentage% full
+                            @if (isFull)
                                         {
                                             <span class="badge bg-danger ms-1">Full</span>
                                         }
                                     </small>
                                 }
+
+                                <div class="text-center mt-2">
+                                    <a href="@Url.Action("Attendance", "Event", new { id = eventItem.Id })"
+                                       class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-users me-1"></i> Manage
+                                    </a>
+                                </div>
                             </div>
                         </td>
                         <td>
                             <div class="d-flex align-items-center">
-                                <select class="form-select form-select-sm status-select"
-                                        data-event-id="@eventItem.Id"
-                                        style="width: 120px;"
-                                        onchange="updateEventStatus(@eventItem.Id, this.value)">
-                                    <option value="Scheduled" @@(eventItem.Status == "Scheduled" ? "selected" : "")>Scheduled</option>
-                                    <option value="Ongoing" @@(eventItem.Status == "Ongoing" ? "selected" : "")>Ongoing</option>
-                                    <option value="Completed" @@(eventItem.Status == "Completed" ? "selected" : "")>Completed</option>
-                                    <option value="Cancelled" @@(eventItem.Status == "Cancelled" ? "selected" : "")>Cancelled</option>
-                                </select>
-                                <span class="badge @GetStatusBadgeClass(eventItem.Status) ms-2">
+                                <span class="badge @GetStatusBadgeClass(eventItem.Status)">
                                     @eventItem.Status
                                 </span>
+                                @if (eventItem.Status != "Completed")
+                                {
+                                    <select class="form-select form-select-sm status-select ms-2"
+                                            data-event-id="@eventItem.Id"
+                                            style="width: 120px;"
+                                            onchange="updateEventStatus(@eventItem.Id, this.value)">
+                                        <option value="Upcoming" selected="@(eventItem.Status == "Upcoming")">Upcoming</option>
+                                        <option value="Ongoing" selected="@(eventItem.Status == "Ongoing")">Ongoing</option>
+                                        <option value="Completed" selected="@(eventItem.Status == "Completed")">Completed</option>
+                                        <option value="Cancelled" selected="@(eventItem.Status == "Cancelled")">Cancelled</option>
+                                    </select>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success ms-2">
+                                        <i class="fas fa-lock me-1"></i> Locked
+                                    </span>
+                                }
                             </div>
                         </td>
                         <td class="text-center">
                             <div class="btn-group" role="group">
-                                <a href="@Url.Action("View", "Event", new { id = eventItem.Id })" 
+                                <a href="@Url.Action("View", "Event", new { id = eventItem.Id })"
                                    class="btn btn-sm btn-info" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="@Url.Action("Edit", "Event", new { id = eventItem.Id })" 
+                                <a href="@Url.Action("Edit", "Event", new { id = eventItem.Id })"
                                    class="btn btn-sm btn-warning" title="Edit Event">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                                <a href="@Url.Action("Attendance", "Event", new { id = eventItem.Id })"
+                                   class="btn btn-sm btn-success" title="Manage Attendance">
+                                    <i class="fas fa-users"></i>
+                                </a>
                                 @if (User.IsInRole("Administrator"))
                                 {
-                                    <button class="btn btn-sm btn-danger archive-btn" 
+                                    <button class="btn btn-sm btn-danger archive-btn"
                                             onclick="archiveEvent(@eventItem.Id, '@eventItem.EventTitle.Replace("'", "\\'")')"
                                             title="Archive Event">
                                         <i class="fas fa-archive"></i>
@@ -152,69 +149,47 @@ else
     {
         return status switch
         {
-            "Scheduled" => "bg-primary",
-            "Ongoing" => "bg-warning text-dark",
-            "Completed" => "bg-success",
-            "Cancelled" => "bg-danger",
-            _ => "bg-secondary"
+            "Upcoming" => "badge bg-primary",
+            "Ongoing" => "badge bg-warning text-dark",
+            "Completed" => "badge bg-success",
+            "Cancelled" => "badge bg-danger",
+            _ => "badge bg-secondary"
         };
     }
 }
 
 <script>
     // JavaScript functions for AJAX operations
-    function updateAttendance(eventId, change) {
-        $.ajax({
-            url: '@Url.Action("UpdateAttendance", "Event")',
-            type: 'POST',
-            data: {
-                id: eventId,
-                count: change,
-                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-            },
-            success: function (response) {
-                if (response.success) {
-                    // Find the row and update attendance display
-                    const row = $(`tr[data-event-id="${eventId}"]`);
-                    const display = row.find('.attendance-display');
-                    let current = parseInt(display.text().match(/\d+/)[0]);
-                    let newCount = current + change;
-                    
-                    // Update display
-                    const max = display.data('max');
-                    display.text(newCount + (max ? '/' + max : ''));
-                    
-                    // Update progress bar
-                    if (max) {
-                        const percentage = Math.round((newCount / max) * 100);
-                        const progressBar = row.find('.progress-bar');
-                        progressBar.css('width', percentage + '%');
-                        progressBar.removeClass('bg-success bg-warning bg-danger')
-                            .addClass(percentage >= 90 ? 'bg-danger' : 
-                                      percentage >= 70 ? 'bg-warning' : 'bg-success');
-                        
-                        // Update percentage text
-                        row.find('.text-muted').html(percentage + '% full' + 
-                            (newCount >= max ? ' <span class="badge bg-danger ms-1">Full</span>' : ''));
-                        
-                        // Enable/disable buttons
-                        row.find('.plus').prop('disabled', newCount >= max);
-                    }
-                    
-                    row.find('.minus').prop('disabled', newCount <= 0);
-                    
-                    showSuccess(response.message);
-                } else {
-                    showError(response.message);
-                }
-            },
-            error: function (xhr, status, error) {
-                showError('Error updating attendance: ' + error);
-            }
-        });
-    }
-    
     function updateEventStatus(eventId, newStatus) {
+        if (newStatus === "Cancelled") {
+            Swal.fire({
+                title: 'Cancel Event',
+                html: `<p>Are you sure you want to cancel this event?</p>
+                       <p class="text-muted small">Cancelled events will be moved to archive automatically.</p>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, cancel it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    performStatusUpdate(eventId, newStatus);
+                } else {
+                    // Reset the dropdown to original value
+                    const row = $(`tr[data-event-id="${eventId}"]`);
+                    const currentStatus = row.find('.badge').first().text();
+                    const dropdown = row.find('.status-select');
+                    dropdown.val(currentStatus);
+                }
+            });
+        } else {
+            performStatusUpdate(eventId, newStatus);
+        }
+    }
+
+    function performStatusUpdate(eventId, newStatus) {
         $.ajax({
             url: '@Url.Action("UpdateStatus", "Event")',
             type: 'POST',
@@ -226,24 +201,56 @@ else
             success: function (response) {
                 if (response.success) {
                     const row = $(`tr[data-event-id="${eventId}"]`);
-                    const badge = row.find('.badge');
-                    
+                    const badge = row.find('.badge').first();
+                    const dropdown = row.find('.status-select');
+
                     // Update badge
                     badge.removeClass('bg-primary bg-warning bg-success bg-danger bg-secondary')
                         .addClass(getStatusClass(newStatus))
                         .text(newStatus);
-                    
+
+                    // If archived, remove row
+                    if (response.archived) {
+                        row.fadeOut(300, function() {
+                            $(this).remove();
+                            // Show message if no events left
+                            if ($('tbody tr').length === 0) {
+                                location.reload();
+                            }
+                        });
+                    }
+
+                    // If status is Completed, disable dropdown and show lock
+                    if (newStatus === "Completed") {
+                        dropdown.remove();
+                        row.find('td:nth-child(6) .d-flex').append(`
+                            <span class="badge bg-success ms-2">
+                                <i class="fas fa-lock me-1"></i> Locked
+                            </span>
+                        `);
+                    }
+
                     showSuccess(response.message);
                 } else {
                     showError(response.message);
+                    // Reset dropdown to current status
+                    const row = $(`tr[data-event-id="${eventId}"]`);
+                    const currentStatus = row.find('.badge').first().text();
+                    const dropdown = row.find('.status-select');
+                    dropdown.val(currentStatus);
                 }
             },
             error: function (xhr, status, error) {
                 showError('Error updating status: ' + error);
+                // Reset dropdown
+                const row = $(`tr[data-event-id="${eventId}"]`);
+                const currentStatus = row.find('.badge').first().text();
+                const dropdown = row.find('.status-select');
+                dropdown.val(currentStatus);
             }
         });
     }
-    
+
     function archiveEvent(eventId, eventTitle) {
         Swal.fire({
             title: 'Archive Event',
@@ -279,17 +286,17 @@ else
             }
         });
     }
-    
+
     function getStatusClass(status) {
         switch(status) {
-            case 'Scheduled': return 'bg-primary';
+            case 'Upcoming': return 'bg-primary';
             case 'Ongoing': return 'bg-warning text-dark';
             case 'Completed': return 'bg-success';
             case 'Cancelled': return 'bg-danger';
             default: return 'bg-secondary';
         }
     }
-    
+
     function showSuccess(message) {
         Swal.fire({
             icon: 'success',
@@ -301,7 +308,7 @@ else
             timer: 3000
         });
     }
-    
+
     function showError(message) {
         Swal.fire({
             icon: 'error',
@@ -319,34 +326,31 @@ else
     .attendance-control {
         min-width: 120px;
     }
-    
-    .attendance-btn {
-        width: 28px;
-        height: 28px;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
+
     .progress {
         background-color: #e9ecef;
         border-radius: 2px;
         margin: 2px auto;
     }
-    
+
     .progress-bar {
         border-radius: 2px;
         transition: width 0.3s ease;
     }
-    
+
     .badge {
         font-size: 0.8em;
         padding: 0.25em 0.6em;
     }
-    
+
     .btn-group .btn {
         border-radius: 4px !important;
         margin: 0 2px;
+    }
+
+    .status-select {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        height: 1.8rem;
     }
 </style>

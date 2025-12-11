@@ -1,0 +1,320 @@
+﻿@model SeniorManagement.Models.Event
+@{
+    ViewData["Title"] = "";
+    bool canEdit = ViewBag.CanEdit as bool? ?? false;
+
+    string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Upcoming" => "badge bg-primary",
+            "Scheduled" => "badge bg-info",
+            "Ongoing" => "badge bg-warning text-dark",
+            "Completed" => "badge bg-success",
+            "Confirmed" => "badge bg-success",
+            "Cancelled" => "badge bg-danger",
+            _ => "badge bg-secondary"
+        };
+    }
+
+    string FormatTime(TimeSpan timeSpan)
+    {
+        try
+        {
+            var time = DateTime.Today.Add(timeSpan);
+            return time.ToString("h:mm tt");
+        }
+        catch
+        {
+            return timeSpan.ToString(@"hh\:mm");
+        }
+    }
+}
+
+<div class="container-fluid">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>@Model.EventTitle</h2>
+                    <p class="mb-0 opacity-90">Event Details</p>
+                </div>
+                <div class="btn-group">
+                    <a href="@Url.Action("Attendance", "Event", new { id = Model.Id })"
+                       class="btn btn-success">
+                        <i class="fas fa-users me-1"></i> Manage Attendance
+                    </a>
+                    @if (canEdit)
+                    {
+                        <a href="@Url.Action("Edit", "Event", new { id = Model.Id })"
+                           class="btn btn-warning">
+                            <i class="fas fa-edit me-1"></i> Edit Event
+                        </a>
+                    }
+                    <a href="@Url.Action("Index", "Event")" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Events
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="row">
+                <!-- Event Details -->
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Event Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-3">Description:</dt>
+                                <dd class="col-sm-9">
+                                    <p class="text-muted">@Model.EventDescription</p>
+                                </dd>
+
+                                <dt class="col-sm-3">Date & Time:</dt>
+                                <dd class="col-sm-9">
+                                    <i class="fas fa-calendar me-1"></i> @Model.EventDate.ToString("dddd, MMMM dd, yyyy")
+                                    <br>
+                                    <i class="fas fa-clock me-1"></i> @FormatTime(Model.EventTime)
+                                </dd>
+
+                                <dt class="col-sm-3">Location:</dt>
+                                <dd class="col-sm-9">
+                                    <i class="fas fa-map-marker-alt me-1"></i> @Model.EventLocation
+                                </dd>
+
+                                <dt class="col-sm-3">Event Type:</dt>
+                                <dd class="col-sm-9">
+                                    <span class="badge bg-info">@Model.EventType</span>
+                                </dd>
+
+                                <dt class="col-sm-3">Organized By:</dt>
+                                <dd class="col-sm-9">
+                                    <i class="fas fa-user me-1"></i> @Model.OrganizedBy
+                                </dd>
+
+                                <dt class="col-sm-3">Status:</dt>
+                                <dd class="col-sm-9">
+                                    <span class="badge @GetStatusBadgeClass(Model.Status)">
+                                        @Model.Status
+                                    </span>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Card -->
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Attendance Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <div class="display-4 text-success">@Model.AttendanceCount</div>
+                                    <h6 class="text-muted">Seniors Present</h6>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="display-4 text-primary">
+                                        @if (Model.MaxCapacity.HasValue)
+                                        {
+                                            var percentage = (int)Math.Round((double)Model.AttendanceCount / Model.MaxCapacity.Value * 100);
+                                            @percentage
+                                        
+                                            <small>%</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">N/A</span>
+                                        }
+                                    </div>
+                                    <h6 class="text-muted">Capacity</h6>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="display-4 text-info">
+                                        @if (Model.MaxCapacity.HasValue)
+                                        {
+                                            @Model.MaxCapacity
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">∞</span>
+                                        }
+                                    </div>
+                                    <h6 class="text-muted">Max Capacity</h6>
+                                </div>
+                            </div>
+
+                            @if (Model.MaxCapacity.HasValue)
+                            {
+                                var percentage = (int)Math.Round((double)Model.AttendanceCount / Model.MaxCapacity.Value * 100);
+                                <div class="mt-4">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Capacity Progress</span>
+                                        <span>@Model.AttendanceCount / @Model.MaxCapacity.Value</span>
+                                    </div>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar
+                                                 @(percentage >= 90 ? "bg-danger" :
+                                                                                            percentage >= 70 ? "bg-warning" : "bg-success")"
+                                         style="width: @percentage%">
+                                        @percentage%
+                                    </div>
+                                </div>
+                                @if (Model.AttendanceCount >= Model.MaxCapacity.Value)
+                                    {
+                                        <div class="alert alert-warning mt-3">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            This event has reached maximum capacity.
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            <div class="mt-4 text-center">
+                                <a href="@Url.Action("Attendance", "Event", new { id = Model.Id })"
+                                   class="btn btn-success btn-lg">
+                                    <i class="fas fa-users me-2"></i> Manage Attendance
+                                </a>
+                                <p class="text-muted mt-2">
+                                    Mark seniors as present/absent and track attendance in real-time
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar Stats -->
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Event Statistics</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Created On
+                                    <span class="badge bg-info">
+                                        @Model.CreatedAt.ToString("MMM dd, yyyy")
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Last Updated
+                                    <span class="badge bg-info">
+                                        @Model.UpdatedAt.ToString("MMM dd, yyyy")
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Days Remaining
+                                    <span class="badge @(Model.EventDate >= DateTime.Today ? "bg-success" : "bg-secondary")">
+                                        @{
+                                            var days = (Model.EventDate - DateTime.Today).Days;
+                                            if (days > 0)
+                                            {
+                                                <text>@days days</text>
+                                            }
+                                            else if (days == 0)
+                                            {
+                                                <text>Today</text>
+                                            }
+                                            else
+                                            {
+                                                <text>@Math.Abs(days) days ago</text>
+                                            }
+                                        }
+                                    </span>
+                                </li>
+                                @if (Model.MaxCapacity.HasValue)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        Available Slots
+                                        <span class="badge @(Model.MaxCapacity.Value - Model.AttendanceCount > 0 ? "bg-success" : "bg-danger")">
+                                            @(Model.MaxCapacity.Value - Model.AttendanceCount)
+                                        </span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="@Url.Action("Attendance", "Event", new { id = Model.Id })"
+                                   class="btn btn-success">
+                                    <i class="fas fa-users me-2"></i> Manage Attendance
+                                </a>
+                                @if (canEdit)
+                                {
+                                    <a href="@Url.Action("Edit", "Event", new { id = Model.Id })"
+                                       class="btn btn-warning">
+                                        <i class="fas fa-edit me-2"></i> Edit Event
+                                    </a>
+                                }
+                                <a href="@Url.Action("Index", "Event")"
+                                   class="btn btn-secondary">
+                                    <i class="fas fa-list me-2"></i> View All Events
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer bg-light">
+            <div class="d-flex justify-content-between">
+                <small class="text-muted">
+                    Event ID: @Model.Id | Created: @Model.CreatedAt.ToString("f")
+                </small>
+                @if (Model.IsDeleted)
+                {
+                    <span class="badge bg-danger">Archived</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show success/error messages
+            @if (TempData["SuccessMessage"] != null)
+            {
+                    <text>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: '@TempData["SuccessMessage"]',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    </text>
+            }
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                    <text>
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: '@TempData["ErrorMessage"]',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    </text>
+            }
+        });
+    </script>
+}

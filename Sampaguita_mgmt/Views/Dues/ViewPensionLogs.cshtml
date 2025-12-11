@@ -1,6 +1,6 @@
-﻿@model List<SeniorManagement.Models.ContributionLog>
+﻿@model List<SeniorManagement.Models.PensionLog>
 @{
-    ViewData["Title"] = "";
+    ViewData["Title"] = "Pension Logs";
 
     // Get unique years and months for filter dropdowns
     var years = Model.Select(l => l.Year).Distinct().OrderByDescending(y => y).ToList();
@@ -17,7 +17,7 @@
     var toYear = ViewBag.ToYear != null ? (int?)ViewBag.ToYear : null;
 
     // Filter logs based on date range
-    List<ContributionLog> filteredLogs = Model;
+    List<PensionLog> filteredLogs = Model;
 
     if (fromYear.HasValue && !string.IsNullOrEmpty(fromMonth) &&
         toYear.HasValue && !string.IsNullOrEmpty(toMonth))
@@ -59,10 +59,10 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-history text-primary mr-2"></i>Contribution Logs
+            <i class="fas fa-history text-info mr-2"></i>Pension Logs
         </h1>
-        <a href="@Url.Action("Index", "Dues")" class="btn btn-outline-primary">
-            <i class="fas fa-arrow-left mr-2"></i>Back to Contributions
+        <a href="@Url.Action("Pension", "Dues")" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Pension
         </a>
     </div>
 
@@ -138,7 +138,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-filter mr-1"></i>Apply Filter
                         </button>
-                        <a href="@Url.Action("ViewLogs", "Dues")" class="btn btn-outline-secondary">
+                        <a href="@Url.Action("ViewPensionLogs", "Dues")" class="btn btn-outline-secondary">
                             <i class="fas fa-times mr-1"></i>Clear All
                         </a>
                     </div>
@@ -150,7 +150,7 @@
                         !string.IsNullOrEmpty(toMonth) && toYear.HasValue)
             {
                 // Calculate totals for display
-                int totalPaidSeniors = 0;
+                int totalClaimedSeniors = 0;
                 int totalSeniors = 0;
 
                 foreach (var log in filteredLogs)
@@ -167,33 +167,33 @@
                             }
                         }
 
-                        if (notesParts[1].Contains("Paid:"))
+                        if (notesParts[1].Contains("Claimed:"))
                         {
-                            var paidPart = notesParts[1].Split(':');
-                            if (paidPart.Length >= 2 && int.TryParse(paidPart[1].Trim(), out int paid))
+                            var claimedPart = notesParts[1].Split(':');
+                            if (claimedPart.Length >= 2 && int.TryParse(claimedPart[1].Trim(), out int claimed))
                             {
-                                totalPaidSeniors += paid;
+                                totalClaimedSeniors += claimed;
                             }
                         }
                     }
                 }
 
-                int totalCollectedAmount = totalPaidSeniors * 10;
+                int totalClaimedAmount = totalClaimedSeniors * 500;
 
                 <div class="alert alert-info mt-3 mb-0" role="alert">
                     <div class="row">
                         <div class="col-md-8">
                             <i class="fas fa-info-circle mr-2"></i>
-                            Showing logs from <strong>@fromMonth @fromYear</strong> to <strong>@toMonth @toYear</strong>
+                            Showing pension logs from <strong>@fromMonth @fromYear</strong> to <strong>@toMonth @toYear</strong>
                             <br>
                             <small class="mt-1">
-                                <i class="fas fa-users mr-1"></i>Total Seniors: @totalSeniors |
-                                <i class="fas fa-check-circle mr-1"></i>Paid: @totalPaidSeniors |
-                                <i class="fas fa-money-bill-wave mr-1"></i>Collected: ₱@totalCollectedAmount
+                                <i class="fas fa-users mr-1"></i>Total Pensioners: @totalSeniors |
+                                <i class="fas fa-check-circle mr-1"></i>Claimed: @totalClaimedSeniors |
+                                <i class="fas fa-money-bill-wave mr-1"></i>Claimed Amount: ₱@totalClaimedAmount
                             </small>
                         </div>
                         <div class="col-md-4 text-right">
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportFilteredCsv()">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportFilteredPensionCsv()">
                                 <i class="fas fa-file-excel mr-1"></i>Export Filtered CSV
                             </button>
                         </div>
@@ -203,11 +203,11 @@
         </div>
     </div>
 
-    <!-- Logs Table -->
+    <!-- Pension Logs Table -->
     <div class="card shadow">
         <div class="card-header py-3 d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-primary">
-                Saved Monthly Logs
+                Saved Pension Logs
                 @if (!string.IsNullOrEmpty(fromMonth) && fromYear.HasValue &&
                                 !string.IsNullOrEmpty(toMonth) && toYear.HasValue)
                 {
@@ -227,7 +227,7 @@
             @if (filteredLogs.Any())
             {
                 <div class="table-responsive">
-                    <table class="table table-bordered table-hover" id="logsTable" width="100%" cellspacing="0">
+                    <table class="table table-bordered table-hover" id="pensionLogsTable" width="100%" cellspacing="0">
                         <thead class="bg-light">
                             <tr>
                                 <th>Month</th>
@@ -255,7 +255,7 @@
                                     <td>
                                         @if (!string.IsNullOrEmpty(log.FilePath))
                                         {
-                                            <a href="@Url.Action("DownloadLog", "Dues", new { month = log.Month, year = log.Year })"
+                                            <a href="@Url.Action("DownloadPensionLog", "Dues", new { month = log.Month, year = log.Year })"
                                                class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-download mr-1"></i>Download CSV
                                             </a>
@@ -279,18 +279,18 @@
                         @if (!string.IsNullOrEmpty(fromMonth) || fromYear.HasValue ||
                                             !string.IsNullOrEmpty(toMonth) || toYear.HasValue)
                         {
-                            <text>No logs found for the selected date range.</text>
+                            <text>No pension logs found for the selected date range.</text>
                         }
                         else
                         {
-                            <text>No logs found. Save a log from the Contributions page.</text>
+                            <text>No pension logs found. Save a log from the Pension page.</text>
                         }
                     </p>
                     @if (!string.IsNullOrEmpty(fromMonth) || fromYear.HasValue ||
                                     !string.IsNullOrEmpty(toMonth) || toYear.HasValue)
                     {
-                        <a href="@Url.Action("ViewLogs", "Dues")" class="btn btn-outline-primary mt-3">
-                            <i class="fas fa-eye mr-1"></i>View All Logs
+                        <a href="@Url.Action("ViewPensionLogs", "Dues")" class="btn btn-outline-primary mt-3">
+                            <i class="fas fa-eye mr-1"></i>View All Pension Logs
                         </a>
                     }
                 </div>
@@ -302,18 +302,18 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
-            $('#logsTable').DataTable({
+            $('#pensionLogsTable').DataTable({
                 "order": [[2, "desc"]], // Sort by Saved Date descending
                 "pageLength": 10,
                 "language": {
-                    "emptyTable": "No logs available",
-                    "search": "Search logs:"
+                    "emptyTable": "No pension logs available",
+                    "search": "Search pension logs:"
                 }
             });
         });
 
-        // Export Filtered CSV
-        function exportFilteredCsv() {
+        // Export Filtered Pension CSV
+        function exportFilteredPensionCsv() {
             var fromMonth = '@fromMonth';
             var fromYear = '@fromYear';
             var toMonth = '@toMonth';
@@ -324,7 +324,7 @@
                 return;
             }
 
-            var url = '@Url.Action("ExportFilteredCsv", "Dues")' +
+            var url = '@Url.Action("ExportFilteredPensionCsv", "Dues")' +
                 '?fromMonth=' + encodeURIComponent(fromMonth) +
                 '&fromYear=' + fromYear +
                 '&toMonth=' + encodeURIComponent(toMonth) +

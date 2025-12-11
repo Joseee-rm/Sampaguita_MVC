@@ -1,0 +1,146 @@
+﻿@model List<SeniorManagement.Models.Event>
+@{
+    ViewData["Title"] = "";
+    bool isAdmin = ViewBag.IsAdmin as bool? ?? false;
+    bool isStaff = ViewBag.IsStaff as bool? ?? false;
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0"><i class="fas fa-calendar me-2 text-primary"></i>Event Calendar</h1>
+            <p class="text-muted mb-0">View all events in calendar format</p>
+        </div>
+        <div>
+            <a href="@Url.Action("Index", "Event")" class="btn btn-outline-primary">
+                <i class="fas fa-list me-2"></i> List View
+            </a>
+            <a href="@Url.Action("Create", "Event")" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-2"></i> New Event
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-white">
+            <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Monthly Calendar</h5>
+        </div>
+        <div class="card-body">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Sunday</th>
+                                <th>Monday</th>
+                                <th>Tuesday</th>
+                                <th>Wednesday</th>
+                                <th>Thursday</th>
+                                <th>Friday</th>
+                                <th>Saturday</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Calendar days would go here -->
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="py-5">
+                                        <i class="fas fa-calendar fa-3x text-muted mb-3"></i>
+                                        <h4 class="text-muted">Calendar View</h4>
+                                        <p class="text-muted">Calendar view coming soon</p>
+                                        <p class="text-muted">For now, use the list view to manage events</p>
+                                        <a href="@Url.Action("Index", "Event")" class="btn btn-primary">
+                                            <i class="fas fa-list me-2"></i> Go to List View
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Upcoming Events List -->
+                <div class="mt-5">
+                    <h5 class="mb-3"><i class="fas fa-clock me-2"></i>Upcoming Events</h5>
+                    <div class="row">
+                        @foreach (var evt in Model.Where(e => e.EventDate >= DateTime.Today).OrderBy(e => e.EventDate).Take(6))
+                        {
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-header @GetStatusColor(evt.Status)">
+                                        <h6 class="mb-0 text-white">@evt.EventTitle</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="mb-2">
+                                            <i class="fas fa-calendar me-2"></i>
+                                            @evt.EventDate.ToString("MMM dd, yyyy")
+                                        </p>
+                                        <p class="mb-2">
+                                            <i class="fas fa-clock me-2"></i>
+                                            @evt.TimeFormatted
+                                        </p>
+                                        <p class="mb-2">
+                                            <i class="fas fa-map-marker-alt me-2"></i>
+                                            @evt.EventLocation
+                                        </p>
+                                        <div class="d-flex justify-content-between align-items-center mt-3">
+                                            <span class="badge @GetStatusBadgeClass(evt.Status)">
+                                                @evt.Status
+                                            </span>
+                                            <a href="@Url.Action("View", "Event", new { id = evt.Id })"
+                                               class="btn btn-sm btn-outline-primary">
+                                                View
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Events Found</h4>
+                    <p class="text-muted">There are no events to display in the calendar.</p>
+                    <a href="@Url.Action("Create", "Event")" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> Create New Event
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@functions {
+    public string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Upcoming" => "badge bg-primary",
+            "Scheduled" => "badge bg-info",
+            "Ongoing" => "badge bg-warning text-dark",
+            "Completed" => "badge bg-success",
+            "Confirmed" => "badge bg-success",
+            "Cancelled" => "badge bg-danger",
+            _ => "badge bg-secondary"
+        };
+    }
+
+    public string GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "Upcoming" => "bg-primary",
+            "Scheduled" => "bg-info",
+            "Ongoing" => "bg-warning",
+            "Completed" => "bg-success",
+            "Confirmed" => "bg-success",
+            "Cancelled" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}

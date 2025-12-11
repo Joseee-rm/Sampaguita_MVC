@@ -1,0 +1,949 @@
+﻿@model List<SeniorManagement.Models.Senior>
+@{
+    ViewData["Title"] = "Event Attendance";
+    var eventDetails = ViewBag.EventDetails as SeniorManagement.Models.Event;
+    var attendanceStatus = ViewBag.AttendanceStatus as Dictionary<string, string>;
+    var presentCount = ViewBag.PresentCount as int? ?? 0;
+    var absentCount = ViewBag.AbsentCount as int? ?? 0;
+    var unmarkedCount = ViewBag.UnmarkedCount as int? ?? 0;
+
+    // Helper functions
+    string GetAttendanceBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Present" => "badge bg-success",
+            "Absent" => "badge bg-danger",
+            _ => "badge bg-secondary"
+        };
+    }
+
+    string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Upcoming" => "badge bg-primary",
+            "Scheduled" => "badge bg-info",
+            "Ongoing" => "badge bg-warning text-dark",
+            "Completed" => "badge bg-success",
+            "Confirmed" => "badge bg-success",
+            "Cancelled" => "badge bg-danger",
+            _ => "badge bg-secondary"
+        };
+    }
+}
+
+<div class="container-fluid">
+    <!-- Header Card -->
+    <div class="card shadow-lg mb-4">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="mb-1"><i class="fas fa-users me-2"></i>Event Attendance Management</h3>
+                    <h4 class="mb-0">@eventDetails.EventTitle</h4>
+                    <small class="opacity-90">
+                        <i class="fas fa-calendar me-1"></i>@eventDetails.EventDate.ToString("MMMM dd, yyyy")
+                        <i class="fas fa-clock ms-3 me-1"></i>@eventDetails.TimeFormatted
+                    </small>
+                </div>
+                <div class="text-end">
+                    <div class="btn-group">
+                        <a href="@Url.Action("View", "Event", new { id = eventDetails.Id })"
+                           class="btn btn-outline-light">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Event
+                        </a>
+                        <a href="@Url.Action("Edit", "Event", new { id = eventDetails.Id })"
+                           class="btn btn-warning">
+                            <i class="fas fa-edit me-1"></i>Edit Event
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card-body py-3">
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <div class="display-4 text-success">@presentCount</div>
+                    <h6 class="text-muted">Present</h6>
+                </div>
+                <div class="col-md-3">
+                    <div class="display-4 text-danger">@absentCount</div>
+                    <h6 class="text-muted">Absent</h6>
+                </div>
+                <div class="col-md-3">
+                    <div class="display-4 text-secondary">@unmarkedCount</div>
+                    <h6 class="text-muted">Unmarked</h6>
+                </div>
+                <div class="col-md-3">
+                    <div class="display-4 text-info">@Model.Count</div>
+                    <h6 class="text-muted">Total Seniors</h6>
+                </div>
+            </div>
+
+            @if (eventDetails.MaxCapacity.HasValue)
+            {
+                var percentage = (int)Math.Round((double)presentCount / eventDetails.MaxCapacity.Value * 100);
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Capacity: @presentCount / @eventDetails.MaxCapacity.Value (@percentage%)</span>
+                            @if (presentCount >= eventDetails.MaxCapacity.Value)
+                            {
+                                <span class="badge bg-danger">Full</span>
+                            }
+                    </div>
+                    <div class="progress" style="height: 15px;">
+                        <div class="progress-bar
+                                 @(percentage >= 90 ? "bg-danger" :
+                                                                percentage >= 70 ? "bg-warning" : "bg-success")"
+                             style="width: @percentage%">
+                            @percentage%
+                        </div>
+                    </div>
+                </div>
+            </div>
+                        }
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Event Information Sidebar -->
+        <div class="col-md-3">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Event Details</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="mb-0">
+                        <dt>Location:</dt>
+                        <dd class="mb-2">@eventDetails.EventLocation</dd>
+
+                        <dt>Organizer:</dt>
+                        <dd class="mb-2">@eventDetails.OrganizedBy</dd>
+
+                        <dt>Event Type:</dt>
+                        <dd class="mb-2">
+                            <span class="badge bg-primary">@eventDetails.EventType</span>
+                        </dd>
+
+                        <dt>Status:</dt>
+                        <dd class="mb-3">
+                            <span class="badge @GetStatusBadgeClass(eventDetails.Status)">
+                                @eventDetails.Status
+                            </span>
+                        </dd>
+                    </dl>
+
+                    <div class="alert alert-warning mt-3">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Important Notes</h6>
+                        <ul class="small mb-0">
+                            <li>Once marked <strong>Present</strong>, cannot change to <strong>Absent</strong></li>
+                            <li>Use bulk actions for multiple seniors</li>
+                            <li>Attendance updates automatically</li>
+                            <li>Changes are logged with your username</li>
+                        </ul>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="mt-3">
+                        <h6><i class="fas fa-bolt me-2"></i>Quick Actions</h6>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-success" onclick="markAllUnmarkedAsPresent()">
+                                <i class="fas fa-check-circle me-2"></i>Mark All Unmarked as Present
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" onclick="clearAllAttendance()">
+                                <i class="fas fa-trash-alt me-2"></i>Clear All Attendance
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Summary -->
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Attendance Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        @if (Model.Count > 0)
+                        {
+                            var presentPercent = (int)Math.Round((double)presentCount / Model.Count * 100);
+                            var absentPercent = (int)Math.Round((double)absentCount / Model.Count * 100);
+                            var unmarkedPercent = (int)Math.Round((double)unmarkedCount / Model.Count * 100);
+
+                            <div class="mb-3" style="height: 150px;">
+                                <!-- Pie chart visualization -->
+                                <div class="position-relative mx-auto" style="width: 120px; height: 120px;">
+                                    <div class="position-absolute top-0 start-0 w-100 h-100">
+                                        <div class="rounded-circle position-absolute top-0 start-0 w-100 h-100"
+                                             style="background: conic-gradient(
+                                                     #28a745 @(presentPercent * 3.6)deg,
+                                                     #dc3545 @(presentPercent * 3.6)deg @((presentPercent + absentPercent) * 3.6)deg,
+                                                     #6c757d @((presentPercent + absentPercent) * 3.6)deg
+                                                 );">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="legend">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-success me-2" style="width: 20px; height: 10px;"></span>
+                                    <span>Present: @presentPercent% (@presentCount)</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-danger me-2" style="width: 20px; height: 10px;"></span>
+                                    <span>Absent: @absentPercent% (@absentCount)</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-secondary me-2" style="width: 20px; height: 10px;"></span>
+                                    <span>Unmarked: @unmarkedPercent% (@unmarkedCount)</span>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">No seniors available</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Attendance Table -->
+        <div class="col-md-9">
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Senior Attendance List</h5>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-user-friends me-1"></i>@Model.Count Total Seniors
+                            </span>
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#filtersCollapse">
+                                <i class="fas fa-filter me-1"></i>Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="collapse" id="filtersCollapse">
+                    <div class="card-body border-bottom">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Search Seniors</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="searchSeniors" class="form-control"
+                                           placeholder="Name, ID, or contact...">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Zone</label>
+                                <select id="filterZone" class="form-select">
+                                    <option value="">All Zones</option>
+                                    @for (int i = 1; i <= 10; i++)
+                                    {
+                                        <option value="@i">Zone @i</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Barangay</label>
+                                <select id="filterBarangay" class="form-select">
+                                    <option value="">All Barangays</option>
+                                    @{
+                                        var barangays = Model.Select(s => s.Barangay).Distinct().OrderBy(b => b);
+                                        foreach (var barangay in barangays)
+                                        {
+                                            <option value="@barangay">@barangay</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Status</label>
+                                <select id="filterAttendance" class="form-select">
+                                    <option value="">All Status</option>
+                                    <option value="Present">Present Only</option>
+                                    <option value="Absent">Absent Only</option>
+                                    <option value="Unmarked">Unmarked Only</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="toggleSelectAll">
+                                    <label class="form-check-label" for="toggleSelectAll">Select All Visible Seniors</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    @if (Model.Any())
+                    {
+                        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                            <table class="table table-hover mb-0" id="attendanceTable">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th width="50">
+                                            <input type="checkbox" id="selectAll" class="form-check-input">
+                                        </th>
+                                        <th>Senior ID</th>
+                                        <th>Full Name</th>
+                                        <th>Zone</th>
+                                        <th>Barangay</th>
+                                        <th>Age</th>
+                                        <th>Gender</th>
+                                        <th>Status</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var senior in Model)
+                                    {
+                                        var status = attendanceStatus != null && attendanceStatus.ContainsKey(senior.SeniorId)
+                                        ? attendanceStatus[senior.SeniorId]
+                                        : "Unmarked";
+
+                                        <tr data-senior-id="@senior.SeniorId"
+                                            data-zone="@senior.Zone"
+                                            data-barangay="@senior.Barangay"
+                                            data-status="@status"
+                                            class="@(status == "Present" ? "table-success" : status == "Absent" ? "table-danger" : "")">
+                                            <td>
+                                                <input type="checkbox" class="form-check-input senior-checkbox"
+                                                       value="@senior.SeniorId"
+                                                       @(status == "Present" ? "disabled" : "") />
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold">@senior.SeniorId</span>
+                                            </td>
+                                            <td>
+                                                @senior.LastName, @senior.FirstName
+                                                @if (!string.IsNullOrEmpty(senior.MiddleInitial))
+                                                {
+                                                    <text>@senior.MiddleInitial.</text>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">Zone @senior.Zone</span>
+                                            </td>
+                                            <td>@senior.Barangay</td>
+                                            <td>@senior.Age</td>
+                                            <td>
+                                                <span class="badge @(senior.Gender == "Male" ? "bg-primary" : "bg-pink")">
+                                                    @senior.Gender
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge @GetAttendanceBadgeClass(status)">
+                                                    @status
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group btn-group-sm">
+                                                    @if (status != "Present")
+                                                    {
+                                                        <button class="btn btn-outline-success mark-present"
+                                                                onclick="markAttendance('@senior.SeniorId', 'Present')"
+                                                                title="Mark as Present">
+                                                            <i class="fas fa-check"></i> Present
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-success" disabled title="Already Present">
+                                                            <i class="fas fa-check"></i> Present
+                                                        </button>
+                                                    }
+
+                                                    @if (status != "Absent" && status != "Present")
+                                                    {
+                                                        <button class="btn btn-outline-danger mark-absent"
+                                                                onclick="markAttendance('@senior.SeniorId', 'Absent')"
+                                                                title="Mark as Absent">
+                                                            <i class="fas fa-times"></i> Absent
+                                                        </button>
+                                                    }
+                                                    else if (status == "Absent")
+                                                    {
+                                                        <button class="btn btn-danger" disabled title="Already Absent">
+                                                            <i class="fas fa-times"></i> Absent
+                                                        </button>
+                                                    }
+                                                    else if (status == "Present")
+                                                    {
+                                                        <button class="btn btn-outline-secondary" disabled title="Cannot change from Present">
+                                                            <i class="fas fa-lock"></i> Locked
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Selected Count and Bulk Actions -->
+                        <div class="card-footer bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span id="selectedCount" class="badge bg-primary">0 selected</span>
+                                    <small class="text-muted ms-3">
+                                        Showing @Model.Count seniors
+                                    </small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <div class="input-group" style="width: 300px;">
+                                        <select id="bulkAction" class="form-select">
+                                            <option value="Present">Mark as Present</option>
+                                            <option value="Absent">Mark as Absent</option>
+                                        </select>
+                                        <button class="btn btn-primary" onclick="bulkMarkAttendance()" id="bulkActionBtn" disabled>
+                                            <i class="fas fa-play me-1"></i> Apply
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-user-slash fa-4x text-muted mb-3"></i>
+                            <h4 class="text-muted">No Active Seniors</h4>
+                            <p class="text-muted">There are no active seniors in the system.</p>
+                            <a href="@Url.Action("Index", "Senior")" class="btn btn-primary">
+                                <i class="fas fa-user-plus me-1"></i> Manage Seniors
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Export Options -->
+            <div class="card shadow mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-download me-2"></i>Export Options</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-success w-100" onclick="exportAttendance('Present')">
+                                <i class="fas fa-file-excel me-2"></i>Export Present List
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-danger w-100" onclick="exportAttendance('Absent')">
+                                <i class="fas fa-file-excel me-2"></i>Export Absent List
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary w-100" onclick="exportAttendance('All')">
+                                <i class="fas fa-file-excel me-2"></i>Export Full List
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        let eventId = @eventDetails.Id;
+        let token = $('input[name="__RequestVerificationToken"]').val();
+        let originalAttendance = @presentCount;
+
+        // Update selected count
+        function updateSelectedCount() {
+            let selected = $('.senior-checkbox:checked').length;
+            $('#selectedCount').text(selected + ' selected');
+            $('#bulkActionBtn').prop('disabled', selected === 0);
+        }
+
+        // Select All functionality
+        $('#selectAll').on('change', function() {
+            let isChecked = $(this).prop('checked');
+            $('.senior-checkbox:not(:disabled)').prop('checked', isChecked);
+            updateSelectedCount();
+        });
+
+        // Toggle select all visible
+        $('#toggleSelectAll').on('change', function() {
+            let isChecked = $(this).prop('checked');
+            $('#attendanceTable tbody tr:visible .senior-checkbox:not(:disabled)').prop('checked', isChecked);
+            updateSelectedCount();
+        });
+
+        // Individual checkbox change
+        $(document).on('change', '.senior-checkbox', updateSelectedCount);
+
+        // Search functionality
+        $('#searchSeniors').on('keyup', function() {
+            let search = $(this).val().toLowerCase();
+            $('#attendanceTable tbody tr').each(function() {
+                let text = $(this).text().toLowerCase();
+                $(this).toggle(text.includes(search));
+            });
+            updateSelectedCount();
+        });
+
+        // Filter by zone
+        $('#filterZone').on('change', function() {
+            filterTable();
+        });
+
+        // Filter by barangay
+        $('#filterBarangay').on('change', function() {
+            filterTable();
+        });
+
+        // Filter by attendance status
+        $('#filterAttendance').on('change', function() {
+            filterTable();
+        });
+
+        function filterTable() {
+            let zone = $('#filterZone').val();
+            let barangay = $('#filterBarangay').val();
+            let status = $('#filterAttendance').val();
+
+            $('#attendanceTable tbody tr').each(function() {
+                let rowZone = $(this).data('zone').toString();
+                let rowBarangay = $(this).data('barangay');
+                let rowStatus = $(this).data('status');
+
+                let show = true;
+
+                if (zone && rowZone !== zone) {
+                    show = false;
+                }
+
+                if (barangay && rowBarangay !== barangay) {
+                    show = false;
+                }
+
+                if (status) {
+                    if (status === "Unmarked" && rowStatus !== "Unmarked") {
+                        show = false;
+                    } else if (status !== "Unmarked" && rowStatus !== status) {
+                        show = false;
+                    }
+                }
+
+                $(this).toggle(show);
+            });
+            updateSelectedCount();
+        }
+
+        function markAttendance(seniorId, status) {
+            if (status === 'Absent') {
+                Swal.fire({
+                    title: 'Mark as Absent',
+                    html: `Are you sure you want to mark this senior as <strong>Absent</strong>?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, mark absent',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        performMarkAttendance(seniorId, status);
+                    }
+                });
+            } else {
+                performMarkAttendance(seniorId, status);
+            }
+        }
+
+        function performMarkAttendance(seniorId, status) {
+            $.ajax({
+                url: '@Url.Action("MarkAttendance", "Event")',
+                type: 'POST',
+                data: {
+                    id: eventId,
+                    seniorId: seniorId,
+                    status: status,
+                    __RequestVerificationToken: token
+                },
+                beforeSend: function() {
+                    // Show loading on the specific button
+                    $(`tr[data-senior-id="${seniorId}"] .btn`).prop('disabled', true);
+                },
+                success: function (response) {
+                    if (response.success) {
+                        // Update UI
+                        let row = $(`tr[data-senior-id="${seniorId}"]`);
+                        row.data('status', status);
+
+                        // Update badge
+                        let badge = row.find('.badge').last();
+                        badge.removeClass('bg-success bg-danger bg-secondary')
+                            .addClass(getAttendanceBadgeClass(status))
+                            .text(status);
+
+                        // Update row color
+                        row.removeClass('table-success table-danger')
+                            .addClass(status === 'Present' ? 'table-success' :
+                                     status === 'Absent' ? 'table-danger' : '');
+
+                        // Update buttons
+                        let btnGroup = row.find('.btn-group');
+                        if (status === 'Present') {
+                            btnGroup.html(`
+                                <button class="btn btn-success" disabled title="Already Present">
+                                    <i class="fas fa-check"></i> Present
+                                </button>
+                            `);
+                            row.find('.senior-checkbox').prop('disabled', true).prop('checked', false);
+                        } else if (status === 'Absent') {
+                            btnGroup.html(`
+                                <button class="btn btn-danger" disabled title="Already Absent">
+                                    <i class="fas fa-times"></i> Absent
+                                </button>
+                            `);
+                        }
+
+                        // Update counters
+                        updateCounters();
+                        updateSelectedCount();
+
+                        // Show success message
+                        showToast('success', response.message);
+                    } else {
+                        showToast('error', response.message);
+                        // Re-enable buttons
+                        $(`tr[data-senior-id="${seniorId}"] .btn`).prop('disabled', false);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    showToast('error', 'Failed to mark attendance: ' + error);
+                    // Re-enable buttons
+                    $(`tr[data-senior-id="${seniorId}"] .btn`).prop('disabled', false);
+                }
+            });
+        }
+
+        function bulkMarkAttendance() {
+            let seniorIds = [];
+            $('.senior-checkbox:checked').each(function() {
+                seniorIds.push($(this).val());
+            });
+
+            if (seniorIds.length === 0) {
+                showToast('warning', 'Please select at least one senior.');
+                return;
+            }
+
+            let status = $('#bulkAction').val();
+
+            Swal.fire({
+                title: 'Bulk Mark Attendance',
+                html: `Are you sure you want to mark <strong>${seniorIds.length}</strong> selected senior(s) as <strong>${status}</strong>?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: status === 'Present' ? '#28a745' : '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: `Yes, mark as ${status}`,
+                cancelButtonText: 'Cancel',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return $.ajax({
+                        url: '@Url.Action("BulkMarkAttendance", "Event")',
+                        type: 'POST',
+                        traditional: true,
+                        data: {
+                            id: eventId,
+                            seniorIds: seniorIds,
+                            status: status,
+                            __RequestVerificationToken: token
+                        }
+                    });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (result.value.success) {
+                        // Reload page to update all data
+                        location.reload();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: result.value.message
+                        });
+                    }
+                }
+            });
+        }
+
+        function markAllUnmarkedAsPresent() {
+            let unmarkedIds = [];
+            $('tr[data-status="Unmarked"]').each(function() {
+                unmarkedIds.push($(this).data('senior-id'));
+            });
+
+            if (unmarkedIds.length === 0) {
+                showToast('info', 'All seniors are already marked.');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Mark All Unmarked',
+                html: `Are you sure you want to mark <strong>${unmarkedIds.length}</strong> unmarked senior(s) as <strong>Present</strong>?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, mark all!',
+                cancelButtonText: 'Cancel',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return $.ajax({
+                        url: '@Url.Action("BulkMarkAttendance", "Event")',
+                        type: 'POST',
+                        traditional: true,
+                        data: {
+                            id: eventId,
+                            seniorIds: unmarkedIds,
+                            status: 'Present',
+                            __RequestVerificationToken: token
+                        }
+                    });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (result.value.success) {
+                        location.reload();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: result.value.message
+                        });
+                    }
+                }
+            });
+        }
+
+        function clearAllAttendance() {
+            let markedIds = [];
+            $('tr[data-status="Present"], tr[data-status="Absent"]').each(function() {
+                markedIds.push($(this).data('senior-id'));
+            });
+
+            if (markedIds.length === 0) {
+                showToast('info', 'No attendance records to clear.');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Clear All Attendance',
+                html: `<p>Are you sure you want to clear all attendance records?</p>
+                       <p class="text-danger"><strong>This will remove ${markedIds.length} attendance records!</strong></p>
+                       <p class="text-muted small">This action cannot be undone.</p>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, clear all!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Clear each attendance record individually
+                    let cleared = 0;
+                    let total = markedIds.length;
+
+                    markedIds.forEach(seniorId => {
+                        $.ajax({
+                            url: '@Url.Action("MarkAttendance", "Event")',
+                            type: 'POST',
+                            async: false,
+                            data: {
+                                id: eventId,
+                                seniorId: seniorId,
+                                status: 'Unmarked',
+                                __RequestVerificationToken: token
+                            },
+                            success: function(response) {
+                                if (response.success) cleared++;
+                            }
+                        });
+                    });
+
+                    if (cleared === total) {
+                        location.reload();
+                    } else {
+                        showToast('warning', `Cleared ${cleared} of ${total} records.`);
+                        setTimeout(() => location.reload(), 2000);
+                    }
+                }
+            });
+        }
+
+        function exportAttendance(filter) {
+            let data = [];
+            let fileName = `Event_${eventId}_Attendance_${filter}_${new Date().toISOString().slice(0,10)}.xlsx`;
+
+            // Add event information
+            data.push(['Event Attendance Report']);
+            data.push(['Event:', '@eventDetails.EventTitle']);
+            data.push(['Date:', '@eventDetails.EventDate.ToString("MMMM dd, yyyy")']);
+            data.push(['Time:', '@eventDetails.TimeFormatted']);
+            data.push(['Location:', '@eventDetails.EventLocation']);
+            data.push(['Organizer:', '@eventDetails.OrganizedBy']);
+            data.push(['']);
+            data.push(['Senior Attendance List']);
+            data.push(['Senior ID', 'Last Name', 'First Name', 'Middle Initial', 'Zone', 'Barangay', 'Age', 'Gender', 'Attendance Status']);
+
+            // Filter rows based on selection
+            let rows = [];
+            if (filter === 'All') {
+                rows = $('#attendanceTable tbody tr');
+            } else if (filter === 'Present') {
+                rows = $('#attendanceTable tbody tr[data-status="Present"]');
+            } else if (filter === 'Absent') {
+                rows = $('#attendanceTable tbody tr[data-status="Absent"]');
+            }
+
+            rows.each(function() {
+                let cells = $(this).find('td');
+                let seniorId = $(cells[1]).text().trim();
+                let nameParts = $(cells[2]).text().split(',');
+                let lastName = nameParts[0].trim();
+                let firstName = nameParts.length > 1 ? nameParts[1].trim().split(' ')[0] : '';
+                let middleInitial = nameParts.length > 1 && nameParts[1].trim().split(' ').length > 1 ? nameParts[1].trim().split(' ')[1].replace('.', '') : '';
+                let zone = $(cells[3]).text().replace('Zone ', '').trim();
+                let barangay = $(cells[4]).text().trim();
+                let age = $(cells[5]).text().trim();
+                let gender = $(cells[6]).text().trim();
+                let status = $(this).data('status');
+
+                data.push([seniorId, lastName, firstName, middleInitial, zone, barangay, age, gender, status]);
+            });
+
+            // Create worksheet
+            const ws = XLSX.utils.aoa_to_sheet(data);
+
+            // Set column widths
+            const wscols = [
+                {wch: 12}, // Senior ID
+                {wch: 15}, // Last Name
+                {wch: 15}, // First Name
+                {wch: 5},  // Middle Initial
+                {wch: 5},  // Zone
+                {wch: 15}, // Barangay
+                {wch: 5},  // Age
+                {wch: 8},  // Gender
+                {wch: 15}  // Status
+            ];
+            ws['!cols'] = wscols;
+
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+
+            // Download file
+            XLSX.writeFile(wb, fileName);
+
+            showToast('success', `Exported ${rows.length} records to ${fileName}`);
+        }
+
+        function updateCounters() {
+            // This function would be called after AJAX updates to refresh counters
+            // For now, we reload the page after bulk operations
+        }
+
+        function getAttendanceBadgeClass(status) {
+            switch(status) {
+                case 'Present': return 'bg-success';
+                case 'Absent': return 'bg-danger';
+                default: return 'bg-secondary';
+            }
+        }
+
+        function showToast(icon, message) {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                }
+            });
+
+            Toast.fire({
+                icon: icon,
+                title: message
+            });
+        }
+
+        // Show attendance change notification
+        $(document).ready(function() {
+            updateSelectedCount();
+
+            // Check if attendance has changed since page load
+            @if (TempData["AttendanceUpdated"] != null)
+            {
+                    <text>
+                    showToast('success', 'Attendance updated successfully!');
+                    </text>
+            }
+        });
+    </script>
+
+    <style>
+        .bg-pink {
+            background-color: #e83e8c !important;
+            color: white;
+        }
+
+        .table-success {
+            background-color: rgba(40, 167, 69, 0.1) !important;
+        }
+
+        .table-danger {
+            background-color: rgba(220, 53, 69, 0.1) !important;
+        }
+
+        .sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: #f8f9fa;
+        }
+
+        .legend .badge {
+            width: 20px;
+            height: 10px;
+            padding: 0;
+            border-radius: 2px;
+        }
+
+        .btn-group-sm .btn {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+    </style>
+}
