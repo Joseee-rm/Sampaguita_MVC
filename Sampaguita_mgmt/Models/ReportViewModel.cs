@@ -1,5 +1,4 @@
-﻿// ReportViewModel.cs
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -19,8 +18,10 @@ namespace SeniorManagement.Models
         public string SelectedCivilStatus { get; set; }
         public string SelectedAgeRange { get; set; }
         public string SelectedMonthYear { get; set; }
+        public string SelectedPensionType { get; set; }
         public string SeniorSearchTerm { get; set; }
         public List<string> AvailableMonthsYears { get; set; }
+        public List<string> AvailablePensionTypes { get; set; }
 
         // Event Report Data
         public int TotalEvents { get; set; }
@@ -40,6 +41,7 @@ namespace SeniorManagement.Models
             SeniorList = new List<Senior>();
             EventList = new List<EventReportItem>();
             AvailableMonthsYears = new List<string>();
+            AvailablePensionTypes = new List<string>();
         }
     }
 

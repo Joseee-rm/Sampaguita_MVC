@@ -1,4 +1,5 @@
-﻿@model List<SeniorManagement.Models.Senior>
+﻿
+@model List<SeniorManagement.Models.Senior>
 @{
     ViewData["Title"] = "Event Attendance";
     var eventDetails = ViewBag.EventDetails as SeniorManagement.Models.Event;
@@ -33,73 +34,91 @@
     }
 }
 
-<div class="container-fluid">
-    <!-- Header Card -->
-    <div class="card shadow-lg mb-4">
-        <div class="card-header bg-primary text-white">
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white border-0">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h3 class="mb-1"><i class="fas fa-users me-2"></i>Event Attendance Management</h3>
-                    <h4 class="mb-0">@eventDetails.EventTitle</h4>
+                    <h3 class="mb-1"><i class="fas fa-users me-2"></i>Event Attendance</h3>
+                    <h4 class="mb-0 fw-light">@eventDetails.EventTitle</h4>
                     <small class="opacity-90">
                         <i class="fas fa-calendar me-1"></i>@eventDetails.EventDate.ToString("MMMM dd, yyyy")
                         <i class="fas fa-clock ms-3 me-1"></i>@eventDetails.TimeFormatted
                     </small>
                 </div>
                 <div class="text-end">
-                    <div class="btn-group">
+                    <div class="d-flex gap-2">
                         <a href="@Url.Action("View", "Event", new { id = eventDetails.Id })"
                            class="btn btn-outline-light">
-                            <i class="fas fa-arrow-left me-1"></i>Back to Event
+                            <i class="fas fa-arrow-left me-1"></i>Back
                         </a>
                         <a href="@Url.Action("Edit", "Event", new { id = eventDetails.Id })"
-                           class="btn btn-warning">
-                            <i class="fas fa-edit me-1"></i>Edit Event
+                           class="btn btn-light text-primary">
+                            <i class="fas fa-edit me-1"></i>Edit
                         </a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Quick Stats -->
-        <div class="card-body py-3">
-            <div class="row text-center">
+        <!-- Stats Cards -->
+        <div class="card-body py-4">
+            <div class="row g-3">
                 <div class="col-md-3">
-                    <div class="display-4 text-success">@presentCount</div>
-                    <h6 class="text-muted">Present</h6>
+                    <div class="card border-0 bg-success bg-opacity-10">
+                        <div class="card-body text-center py-3">
+                            <div class="display-4 text-success fw-bold">@presentCount</div>
+                            <h6 class="text-muted mb-0">Present</h6>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="display-4 text-danger">@absentCount</div>
-                    <h6 class="text-muted">Absent</h6>
+                    <div class="card border-0 bg-danger bg-opacity-10">
+                        <div class="card-body text-center py-3">
+                            <div class="display-4 text-danger fw-bold">@absentCount</div>
+                            <h6 class="text-muted mb-0">Absent</h6>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="display-4 text-secondary">@unmarkedCount</div>
-                    <h6 class="text-muted">Unmarked</h6>
+                    <div class="card border-0 bg-secondary bg-opacity-10">
+                        <div class="card-body text-center py-3">
+                            <div class="display-4 text-secondary fw-bold">@unmarkedCount</div>
+                            <h6 class="text-muted mb-0">Unmarked</h6>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="display-4 text-info">@Model.Count</div>
-                    <h6 class="text-muted">Total Seniors</h6>
+                    <div class="card border-0 bg-info bg-opacity-10">
+                        <div class="card-body text-center py-3">
+                            <div class="display-4 text-info fw-bold">@Model.Count</div>
+                            <h6 class="text-muted mb-0">Total Seniors</h6>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             @if (eventDetails.MaxCapacity.HasValue)
             {
                 var percentage = (int)Math.Round((double)presentCount / eventDetails.MaxCapacity.Value * 100);
-                <div class="row mt-3">
+                <div class="row mt-4">
                     <div class="col-md-12">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>Capacity: @presentCount / @eventDetails.MaxCapacity.Value (@percentage%)</span>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <span class="fw-medium">Capacity: @presentCount / @eventDetails.MaxCapacity.Value</span>
+                                <span class="text-muted ms-2">(@percentage%)</span>
+                            </div>
                             @if (presentCount >= eventDetails.MaxCapacity.Value)
                             {
                                 <span class="badge bg-danger">Full</span>
                             }
                     </div>
-                    <div class="progress" style="height: 15px;">
+                    <div class="progress" style="height: 8px;">
                         <div class="progress-bar
                                  @(percentage >= 90 ? "bg-danger" :
-                                                                percentage >= 70 ? "bg-warning" : "bg-success")"
-                             style="width: @percentage%">
-                            @percentage%
+                                                                 percentage >= 70 ? "bg-warning" : "bg-success")"
+                             style="width: @percentage%" role="progressbar">
                         </div>
                     </div>
                 </div>
@@ -108,120 +127,126 @@
         </div>
     </div>
 
-    <div class="row">
-        <!-- Event Information Sidebar -->
-        <div class="col-md-3">
-            <div class="card shadow mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Event Details</h5>
+    <div class="row g-4">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <!-- Event Details Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2 text-info"></i>Event Details</h5>
                 </div>
                 <div class="card-body">
                     <dl class="mb-0">
-                        <dt>Location:</dt>
-                        <dd class="mb-2">@eventDetails.EventLocation</dd>
+                        <dt class="text-muted small">Location</dt>
+                        <dd class="mb-3">@eventDetails.EventLocation</dd>
 
-                        <dt>Organizer:</dt>
-                        <dd class="mb-2">@eventDetails.OrganizedBy</dd>
+                        <dt class="text-muted small">Organizer</dt>
+                        <dd class="mb-3">@eventDetails.OrganizedBy</dd>
 
-                        <dt>Event Type:</dt>
-                        <dd class="mb-2">
+                        <dt class="text-muted small">Type</dt>
+                        <dd class="mb-3">
                             <span class="badge bg-primary">@eventDetails.EventType</span>
                         </dd>
 
-                        <dt>Status:</dt>
-                        <dd class="mb-3">
+                        <dt class="text-muted small">Status</dt>
+                        <dd class="mb-0">
                             <span class="badge @GetStatusBadgeClass(eventDetails.Status)">
                                 @eventDetails.Status
                             </span>
                         </dd>
                     </dl>
-
-                    <div class="alert alert-warning mt-3">
-                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Important Notes</h6>
-                        <ul class="small mb-0">
-                            <li>Once marked <strong>Present</strong>, cannot change to <strong>Absent</strong></li>
-                            <li>Use bulk actions for multiple seniors</li>
-                            <li>Attendance updates automatically</li>
-                            <li>Changes are logged with your username</li>
-                        </ul>
-                    </div>
-
-                    <!-- Quick Actions -->
-                    <div class="mt-3">
-                        <h6><i class="fas fa-bolt me-2"></i>Quick Actions</h6>
-                        <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-success" onclick="markAllUnmarkedAsPresent()">
-                                <i class="fas fa-check-circle me-2"></i>Mark All Unmarked as Present
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" onclick="clearAllAttendance()">
-                                <i class="fas fa-trash-alt me-2"></i>Clear All Attendance
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
 
             <!-- Attendance Summary -->
-            <div class="card shadow">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Attendance Summary</h5>
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2 text-success"></i>Attendance Summary</h5>
                 </div>
                 <div class="card-body">
-                    <div class="text-center">
-                        @if (Model.Count > 0)
-                        {
-                            var presentPercent = (int)Math.Round((double)presentCount / Model.Count * 100);
-                            var absentPercent = (int)Math.Round((double)absentCount / Model.Count * 100);
-                            var unmarkedPercent = (int)Math.Round((double)unmarkedCount / Model.Count * 100);
+                    @if (Model.Count > 0)
+                    {
+                        var presentPercent = (int)Math.Round((double)presentCount / Model.Count * 100);
+                        var absentPercent = (int)Math.Round((double)absentCount / Model.Count * 100);
+                        var unmarkedPercent = (int)Math.Round((double)unmarkedCount / Model.Count * 100);
 
-                            <div class="mb-3" style="height: 150px;">
-                                <!-- Pie chart visualization -->
-                                <div class="position-relative mx-auto" style="width: 120px; height: 120px;">
-                                    <div class="position-absolute top-0 start-0 w-100 h-100">
-                                        <div class="rounded-circle position-absolute top-0 start-0 w-100 h-100"
-                                             style="background: conic-gradient(
-                                                     #28a745 @(presentPercent * 3.6)deg,
-                                                     #dc3545 @(presentPercent * 3.6)deg @((presentPercent + absentPercent) * 3.6)deg,
-                                                     #6c757d @((presentPercent + absentPercent) * 3.6)deg
-                                                 );">
-                                        </div>
-                                    </div>
-                                </div>
+                        <div class="d-flex justify-content-center mb-4">
+                            <div class="position-relative" style="width: 140px; height: 140px;">
+                                <canvas id="attendanceChart" width="140" height="140"></canvas>
                             </div>
+                        </div>
 
-                            <div class="legend">
-                                <div class="d-flex align-items-center mb-2">
-                                    <span class="badge bg-success me-2" style="width: 20px; height: 10px;"></span>
-                                    <span>Present: @presentPercent% (@presentCount)</span>
+                        <div class="legend">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="color-indicator bg-success me-2"></div>
+                                <div class="flex-grow-1">
+                                    <span>Present</span>
                                 </div>
-                                <div class="d-flex align-items-center mb-2">
-                                    <span class="badge bg-danger me-2" style="width: 20px; height: 10px;"></span>
-                                    <span>Absent: @absentPercent% (@absentCount)</span>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <span class="badge bg-secondary me-2" style="width: 20px; height: 10px;"></span>
-                                    <span>Unmarked: @unmarkedPercent% (@unmarkedCount)</span>
-                                </div>
+                                <span class="fw-medium">@presentPercent% (@presentCount)</span>
                             </div>
-                        }
-                        else
-                        {
-                            <p class="text-muted">No seniors available</p>
-                        }
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="color-indicator bg-danger me-2"></div>
+                                <div class="flex-grow-1">
+                                    <span>Absent</span>
+                                </div>
+                                <span class="fw-medium">@absentPercent% (@absentCount)</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="color-indicator bg-secondary me-2"></div>
+                                <div class="flex-grow-1">
+                                    <span>Unmarked</span>
+                                </div>
+                                <span class="fw-medium">@unmarkedPercent% (@unmarkedCount)</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <p class="text-muted mb-0">No seniors available</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0"><i class="fas fa-bolt me-2 text-warning"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-success" onclick="markAllUnmarkedAsPresent()">
+                            <i class="fas fa-check-circle me-2"></i>Mark All Unmarked as Present
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="clearAllAttendance()">
+                            <i class="fas fa-trash-alt me-2"></i>Clear All Attendance
+                        </button>
+                    </div>
+
+                    <div class="alert alert-warning mt-4 mb-0">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Important Rules</h6>
+                        <ul class="small mb-0">
+                            <li>Once marked <strong>Present</strong>, cannot be changed</li>
+                            <li>Once marked <strong>Absent</strong>, cannot be changed to Present</li>
+                            <li>Use bulk actions for efficiency</li>
+                            <li>Changes are logged automatically</li>
+                        </ul>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Main Attendance Table -->
-        <div class="col-md-9">
-            <div class="card shadow">
-                <div class="card-header bg-white">
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Filters Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-list me-2"></i>Senior Attendance List</h5>
                         <div class="d-flex gap-2">
                             <span class="badge bg-light text-dark">
-                                <i class="fas fa-user-friends me-1"></i>@Model.Count Total Seniors
+                                <i class="fas fa-user-friends me-1"></i>@Model.Count Total
                             </span>
                             <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#filtersCollapse">
                                 <i class="fas fa-filter me-1"></i>Filters
@@ -235,7 +260,7 @@
                     <div class="card-body border-bottom">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label">Search Seniors</label>
+                                <label class="form-label small fw-medium">Search Seniors</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-search"></i></span>
                                     <input type="text" id="searchSeniors" class="form-control"
@@ -243,7 +268,7 @@
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Zone</label>
+                                <label class="form-label small fw-medium">Zone</label>
                                 <select id="filterZone" class="form-select">
                                     <option value="">All Zones</option>
                                     @for (int i = 1; i <= 10; i++)
@@ -253,7 +278,7 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Barangay</label>
+                                <label class="form-label small fw-medium">Barangay</label>
                                 <select id="filterBarangay" class="form-select">
                                     <option value="">All Barangays</option>
                                     @{
@@ -266,7 +291,7 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">Status</label>
+                                <label class="form-label small fw-medium">Status</label>
                                 <select id="filterAttendance" class="form-select">
                                     <option value="">All Status</option>
                                     <option value="Present">Present Only</option>
@@ -279,13 +304,14 @@
                             <div class="col-md-12">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="toggleSelectAll">
-                                    <label class="form-check-label" for="toggleSelectAll">Select All Visible Seniors</label>
+                                    <label class="form-check-label small" for="toggleSelectAll">Select All Visible Seniors</label>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Table -->
                 <div class="card-body p-0">
                     @if (Model.Any())
                     {
@@ -317,29 +343,40 @@
                                             data-zone="@senior.Zone"
                                             data-barangay="@senior.Barangay"
                                             data-status="@status"
-                                            class="@(status == "Present" ? "table-success" : status == "Absent" ? "table-danger" : "")">
+                                            class="@(status == "Present" ? "table-success-light" : status == "Absent" ? "table-danger-light" : "")">
                                             <td>
                                                 <input type="checkbox" class="form-check-input senior-checkbox"
                                                        value="@senior.SeniorId"
-                                                       @(status == "Present" ? "disabled" : "") />
+                                                       @(status == "Present" || status == "Absent" ? "disabled" : "") />
                                             </td>
                                             <td>
-                                                <span class="fw-bold">@senior.SeniorId</span>
+                                                <span class="fw-medium text-muted">@senior.SeniorId</span>
                                             </td>
                                             <td>
-                                                @senior.LastName, @senior.FirstName
-                                                @if (!string.IsNullOrEmpty(senior.MiddleInitial))
-                                                {
-                                                    <text>@senior.MiddleInitial.</text>
-                                                }
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-circle-sm bg-primary text-white me-2">
+                                                        @(senior.FirstName?.FirstOrDefault().ToString().ToUpper() ?? "S")
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">@senior.LastName, @senior.FirstName</div>
+                                                        @if (!string.IsNullOrEmpty(senior.MiddleInitial))
+                                                        {
+                                                            <small class="text-muted">@senior.MiddleInitial.</small>
+                                                        }
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td>
-                                                <span class="badge bg-info">Zone @senior.Zone</span>
+                                                <span class="badge bg-light text-dark border">Zone @senior.Zone</span>
                                             </td>
-                                            <td>@senior.Barangay</td>
-                                            <td>@senior.Age</td>
                                             <td>
-                                                <span class="badge @(senior.Gender == "Male" ? "bg-primary" : "bg-pink")">
+                                                <span class="text-muted">@senior.Barangay</span>
+                                            </td>
+                                            <td>
+                                                <span class="fw-medium">@senior.Age</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge @(senior.Gender == "Male" ? "bg-primary" : "bg-pink-light")">
                                                     @senior.Gender
                                                 </span>
                                             </td>
@@ -349,40 +386,36 @@
                                                 </span>
                                             </td>
                                             <td class="text-center">
-                                                <div class="btn-group btn-group-sm">
-                                                    @if (status != "Present")
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    @if (status == "Unmarked")
                                                     {
                                                         <button class="btn btn-outline-success mark-present"
                                                                 onclick="markAttendance('@senior.SeniorId', 'Present')"
                                                                 title="Mark as Present">
-                                                            <i class="fas fa-check"></i> Present
+                                                            <i class="fas fa-check"></i>
                                                         </button>
-                                                    }
-                                                    else
-                                                    {
-                                                        <button class="btn btn-success" disabled title="Already Present">
-                                                            <i class="fas fa-check"></i> Present
-                                                        </button>
-                                                    }
-
-                                                    @if (status != "Absent" && status != "Present")
-                                                    {
                                                         <button class="btn btn-outline-danger mark-absent"
                                                                 onclick="markAttendance('@senior.SeniorId', 'Absent')"
                                                                 title="Mark as Absent">
-                                                            <i class="fas fa-times"></i> Absent
-                                                        </button>
-                                                    }
-                                                    else if (status == "Absent")
-                                                    {
-                                                        <button class="btn btn-danger" disabled title="Already Absent">
-                                                            <i class="fas fa-times"></i> Absent
+                                                            <i class="fas fa-times"></i>
                                                         </button>
                                                     }
                                                     else if (status == "Present")
                                                     {
+                                                        <button class="btn btn-success" disabled title="Already Present">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
                                                         <button class="btn btn-outline-secondary" disabled title="Cannot change from Present">
-                                                            <i class="fas fa-lock"></i> Locked
+                                                            <i class="fas fa-lock"></i>
+                                                        </button>
+                                                    }
+                                                    else if (status == "Absent")
+                                                    {
+                                                        <button class="btn btn-outline-secondary" disabled title="Cannot change from Absent to Present">
+                                                            <i class="fas fa-lock"></i>
+                                                        </button>
+                                                        <button class="btn btn-danger" disabled title="Already Absent">
+                                                            <i class="fas fa-times"></i>
                                                         </button>
                                                     }
                                                 </div>
@@ -393,7 +426,7 @@
                             </table>
                         </div>
 
-                        <!-- Selected Count and Bulk Actions -->
+                        <!-- Bulk Actions Footer -->
                         <div class="card-footer bg-light">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
@@ -403,7 +436,7 @@
                                     </small>
                                 </div>
                                 <div class="d-flex gap-2">
-                                    <div class="input-group" style="width: 300px;">
+                                    <div class="input-group" style="width: 280px;">
                                         <select id="bulkAction" class="form-select">
                                             <option value="Present">Mark as Present</option>
                                             <option value="Absent">Mark as Absent</option>
@@ -420,8 +453,8 @@
                     {
                         <div class="text-center py-5">
                             <i class="fas fa-user-slash fa-4x text-muted mb-3"></i>
-                            <h4 class="text-muted">No Active Seniors</h4>
-                            <p class="text-muted">There are no active seniors in the system.</p>
+                            <h4 class="text-muted mb-2">No Active Seniors</h4>
+                            <p class="text-muted mb-4">There are no active seniors in the system.</p>
                             <a href="@Url.Action("Index", "Senior")" class="btn btn-primary">
                                 <i class="fas fa-user-plus me-1"></i> Manage Seniors
                             </a>
@@ -430,13 +463,13 @@
                 </div>
             </div>
 
-            <!-- Export Options -->
-            <div class="card shadow mt-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-download me-2"></i>Export Options</h5>
+            <!-- Export Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0"><i class="fas fa-download me-2 text-primary"></i>Export Options</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-3">
                         <div class="col-md-4">
                             <button class="btn btn-outline-success w-100" onclick="exportAttendance('Present')">
                                 <i class="fas fa-file-excel me-2"></i>Export Present List
@@ -462,14 +495,126 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         let eventId = @eventDetails.Id;
         let token = $('input[name="__RequestVerificationToken"]').val();
-        let originalAttendance = @presentCount;
+        let autoRefreshEnabled = true;
+        let refreshInterval;
+
+        // Initialize Chart
+        function initAttendanceChart() {
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            const presentPercent = @((int)Math.Round((double)presentCount / Model.Count * 100));
+            const absentPercent = @((int)Math.Round((double)absentCount / Model.Count * 100));
+            const unmarkedPercent = @((int)Math.Round((double)unmarkedCount / Model.Count * 100));
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Present', 'Absent', 'Unmarked'],
+                    datasets: [{
+                        data: [presentPercent, absentPercent, unmarkedPercent],
+                        backgroundColor: ['#28a745', '#dc3545', '#6c757d'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const label = context.label;
+                                    return `${label}: ${value}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update stats after attendance change
+        function updateStats() {
+            // Recalculate counts from the table
+            let present = 0, absent = 0, unmarked = 0;
+
+            $('#attendanceTable tbody tr').each(function() {
+                const status = $(this).data('status');
+                if (status === 'Present') present++;
+                else if (status === 'Absent') absent++;
+                else unmarked++;
+            });
+
+            // Update display
+            $('.display-4.text-success').text(present);
+            $('.display-4.text-danger').text(absent);
+            $('.display-4.text-secondary').text(unmarked);
+
+            // Update capacity if applicable
+            if (@(eventDetails.MaxCapacity.HasValue ? "true" : "false")) {
+                const maxCapacity = @(eventDetails.MaxCapacity ?? 0);
+                const percentage = maxCapacity > 0 ? Math.round((present / maxCapacity) * 100) : 0;
+
+                $('.progress-bar').css('width', percentage + '%');
+                $('.progress-bar').text(percentage + '%');
+                $('.fw-medium span:first-child').text(`Capacity: ${present} / ${maxCapacity}`);
+                $('.text-muted.ms-2').text(`(${percentage}%)`);
+
+                // Update full badge
+                const fullBadge = $('.badge.bg-danger');
+                if (present >= maxCapacity) {
+                    if (fullBadge.length === 0) {
+                        $('.d-flex.justify-content-between.mb-2').append('<span class="badge bg-danger">Full</span>');
+                    }
+                } else {
+                    fullBadge.remove();
+                }
+            }
+
+            // Update pie chart
+            if (@Model.Count > 0) {
+                const total = present + absent + unmarked;
+                const presentPercent = Math.round((present / total) * 100);
+                const absentPercent = Math.round((absent / total) * 100);
+                const unmarkedPercent = Math.round((unmarked / total) * 100);
+
+                // Update legend
+                $('.legend .d-flex:first-child .fw-medium').text(`${presentPercent}% (${present})`);
+                $('.legend .d-flex:nth-child(2) .fw-medium').text(`${absentPercent}% (${absent})`);
+                $('.legend .d-flex:last-child .fw-medium').text(`${unmarkedPercent}% (${unmarked})`);
+            }
+        }
+
+        // Start auto-refresh
+        function startAutoRefresh() {
+            if (autoRefreshEnabled && !refreshInterval) {
+                refreshInterval = setInterval(() => {
+                    // Only refresh if page is visible
+                    if (!document.hidden) {
+                        updateStats();
+                    }
+                }, 2000); // Refresh every 2 seconds
+            }
+        }
+
+        // Stop auto-refresh
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
 
         // Update selected count
         function updateSelectedCount() {
-            let selected = $('.senior-checkbox:checked').length;
+            let selected = $('.senior-checkbox:checked:not(:disabled)').length;
             $('#selectedCount').text(selected + ' selected');
             $('#bulkActionBtn').prop('disabled', selected === 0);
         }
@@ -502,19 +647,9 @@
         });
 
         // Filter by zone
-        $('#filterZone').on('change', function() {
-            filterTable();
-        });
-
-        // Filter by barangay
-        $('#filterBarangay').on('change', function() {
-            filterTable();
-        });
-
-        // Filter by attendance status
-        $('#filterAttendance').on('change', function() {
-            filterTable();
-        });
+        $('#filterZone').on('change', filterTable);
+        $('#filterBarangay').on('change', filterTable);
+        $('#filterAttendance').on('change', filterTable);
 
         function filterTable() {
             let zone = $('#filterZone').val();
@@ -550,15 +685,29 @@
         }
 
         function markAttendance(seniorId, status) {
+            const currentStatus = $(`tr[data-senior-id="${seniorId}"]`).data('status');
+
+            // Prevent changing from Absent to Present
+            if (currentStatus === "Absent" && status === "Present") {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Cannot Change Status',
+                    text: 'Cannot change from Absent to Present. Once marked Absent, it cannot be changed to Present.',
+                    confirmButtonColor: '#dc3545'
+                });
+                return;
+            }
+
             if (status === 'Absent') {
                 Swal.fire({
                     title: 'Mark as Absent',
-                    html: `Are you sure you want to mark this senior as <strong>Absent</strong>?`,
+                    html: `Are you sure you want to mark this senior as <strong>Absent</strong>?<br>
+                           <small class="text-muted">Note: Once marked Absent, cannot be changed to Present.</small>`,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonColor: '#dc3545',
                     cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Yes, mark absent',
+                    confirmButtonText: 'Mark Absent',
                     cancelButtonText: 'Cancel'
                 }).then((result) => {
                     if (result.isConfirmed) {
@@ -581,7 +730,6 @@
                     __RequestVerificationToken: token
                 },
                 beforeSend: function() {
-                    // Show loading on the specific button
                     $(`tr[data-senior-id="${seniorId}"] .btn`).prop('disabled', true);
                 },
                 success: function (response) {
@@ -597,42 +745,50 @@
                             .text(status);
 
                         // Update row color
-                        row.removeClass('table-success table-danger')
-                            .addClass(status === 'Present' ? 'table-success' :
-                                     status === 'Absent' ? 'table-danger' : '');
+                        row.removeClass('table-success-light table-danger-light')
+                            .addClass(status === 'Present' ? 'table-success-light' :
+                                     status === 'Absent' ? 'table-danger-light' : '');
 
                         // Update buttons
                         let btnGroup = row.find('.btn-group');
                         if (status === 'Present') {
                             btnGroup.html(`
                                 <button class="btn btn-success" disabled title="Already Present">
-                                    <i class="fas fa-check"></i> Present
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" disabled title="Cannot change from Present">
+                                    <i class="fas fa-lock"></i>
                                 </button>
                             `);
                             row.find('.senior-checkbox').prop('disabled', true).prop('checked', false);
                         } else if (status === 'Absent') {
                             btnGroup.html(`
+                                <button class="btn btn-outline-secondary" disabled title="Cannot change from Absent to Present">
+                                    <i class="fas fa-lock"></i>
+                                </button>
                                 <button class="btn btn-danger" disabled title="Already Absent">
-                                    <i class="fas fa-times"></i> Absent
+                                    <i class="fas fa-times"></i>
                                 </button>
                             `);
+                            row.find('.senior-checkbox').prop('disabled', true).prop('checked', false);
                         }
 
-                        // Update counters
-                        updateCounters();
+                        // Update counters and stats
+                        updateStats();
                         updateSelectedCount();
 
                         // Show success message
                         showToast('success', response.message);
+
+                        // Start auto-refresh if not already running
+                        startAutoRefresh();
                     } else {
                         showToast('error', response.message);
-                        // Re-enable buttons
                         $(`tr[data-senior-id="${seniorId}"] .btn`).prop('disabled', false);
                     }
                 },
                 error: function (xhr, status, error) {
                     showToast('error', 'Failed to mark attendance: ' + error);
-                    // Re-enable buttons
                     $(`tr[data-senior-id="${seniorId}"] .btn`).prop('disabled', false);
                 }
             });
@@ -640,7 +796,7 @@
 
         function bulkMarkAttendance() {
             let seniorIds = [];
-            $('.senior-checkbox:checked').each(function() {
+            $('.senior-checkbox:checked:not(:disabled)').each(function() {
                 seniorIds.push($(this).val());
             });
 
@@ -658,7 +814,7 @@
                 showCancelButton: true,
                 confirmButtonColor: status === 'Present' ? '#28a745' : '#dc3545',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: `Yes, mark as ${status}`,
+                confirmButtonText: `Mark as ${status}`,
                 cancelButtonText: 'Cancel',
                 showLoaderOnConfirm: true,
                 preConfirm: () => {
@@ -708,7 +864,7 @@
                 showCancelButton: true,
                 confirmButtonColor: '#28a745',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, mark all!',
+                confirmButtonText: 'Mark All',
                 cancelButtonText: 'Cancel',
                 showLoaderOnConfirm: true,
                 preConfirm: () => {
@@ -759,38 +915,29 @@
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, clear all!',
+                confirmButtonText: 'Clear All',
                 cancelButtonText: 'Cancel',
                 reverseButtons: true
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Clear each attendance record individually
-                    let cleared = 0;
-                    let total = markedIds.length;
-
-                    markedIds.forEach(seniorId => {
-                        $.ajax({
-                            url: '@Url.Action("MarkAttendance", "Event")',
-                            type: 'POST',
-                            async: false,
-                            data: {
-                                id: eventId,
-                                seniorId: seniorId,
-                                status: 'Unmarked',
-                                __RequestVerificationToken: token
-                            },
-                            success: function(response) {
-                                if (response.success) cleared++;
+                    $.ajax({
+                        url: '@Url.Action("ClearAllAttendance", "Event")',
+                        type: 'POST',
+                        data: {
+                            id: eventId,
+                            __RequestVerificationToken: token
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                location.reload();
+                            } else {
+                                showToast('error', response.message);
                             }
-                        });
+                        },
+                        error: function(xhr, status, error) {
+                            showToast('error', 'Failed to clear attendance: ' + error);
+                        }
                     });
-
-                    if (cleared === total) {
-                        location.reload();
-                    } else {
-                        showToast('warning', `Cleared ${cleared} of ${total} records.`);
-                        setTimeout(() => location.reload(), 2000);
-                    }
                 }
             });
         }
@@ -823,10 +970,10 @@
             rows.each(function() {
                 let cells = $(this).find('td');
                 let seniorId = $(cells[1]).text().trim();
-                let nameParts = $(cells[2]).text().split(',');
+                let nameParts = $(cells[2]).find('.fw-medium').text().split(',');
                 let lastName = nameParts[0].trim();
                 let firstName = nameParts.length > 1 ? nameParts[1].trim().split(' ')[0] : '';
-                let middleInitial = nameParts.length > 1 && nameParts[1].trim().split(' ').length > 1 ? nameParts[1].trim().split(' ')[1].replace('.', '') : '';
+                let middleInitial = $(cells[2]).find('small').text().replace('.', '').trim();
                 let zone = $(cells[3]).text().replace('Zone ', '').trim();
                 let barangay = $(cells[4]).text().trim();
                 let age = $(cells[5]).text().trim();
@@ -863,11 +1010,6 @@
             showToast('success', `Exported ${rows.length} records to ${fileName}`);
         }
 
-        function updateCounters() {
-            // This function would be called after AJAX updates to refresh counters
-            // For now, we reload the page after bulk operations
-        }
-
         function getAttendanceBadgeClass(status) {
             switch(status) {
                 case 'Present': return 'bg-success';
@@ -895,32 +1037,48 @@
             });
         }
 
-        // Show attendance change notification
+        // Initialize on page load
         $(document).ready(function() {
             updateSelectedCount();
+            initAttendanceChart();
+            startAutoRefresh();
 
             // Check if attendance has changed since page load
             @if (TempData["AttendanceUpdated"] != null)
             {
-                    <text>
-                    showToast('success', 'Attendance updated successfully!');
-                    </text>
+                        <text>
+                        showToast('success', '@TempData["AttendanceUpdated"]');
+                        </text>
             }
+
+            // Stop auto-refresh when page is hidden
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    stopAutoRefresh();
+                } else {
+                    startAutoRefresh();
+                }
+            });
+
+            // Stop auto-refresh when window is closed
+            window.addEventListener('beforeunload', function() {
+                stopAutoRefresh();
+            });
         });
     </script>
 
     <style>
-        .bg-pink {
-            background-color: #e83e8c !important;
-            color: white;
+        .bg-pink-light {
+            background-color: #f8d7da !important;
+            color: #721c24;
         }
 
-        .table-success {
-            background-color: rgba(40, 167, 69, 0.1) !important;
+        .table-success-light {
+            background-color: rgba(40, 167, 69, 0.05) !important;
         }
 
-        .table-danger {
-            background-color: rgba(220, 53, 69, 0.1) !important;
+        .table-danger-light {
+            background-color: rgba(220, 53, 69, 0.05) !important;
         }
 
         .sticky-top {
@@ -930,20 +1088,63 @@
             background-color: #f8f9fa;
         }
 
-        .legend .badge {
-            width: 20px;
-            height: 10px;
-            padding: 0;
+        .avatar-circle-sm {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .color-indicator {
+            width: 12px;
+            height: 12px;
             border-radius: 2px;
         }
 
+        .legend .d-flex {
+            padding: 4px 0;
+        }
+
         .btn-group-sm .btn {
-            font-size: 0.8rem;
             padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
         }
 
         .table-hover tbody tr:hover {
-            background-color: rgba(0, 123, 255, 0.05);
+            background-color: rgba(0, 123, 255, 0.03);
+        }
+
+        .progress {
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .progress-bar {
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 8px;
+        }
+
+        .card {
+            border-radius: 8px;
+        }
+
+        .form-control, .form-select {
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .btn {
+            border-radius: 6px;
+        }
+
+        .badge {
+            border-radius: 4px;
+            font-weight: 500;
         }
     </style>
 }

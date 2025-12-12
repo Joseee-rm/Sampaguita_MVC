@@ -11,10 +11,10 @@
     };
 
     // Get filter parameters
-    var fromMonth = ViewBag.FromMonth != null ? (string)ViewBag.FromMonth : "";
-    var fromYear = ViewBag.FromYear != null ? (int?)ViewBag.FromYear : null;
-    var toMonth = ViewBag.ToMonth != null ? (string)ViewBag.ToMonth : "";
-    var toYear = ViewBag.ToYear != null ? (int?)ViewBag.ToYear : null;
+    string fromMonth = ViewBag.FromMonth != null ? (string)ViewBag.FromMonth : "";
+    int? fromYear = ViewBag.FromYear != null ? (int?)ViewBag.FromYear : null;
+    string toMonth = ViewBag.ToMonth != null ? (string)ViewBag.ToMonth : "";
+    int? toYear = ViewBag.ToYear != null ? (int?)ViewBag.ToYear : null;
 
     // Filter logs based on date range
     List<PensionLog> filteredLogs = Model;
@@ -53,6 +53,85 @@
             }
         }).ToList();
     }
+
+    // Parse pension type and frequency from notes for statistics
+    var pensionTypeStats = new Dictionary<string, (int Total, int Claimed, int Amount)>();
+    int totalClaimedSeniors = 0;
+    int totalSeniors = 0;
+    int totalClaimedAmount = 0;
+
+    foreach (var log in filteredLogs)
+    {
+        // Extract pension type from notes if available
+        var notesParts = log.Notes.Split(',');
+        string pensionType = "All Types";
+
+        // Try to find pension type in notes
+        foreach (var part in notesParts)
+        {
+            if (part.Contains("Pension Type:"))
+            {
+                var typePart = part.Split(':');
+                if (typePart.Length >= 2)
+                {
+                    pensionType = typePart[1].Trim();
+                    break;
+                }
+            }
+        }
+
+        // Extract total and claimed counts
+        int logTotalSeniors = 0;
+        int logClaimedSeniors = 0;
+        int logClaimedAmount = 0;
+
+        if (notesParts.Length >= 3)
+        {
+            // Extract total seniors
+            if (notesParts[0].Contains("Total Seniors:"))
+            {
+                var totalPart = notesParts[0].Split(':');
+                if (totalPart.Length >= 2 && int.TryParse(totalPart[1].Trim(), out int total))
+                {
+                    logTotalSeniors = total;
+                    totalSeniors += total;
+                }
+            }
+
+            // Extract claimed seniors
+            if (notesParts[1].Contains("Claimed:"))
+            {
+                var claimedPart = notesParts[1].Split(':');
+                if (claimedPart.Length >= 2 && int.TryParse(claimedPart[1].Trim(), out int claimed))
+                {
+                    logClaimedSeniors = claimed;
+                    totalClaimedSeniors += claimed;
+                }
+            }
+
+            // Extract claimed amount
+            if (notesParts[2].Contains("Claimed Amount:"))
+            {
+                var amountPart = notesParts[2].Split(':');
+                if (amountPart.Length >= 2)
+                {
+                    var amountStr = amountPart[1].Trim().Replace("₱", "").Replace(".00", "");
+                    if (int.TryParse(amountStr, out int amount))
+                    {
+                        logClaimedAmount = amount;
+                        totalClaimedAmount += amount;
+                    }
+                }
+            }
+        }
+
+        if (!pensionTypeStats.ContainsKey(pensionType))
+        {
+            pensionTypeStats[pensionType] = (0, 0, 0);
+        }
+        var stats = pensionTypeStats[pensionType];
+        pensionTypeStats[pensionType] = (stats.Total + logTotalSeniors, stats.Claimed + logClaimedSeniors, stats.Amount + logClaimedAmount);
+    }
 }
 
 <div class="container-fluid">
@@ -61,9 +140,15 @@
         <h1 class="h3 mb-0 text-gray-800">
             <i class="fas fa-history text-info mr-2"></i>Pension Logs
         </h1>
-        <a href="@Url.Action("Pension", "Dues")" class="btn btn-outline-primary">
-            <i class="fas fa-arrow-left mr-2"></i>Back to Pension
-        </a>
+        <!-- In the header section, add the Frequency Dashboard button -->
+        <div class="btn-group">
+            <a href="@Url.Action("Pension", "Dues")" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Pension
+            </a>
+            <a href="@Url.Action("PensionFrequencyDashboard", "Dues")" class="btn btn-outline-info ml-2">
+                <i class="fas fa-chart-pie mr-2"></i>Frequency Dashboard
+            </a>
+        </div>
     </div>
 
     <!-- Error Alert -->
@@ -91,7 +176,7 @@
                         <option value="">Select Month</option>
                         @foreach (var month in months)
                         {
-                            var isSelected = month == fromMonth;
+                            bool isSelected = month == fromMonth;
                             <option value="@month" selected="@isSelected">@month</option>
                         }
                     </select>
@@ -102,7 +187,7 @@
                         <option value="">Select Year</option>
                         @foreach (var year in years)
                         {
-                            var isSelected = year == fromYear;
+                            bool isSelected = year == fromYear;
                             <option value="@year" selected="@isSelected">@year</option>
                         }
                     </select>
@@ -115,7 +200,7 @@
                         <option value="">Select Month</option>
                         @foreach (var month in months)
                         {
-                            var isSelected = month == toMonth;
+                            bool isSelected = month == toMonth;
                             <option value="@month" selected="@isSelected">@month</option>
                         }
                     </select>
@@ -126,7 +211,7 @@
                         <option value="">Select Year</option>
                         @foreach (var year in years)
                         {
-                            var isSelected = year == toYear;
+                            bool isSelected = year == toYear;
                             <option value="@year" selected="@isSelected">@year</option>
                         }
                     </select>
@@ -149,37 +234,6 @@
             @if (!string.IsNullOrEmpty(fromMonth) && fromYear.HasValue &&
                         !string.IsNullOrEmpty(toMonth) && toYear.HasValue)
             {
-                // Calculate totals for display
-                int totalClaimedSeniors = 0;
-                int totalSeniors = 0;
-
-                foreach (var log in filteredLogs)
-                {
-                    var notesParts = log.Notes.Split(',');
-                    if (notesParts.Length >= 2)
-                    {
-                        if (notesParts[0].Contains("Total Seniors:"))
-                        {
-                            var totalPart = notesParts[0].Split(':');
-                            if (totalPart.Length >= 2 && int.TryParse(totalPart[1].Trim(), out int total))
-                            {
-                                totalSeniors += total;
-                            }
-                        }
-
-                        if (notesParts[1].Contains("Claimed:"))
-                        {
-                            var claimedPart = notesParts[1].Split(':');
-                            if (claimedPart.Length >= 2 && int.TryParse(claimedPart[1].Trim(), out int claimed))
-                            {
-                                totalClaimedSeniors += claimed;
-                            }
-                        }
-                    }
-                }
-
-                int totalClaimedAmount = totalClaimedSeniors * 500;
-
                 <div class="alert alert-info mt-3 mb-0" role="alert">
                     <div class="row">
                         <div class="col-md-8">
@@ -191,6 +245,20 @@
                                 <i class="fas fa-check-circle mr-1"></i>Claimed: @totalClaimedSeniors |
                                 <i class="fas fa-money-bill-wave mr-1"></i>Claimed Amount: ₱@totalClaimedAmount
                             </small>
+
+                            @if (pensionTypeStats.Any())
+                            {
+                                <div class="mt-2">
+                                    <small class="font-weight-bold">Pension Type Breakdown:</small>
+                                    @foreach (var stat in pensionTypeStats.OrderByDescending(s => s.Value.Total))
+                                    {
+                                        var claimRate = stat.Value.Total > 0 ? (stat.Value.Claimed * 100 / stat.Value.Total) : 0;
+                                        <span class="badge badge-secondary mr-1 mb-1" title="@stat.Key: @stat.Value.Claimed/@stat.Value.Total claimed (@claimRate%)">
+                                            @stat.Key: @stat.Value.Total
+                                        </span>
+                                    }
+                                </div>
+                            }
                         </div>
                         <div class="col-md-4 text-right">
                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportFilteredPensionCsv()">
@@ -233,32 +301,94 @@
                                 <th>Month</th>
                                 <th>Year</th>
                                 <th>Saved Date</th>
-                                <th>Notes</th>
+                                <th>Pension Type</th>
+                                <th>Notes Summary</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var log in filteredLogs.OrderBy(l => l.Year).ThenBy(l =>
-                                                    Array.IndexOf(months, l.Month)))
+                            @foreach (var log in filteredLogs.OrderByDescending(l => l.Year).ThenByDescending(l => Array.IndexOf(months, l.Month)))
                             {
+                                // Extract pension type from notes
+                                string pensionType = "All Types";
+                                string notesSummary = log.Notes;
+                                var notesParts = log.Notes.Split(',');
+
+                                if (notesParts.Length >= 4 && notesParts[3].Contains("Pension Type:"))
+                                {
+                                    var typePart = notesParts[3].Split(':');
+                                    if (typePart.Length >= 2)
+                                    {
+                                        pensionType = typePart[1].Trim();
+                                        // Create a cleaner summary without the pension type part
+                                        notesSummary = string.Join(",", notesParts.Take(3));
+                                    }
+                                }
+                                else if (notesParts.Length >= 1)
+                                {
+                                    // Try to find pension type elsewhere in notes
+                                    foreach (var part in notesParts)
+                                    {
+                                        if (part.Contains("Pension Type:"))
+                                        {
+                                            var typePart = part.Split(':');
+                                            if (typePart.Length >= 2)
+                                            {
+                                                pensionType = typePart[1].Trim();
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+
                                 <tr>
                                     <td>
                                         <strong>@log.Month</strong>
                                     </td>
                                     <td>
-                                        <span class="badge badge-secondary" style="background-color: #6c757d !important; color: white !important;">@log.Year</span>
+                                        <span class="badge badge-secondary">@log.Year</span>
                                     </td>
                                     <td>@log.CreatedAt.ToString("MMM dd, yyyy HH:mm")</td>
                                     <td>
-                                        <small class="text-muted">@log.Notes</small>
+                                        @if (pensionType != "All Types")
+                                        {
+                                            <span class="badge badge-info">@pensionType</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">All Types</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">@notesSummary</small>
+                                        <br>
+                                        <small class="text-muted">
+                                            <i class="fas fa-file-alt mr-1"></i>
+                                            @if (!string.IsNullOrEmpty(log.FilePath))
+                                            {
+                                                <span class="text-success">File saved</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-danger">No file</span>
+                                            }
+                                        </small>
                                     </td>
                                     <td>
                                         @if (!string.IsNullOrEmpty(log.FilePath))
                                         {
-                                            <a href="@Url.Action("DownloadPensionLog", "Dues", new { month = log.Month, year = log.Year })"
-                                               class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-download mr-1"></i>Download CSV
-                                            </a>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="@Url.Action("DownloadPensionLog", "Dues", new { month = log.Month, year = log.Year })"
+                                                   class="btn btn-outline-primary"
+                                                   title="Download CSV File">
+                                                    <i class="fas fa-download mr-1"></i>Download
+                                                </a>
+                                                <button class="btn btn-outline-info ml-1"
+                                                        onclick="viewLogDetails('@log.Month', @log.Year)"
+                                                        title="View Log Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
                                         }
                                         else
                                         {
@@ -302,14 +432,17 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
-            $('#pensionLogsTable').DataTable({
-                "order": [[2, "desc"]], // Sort by Saved Date descending
-                "pageLength": 10,
-                "language": {
-                    "emptyTable": "No pension logs available",
-                    "search": "Search pension logs:"
-                }
-            });
+            // Initialize DataTable if table exists
+            if ($('#pensionLogsTable').length) {
+                $('#pensionLogsTable').DataTable({
+                    "order": [[2, "desc"]],
+                    "pageLength": 10,
+                    "language": {
+                        "emptyTable": "No pension logs available",
+                        "search": "Search pension logs:"
+                    }
+                });
+            }
         });
 
         // Export Filtered Pension CSV
@@ -331,6 +464,17 @@
                 '&toYear=' + toYear;
 
             window.location.href = url;
+        }
+
+        // View Log Details
+        function viewLogDetails(month, year) {
+            // In a real implementation, this would open a modal with detailed log information
+            alert('Log details for ' + month + ' ' + year + ':\n\n' +
+                  'Detailed information would be displayed here including:\n' +
+                  '- Complete notes\n' +
+                  '- File information\n' +
+                  '- Pension type breakdown\n' +
+                  '- Claim statistics');
         }
     </script>
 }

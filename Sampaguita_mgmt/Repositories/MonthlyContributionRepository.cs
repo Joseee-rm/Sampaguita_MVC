@@ -17,7 +17,6 @@ namespace SeniorManagement.Repositories
             _dbHelper = dbHelper;
         }
 
-        // Existing Methods (unchanged)
         public async Task<List<MonthlyContribution>> GetMonthlyContributionsAsync(int month, int year)
         {
             var contributions = new List<MonthlyContribution>();
@@ -268,7 +267,8 @@ namespace SeniorManagement.Repositories
 
                 string query = @"
                     SELECT mc.Id, mc.SeniorId, mc.Month, mc.Year, mc.IsPaid, mc.PaidDate,
-                           s.FirstName, s.LastName, s.MiddleInitial, s.Zone, s.Status
+                           s.FirstName, s.LastName, s.MiddleInitial, s.Zone, s.Status,
+                           s.SeniorId as SCCN
                     FROM monthly_contributions mc
                     JOIN seniors s ON mc.SeniorId = s.Id
                     WHERE mc.Month = @Month AND mc.Year = @Year
@@ -306,9 +306,9 @@ namespace SeniorManagement.Repositories
             return contributions;
         }
 
-        // ==================== PENSION METHODS ====================
+        // ==================== UPDATED PENSION METHODS ====================
 
-        public async Task<List<PensionContribution>> GetMonthlyPensionsAsync(int month, int year)
+        public async Task<List<PensionContribution>> GetMonthlyPensionsAsync(int month, int year, string pensionType = null)
         {
             var pensions = new List<PensionContribution>();
 
@@ -328,23 +328,45 @@ namespace SeniorManagement.Repositories
                         pc.IsClaimed,
                         pc.ClaimedDate,
                         pc.CreatedAt,
-                        CONCAT(s.FirstName, ' ', s.LastName) as FullName,
+                        CONCAT(s.LastName, ', ', s.FirstName, ' ', COALESCE(s.MiddleInitial, '')) as FullName,
                         s.FirstName,
                         s.LastName,
                         s.MiddleInitial,
                         s.Zone,
-                        s.Status
+                        s.Status,
+                        COALESCE(s.PensionType, '') as PensionType,
+                        COALESCE(s.Age, 0) as Age,
+                        s.SeniorId as SCCN
                     FROM pension_contributions pc
                     INNER JOIN seniors s ON pc.SeniorId = s.Id
                     WHERE pc.Month = @Month 
                         AND pc.Year = @Year
-                        AND s.Status = 'Active'
-                    ORDER BY s.LastName, s.FirstName";
+                        AND s.Status = 'Active'";
+
+                // Add pension type filter if specified
+                if (!string.IsNullOrEmpty(pensionType))
+                {
+                    if (pensionType == "No Pension")
+                    {
+                        query += " AND (s.PensionType IS NULL OR s.PensionType = '')";
+                    }
+                    else
+                    {
+                        query += " AND s.PensionType = @PensionType";
+                    }
+                }
+
+                query += " ORDER BY s.LastName, s.FirstName";
 
                 using (var cmd = new MySqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@Month", month);
                     cmd.Parameters.AddWithValue("@Year", year);
+
+                    if (!string.IsNullOrEmpty(pensionType) && pensionType != "No Pension")
+                    {
+                        cmd.Parameters.AddWithValue("@PensionType", pensionType);
+                    }
 
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -364,7 +386,95 @@ namespace SeniorManagement.Repositories
                                 MiddleInitial = reader["MiddleInitial"]?.ToString() ?? "",
                                 Zone = reader.GetInt32("Zone"),
                                 Status = reader.GetString("Status"),
-                                FullName = reader.GetString("FullName")
+                                PensionType = reader["PensionType"]?.ToString() ?? "",
+                                Age = reader.GetInt32("Age"),
+                                FullName = reader.GetString("FullName").Trim()
+                            });
+                        }
+                    }
+                }
+            }
+
+            return pensions;
+        }
+
+        public async Task<List<PensionContribution>> GetPensionsForExportAsync(int month, int year, string pensionType = null)
+        {
+            var pensions = new List<PensionContribution>();
+
+            using (var conn = _dbHelper.GetConnection())
+            {
+                await conn.OpenAsync();
+
+                string query = @"
+                    SELECT 
+                        pc.Id,
+                        pc.SeniorId,
+                        pc.Month,
+                        pc.Year,
+                        pc.IsClaimed,
+                        pc.ClaimedDate,
+                        pc.CreatedAt,
+                        CONCAT(s.LastName, ', ', s.FirstName, ' ', COALESCE(s.MiddleInitial, '')) as FullName,
+                        s.FirstName,
+                        s.LastName,
+                        s.MiddleInitial,
+                        s.Zone,
+                        s.Status,
+                        COALESCE(s.PensionType, '') as PensionType,
+                        COALESCE(s.Age, 0) as Age,
+                        s.SeniorId as SCCN
+                    FROM pension_contributions pc
+                    INNER JOIN seniors s ON pc.SeniorId = s.Id
+                    WHERE pc.Month = @Month 
+                        AND pc.Year = @Year";
+
+                // Add pension type filter if specified
+                if (!string.IsNullOrEmpty(pensionType))
+                {
+                    if (pensionType == "No Pension")
+                    {
+                        query += " AND (s.PensionType IS NULL OR s.PensionType = '')";
+                    }
+                    else
+                    {
+                        query += " AND s.PensionType = @PensionType";
+                    }
+                }
+
+                query += " ORDER BY s.Zone, s.LastName, s.FirstName";
+
+                using (var cmd = new MySqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Month", month);
+                    cmd.Parameters.AddWithValue("@Year", year);
+
+                    if (!string.IsNullOrEmpty(pensionType) && pensionType != "No Pension")
+                    {
+                        cmd.Parameters.AddWithValue("@PensionType", pensionType);
+                    }
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            pensions.Add(new PensionContribution
+                            {
+                                Id = reader.GetInt32("Id"),
+                                SeniorId = reader.GetInt32("SeniorId"),
+                                Month = reader.GetInt32("Month"),
+                                Year = reader.GetInt32("Year"),
+                                IsClaimed = reader.GetBoolean("IsClaimed"),
+                                ClaimedDate = reader.IsDBNull("ClaimedDate") ? null : reader.GetDateTime("ClaimedDate"),
+                                CreatedAt = reader.GetDateTime("CreatedAt"),
+                                FirstName = reader.GetString("FirstName"),
+                                LastName = reader.GetString("LastName"),
+                                MiddleInitial = reader["MiddleInitial"]?.ToString() ?? "",
+                                Zone = reader.GetInt32("Zone"),
+                                Status = reader.GetString("Status"),
+                                PensionType = reader["PensionType"]?.ToString() ?? "",
+                                Age = reader.GetInt32("Age"),
+                                FullName = reader.GetString("FullName").Trim()
                             });
                         }
                     }
@@ -395,68 +505,6 @@ namespace SeniorManagement.Repositories
                     return await cmd.ExecuteNonQueryAsync() > 0;
                 }
             }
-        }
-
-        public async Task<List<PensionContribution>> GetPensionsForExportAsync(int month, int year)
-        {
-            var pensions = new List<PensionContribution>();
-
-            using (var conn = _dbHelper.GetConnection())
-            {
-                await conn.OpenAsync();
-
-                string query = @"
-                    SELECT 
-                        pc.Id,
-                        pc.SeniorId,
-                        pc.Month,
-                        pc.Year,
-                        pc.IsClaimed,
-                        pc.ClaimedDate,
-                        pc.CreatedAt,
-                        CONCAT(s.FirstName, ' ', s.LastName) as FullName,
-                        s.FirstName,
-                        s.LastName,
-                        s.MiddleInitial,
-                        s.Zone,
-                        s.Status
-                    FROM pension_contributions pc
-                    INNER JOIN seniors s ON pc.SeniorId = s.Id
-                    WHERE pc.Month = @Month 
-                        AND pc.Year = @Year
-                    ORDER BY s.LastName, s.FirstName";
-
-                using (var cmd = new MySqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Month", month);
-                    cmd.Parameters.AddWithValue("@Year", year);
-
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            pensions.Add(new PensionContribution
-                            {
-                                Id = reader.GetInt32("Id"),
-                                SeniorId = reader.GetInt32("SeniorId"),
-                                Month = reader.GetInt32("Month"),
-                                Year = reader.GetInt32("Year"),
-                                IsClaimed = reader.GetBoolean("IsClaimed"),
-                                ClaimedDate = reader.IsDBNull("ClaimedDate") ? null : reader.GetDateTime("ClaimedDate"),
-                                CreatedAt = reader.GetDateTime("CreatedAt"),
-                                FirstName = reader.GetString("FirstName"),
-                                LastName = reader.GetString("LastName"),
-                                MiddleInitial = reader["MiddleInitial"]?.ToString() ?? "",
-                                Zone = reader.GetInt32("Zone"),
-                                Status = reader.GetString("Status"),
-                                FullName = reader.GetString("FullName")
-                            });
-                        }
-                    }
-                }
-            }
-
-            return pensions;
         }
 
         public async Task<PensionLog> SavePensionLogAsync(string month, int year, string filePath, string notes)
@@ -610,31 +658,72 @@ namespace SeniorManagement.Repositories
             }
         }
 
-        // Helper method to create pension entries
-        private async Task<int> CreateMonthlyPensionEntriesAsync(int month, int year)
+        public async Task<List<string>> GetDistinctPensionTypesAsync()
+        {
+            var pensionTypes = new List<string>();
+
+            using (var conn = _dbHelper.GetConnection())
+            {
+                await conn.OpenAsync();
+
+                string query = @"
+                    SELECT DISTINCT 
+                        CASE 
+                            WHEN PensionType IS NULL OR PensionType = '' THEN 'No Pension'
+                            ELSE PensionType 
+                        END as PensionType
+                    FROM seniors 
+                    WHERE Status = 'Active'
+                    ORDER BY 
+                        CASE 
+                            WHEN PensionType IS NULL OR PensionType = '' THEN 1
+                            ELSE 0 
+                        END, 
+                        PensionType";
+
+                using (var cmd = new MySqlCommand(query, conn))
+                {
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            pensionTypes.Add(reader.GetString("PensionType"));
+                        }
+                    }
+                }
+            }
+
+            // Add common pension types if they don't exist
+            var commonTypes = new List<string>
+            {
+                "Social Security",
+                "Defined Benefit Plan",
+                "Annuity",
+                "Government/Military Pension",
+                "Defined Contribution Plan (401k/403b)",
+                "IRA (Traditional/Roth)"
+            };
+
+            foreach (var type in commonTypes)
+            {
+                if (!pensionTypes.Contains(type))
+                {
+                    pensionTypes.Add(type);
+                }
+            }
+
+            return pensionTypes;
+        }
+
+        public async Task<int> CreateMonthlyPensionEntriesAsync(int month, int year)
         {
             using (var conn = _dbHelper.GetConnection())
             {
                 await conn.OpenAsync();
 
-                // First, check if we have active seniors
-                string checkActiveSeniors = "SELECT COUNT(*) FROM seniors WHERE Status = 'Active'";
-                int activeSeniorsCount;
-
-                using (var checkCmd = new MySqlCommand(checkActiveSeniors, conn))
-                {
-                    activeSeniorsCount = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
-                }
-
-                if (activeSeniorsCount == 0)
-                {
-                    return 0; // No active seniors to create entries for
-                }
-
-                // Create pension entries for all active seniors
-                string insertQuery = @"
-                    INSERT INTO pension_contributions (SeniorId, Month, Year, IsClaimed)
-                    SELECT s.Id, @Month, @Year, FALSE
+                // Get active seniors with pension type
+                string getActiveSeniorsQuery = @"
+                    SELECT s.Id, s.PensionType
                     FROM seniors s
                     WHERE s.Status = 'Active'
                     AND NOT EXISTS (
@@ -645,14 +734,121 @@ namespace SeniorManagement.Repositories
                         AND pc.Year = @Year
                     )";
 
-                using (var cmd = new MySqlCommand(insertQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Month", month);
-                    cmd.Parameters.AddWithValue("@Year", year);
+                var seniorsToAdd = new List<(int SeniorId, string PensionType)>();
 
-                    return await cmd.ExecuteNonQueryAsync();
+                using (var getCmd = new MySqlCommand(getActiveSeniorsQuery, conn))
+                {
+                    getCmd.Parameters.AddWithValue("@Month", month);
+                    getCmd.Parameters.AddWithValue("@Year", year);
+
+                    using (var reader = await getCmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            int seniorId = reader.GetInt32("Id");
+                            string pensionType = reader.IsDBNull(reader.GetOrdinal("PensionType"))
+                                ? ""
+                                : reader.GetString("PensionType");
+
+                            seniorsToAdd.Add((seniorId, pensionType));
+                        }
+                    }
+                }
+
+                // Insert pension entries
+                if (seniorsToAdd.Count > 0)
+                {
+                    string insertQuery = @"
+                        INSERT INTO pension_contributions (SeniorId, Month, Year, IsClaimed)
+                        VALUES (@SeniorId, @Month, @Year, FALSE)";
+
+                    int rowsInserted = 0;
+
+                    foreach (var senior in seniorsToAdd)
+                    {
+                        using (var insertCmd = new MySqlCommand(insertQuery, conn))
+                        {
+                            insertCmd.Parameters.AddWithValue("@SeniorId", senior.SeniorId);
+                            insertCmd.Parameters.AddWithValue("@Month", month);
+                            insertCmd.Parameters.AddWithValue("@Year", year);
+
+                            rowsInserted += await insertCmd.ExecuteNonQueryAsync();
+                        }
+                    }
+
+                    return rowsInserted;
                 }
             }
+
+            return 0;
+        }
+
+        public async Task<PensionContribution> GetPensionContributionByIdAsync(int id)
+        {
+            using (var conn = _dbHelper.GetConnection())
+            {
+                await conn.OpenAsync();
+
+                string query = @"
+                    SELECT 
+                        pc.Id,
+                        pc.SeniorId,
+                        pc.Month,
+                        pc.Year,
+                        pc.IsClaimed,
+                        pc.ClaimedDate,
+                        pc.CreatedAt,
+                        CONCAT(s.LastName, ', ', s.FirstName, ' ', COALESCE(s.MiddleInitial, '')) as FullName,
+                        s.FirstName,
+                        s.LastName,
+                        s.MiddleInitial,
+                        s.Zone,
+                        s.Status,
+                        COALESCE(s.PensionType, '') as PensionType,
+                        COALESCE(s.Age, 0) as Age,
+                        s.SeniorId as SCCN
+                    FROM pension_contributions pc
+                    INNER JOIN seniors s ON pc.SeniorId = s.Id
+                    WHERE pc.Id = @Id";
+
+                using (var cmd = new MySqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", id);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new PensionContribution
+                            {
+                                Id = reader.GetInt32("Id"),
+                                SeniorId = reader.GetInt32("SeniorId"),
+                                Month = reader.GetInt32("Month"),
+                                Year = reader.GetInt32("Year"),
+                                IsClaimed = reader.GetBoolean("IsClaimed"),
+                                ClaimedDate = reader.IsDBNull("ClaimedDate") ? null : reader.GetDateTime("ClaimedDate"),
+                                CreatedAt = reader.GetDateTime("CreatedAt"),
+                                FirstName = reader.GetString("FirstName"),
+                                LastName = reader.GetString("LastName"),
+                                MiddleInitial = reader["MiddleInitial"]?.ToString() ?? "",
+                                Zone = reader.GetInt32("Zone"),
+                                Status = reader.GetString("Status"),
+                                PensionType = reader["PensionType"]?.ToString() ?? "",
+                                Age = reader.GetInt32("Age"),
+                                FullName = reader.GetString("FullName").Trim()
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        // Helper method for creating pension entries (backwards compatibility)
+        private async Task<int> CreateMonthlyPensionEntriesPrivateAsync(int month, int year)
+        {
+            return await CreateMonthlyPensionEntriesAsync(month, year);
         }
     }
 }

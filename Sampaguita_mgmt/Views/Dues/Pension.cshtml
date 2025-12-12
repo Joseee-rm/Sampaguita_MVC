@@ -1,17 +1,58 @@
 ﻿@model List<SeniorManagement.Models.PensionContribution>
 @using System.Globalization
 @{
-    ViewData["Title"] = "Monthly Pension";
-    var currentMonth = DateTime.Now.Month;
-    var currentYear = DateTime.Now.Year;
-    var selectedMonth = ViewBag.Month != null ? (int)ViewBag.Month : currentMonth;
-    var selectedYear = ViewBag.Year != null ? (int)ViewBag.Year : currentYear;
-    var monthName = ViewBag.MonthName != null ? ViewBag.MonthName : CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(selectedMonth);
-    var hasLog = ViewBag.HasLog != null && (bool)ViewBag.HasLog;
+    ViewData["Title"] = "";
+
+    int currentMonth = DateTime.Now.Month;
+    int currentYear = DateTime.Now.Year;
+    int selectedMonth = ViewBag.Month != null ? (int)ViewBag.Month : currentMonth;
+    int selectedYear = ViewBag.Year != null ? (int)ViewBag.Year : currentYear;
+    string monthName = ViewBag.MonthName != null ? (string)ViewBag.MonthName : CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(selectedMonth);
+    bool hasLog = ViewBag.HasLog != null && (bool)ViewBag.HasLog;
+    List<string> pensionTypes = ViewBag.PensionTypes as List<string> ?? new List<string>();
+    string selectedPensionType = ViewBag.SelectedPensionType as string;
+
+    // Calculate statistics
+    int claimedCount = ViewBag.ClaimedCount != null ? (int)ViewBag.ClaimedCount : 0;
+    int unclaimedCount = ViewBag.UnclaimedCount != null ? (int)ViewBag.UnclaimedCount : 0;
+    int totalPensionAmount = ViewBag.TotalPensionAmount != null ? (int)ViewBag.TotalPensionAmount : 0;
+    int claimedAmount = ViewBag.ClaimedAmount != null ? (int)ViewBag.ClaimedAmount : 0;
+    int newPensionSeniorsCount = ViewBag.NewPensionSeniorsCount != null ? (int)ViewBag.NewPensionSeniorsCount : 0;
+
+    // Group by pension type for statistics
+    var pensionTypeStats = Model
+        .GroupBy(p => string.IsNullOrEmpty(p.PensionType) ? "No Pension" : p.PensionType)
+        .Select(g => new
+        {
+            Type = g.Key,
+            Total = g.Count(),
+            Claimed = g.Count(p => p.IsClaimed),
+            Unclaimed = g.Count(p => !p.IsClaimed)
+        })
+        .ToList();
+
+    // Define frequency categories
+    var monthlyPensionTypes = new List<string>
+    {
+        "Social Security",
+        "Defined Benefit Plan",
+        "Annuity",
+        "Government/Military Pension"
+    };
+
+    var flexiblePensionTypes = new List<string>
+    {
+        "Defined Contribution Plan (401k/403b)",
+        "IRA (Traditional/Roth)"
+    };
+
+    // Calculate frequency-based statistics
+    var monthlyPensions = Model.Where(p => monthlyPensionTypes.Contains(p.PensionType)).ToList();
+    var flexiblePensions = Model.Where(p => flexiblePensionTypes.Contains(p.PensionType)).ToList();
+    var rmdEligible = Model.Where(p => p.Age >= 73 && flexiblePensionTypes.Contains(p.PensionType)).ToList();
 }
 
 <style>
-    /* Fix for table text visibility */
     .table {
         color: #333333 !important;
     }
@@ -26,7 +67,6 @@
             vertical-align: middle;
         }
 
-    /* Badge text contrast fixes */
     .badge-secondary {
         background-color: #6c757d !important;
         color: white !important;
@@ -63,7 +103,6 @@
         border: none;
     }
 
-    /* Button styles */
     .btn-success {
         background-color: #1cc88a !important;
         color: white !important;
@@ -92,12 +131,10 @@
         border: none;
     }
 
-    /* Table header background */
     .bg-light {
         background-color: #f8f9fc !important;
     }
 
-    /* Card styling */
     .card {
         border: 1px solid #e3e6f0;
     }
@@ -107,7 +144,6 @@
         border-bottom: 1px solid #e3e6f0;
     }
 
-    /* Text colors */
     .text-muted {
         color: #6c757d !important;
     }
@@ -116,9 +152,44 @@
         color: #5a5c69 !important;
     }
 
-    /* Fix for light text on light background */
     .table-hover tbody tr:hover {
         background-color: rgba(0,0,0,.03);
+    }
+
+    .pension-type-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .frequency-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+        margin-left: 0.25rem;
+    }
+
+    .frequency-monthly {
+        background-color: #1cc88a !important;
+        color: white !important;
+    }
+
+    .frequency-flexible {
+        background-color: #36b9cc !important;
+        color: white !important;
+    }
+
+    .rmd-warning {
+        background-color: #fff3cd;
+        border-left: 4px solid #f6c23e;
+        padding: 8px;
+        border-radius: 4px;
+        margin: 5px 0;
+    }
+
+    .no-pension-badge {
+        background-color: #6c757d !important;
+        color: white !important;
     }
 </style>
 
@@ -127,6 +198,10 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0 text-gray-800">
             <i class="fas fa-money-bill-wave text-info mr-2"></i>Monthly Pension
+            @if (!string.IsNullOrEmpty(selectedPensionType))
+            {
+                <span class="badge badge-primary ml-2">@selectedPensionType</span>
+            }
         </h1>
         <div class="btn-group">
             <a href="@Url.Action("Index", "Dues")" class="btn btn-outline-primary">
@@ -134,6 +209,10 @@
             </a>
             <a href="@Url.Action("ViewPensionLogs", "Dues")" class="btn btn-outline-primary ml-2">
                 <i class="fas fa-history mr-2"></i>Pension Logs
+            </a>
+            <a href="@Url.Action("PensionFrequencyDashboard", "Dues", new { month = selectedMonth, year = selectedYear })"
+               class="btn btn-outline-info ml-2">
+                <i class="fas fa-chart-pie mr-2"></i>Frequency Dashboard
             </a>
         </div>
     </div>
@@ -150,12 +229,25 @@
     }
 
     <!-- New Pension Seniors Alert -->
-    @if (ViewBag.NewPensionSeniorsCount != null && ViewBag.NewPensionSeniorsCount > 0)
+    @if (newPensionSeniorsCount > 0)
     {
         <div class="alert alert-info alert-dismissible fade show" role="alert">
             <i class="fas fa-info-circle mr-2"></i>
-            <strong>@ViewBag.NewPensionSeniorsCount new senior(s)</strong> have been added to the pension system.
+            <strong>@newPensionSeniorsCount new senior(s)</strong> have been added to the pension system.
             They have been automatically included in this month's pension.
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    <!-- RMD Warning for Age 73+ -->
+    @if (rmdEligible.Any())
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <strong>RMD Alert:</strong> @rmdEligible.Count senior(s) age 73+ with flexible pensions require Required Minimum Distributions (RMDs).
+            <a href="@Url.Action("PensionFrequencyDashboard", "Dues", new { month = selectedMonth, year = selectedYear })" class="alert-link">View RMD List</a>
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
@@ -173,6 +265,16 @@
                                 Total Pensioners
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count</div>
+                            <div class="text-xs text-muted mt-1">
+                                @if (!string.IsNullOrEmpty(selectedPensionType))
+                                {
+                                    <span>Filtered by: @selectedPensionType</span>
+                                }
+                                else
+                                {
+                                    <span>All pension types</span>
+                                }
+                            </div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-users fa-2x text-gray-300"></i>
@@ -190,7 +292,14 @@
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
                                 Claimed
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@(ViewBag.ClaimedCount != null ? ViewBag.ClaimedCount : 0)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@claimedCount</div>
+                            <div class="text-xs text-muted mt-1">
+                                @if (Model.Count > 0)
+                                {
+                                    double claimRate = ((double)claimedCount / Model.Count * 100);
+                                    <span>@claimRate.ToString("0.0")% claim rate</span>
+                                }
+                            </div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-check-circle fa-2x text-gray-300"></i>
@@ -208,7 +317,14 @@
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                                 Not Claimed
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@(ViewBag.UnclaimedCount != null ? ViewBag.UnclaimedCount : 0)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@unclaimedCount</div>
+                            <div class="text-xs text-muted mt-1">
+                                @if (Model.Count > 0)
+                                {
+                                    double unclaimedRate = ((double)unclaimedCount / Model.Count * 100);
+                                    <span>@unclaimedRate.ToString("0.0")% unclaimed</span>
+                                }
+                            </div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-times-circle fa-2x text-gray-300"></i>
@@ -226,8 +342,13 @@
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                                 Claimed Amount
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">₱@(ViewBag.ClaimedAmount != null ? ViewBag.ClaimedAmount : 0)</div>
-                            <div class="text-xs text-muted">Total: ₱@(ViewBag.TotalPensionAmount != null ? ViewBag.TotalPensionAmount : 0)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">₱@claimedAmount</div>
+                            <div class="text-xs text-muted">
+                                Total: ₱@totalPensionAmount
+                            </div>
+                            <div class="text-xs text-muted mt-1">
+                                @monthlyPensions.Count monthly / @flexiblePensions.Count flexible
+                            </div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
@@ -262,21 +383,32 @@
         </div>
         <div class="card-body">
             <form method="get" class="row g-3">
-                <div class="col-md-5">
+                <div class="col-md-3">
                     <label class="form-label">Month</label>
-                    <select name="month" class="form-control" onchange="this.form.submit()">
+                    <select name="month" class="form-control">
                         @for (int m = 1; m <= 12; m++)
                         {
-                            var isSelected = m == selectedMonth;
+                            bool isSelected = m == selectedMonth;
                             <option value="@m" selected="@isSelected">
                                 @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)
                             </option>
                         }
                     </select>
                 </div>
-                <div class="col-md-5">
+                <div class="col-md-3">
                     <label class="form-label">Year</label>
-                    <input type="number" name="year" value="@selectedYear" class="form-control" onchange="this.form.submit()" min="2000" max="2100" />
+                    <input type="number" name="year" value="@selectedYear" class="form-control" min="2000" max="2100" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Pension Type</label>
+                    <select name="pensionType" class="form-control">
+                        <option value="">All Pension Types</option>
+                        @foreach (var type in pensionTypes)
+                        {
+                            bool isSelected = type == selectedPensionType;
+                            <option value="@type" selected="@isSelected">@type</option>
+                        }
+                    </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100">
@@ -284,133 +416,342 @@
                     </button>
                 </div>
             </form>
+
+            <!-- Pension Type Stats -->
+            @if (pensionTypeStats.Any())
+            {
+                <div class="mt-3">
+                    <h6 class="font-weight-bold text-muted mb-2">Pension Type Breakdown:</h6>
+                    <div class="d-flex flex-wrap">
+                        @foreach (var stat in pensionTypeStats)
+                        {
+                            <div class="mr-3 mb-2">
+                                @if (stat.Type == "No Pension")
+                                {
+                                    <span class="badge no-pension-badge pension-type-badge" title="Seniors without pensions cannot be claimed">
+                                        @stat.Type: @stat.Total (@stat.Claimed marked as claimed*)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-info pension-type-badge">
+                                        @stat.Type: @stat.Total (@stat.Claimed claimed)
+                                    </span>
+                                }
+                            </div>
+                        }
+                    </div>
+                    @if (pensionTypeStats.Any(s => s.Type == "No Pension"))
+                    {
+                        <small class="text-muted mt-1">
+                            <i class="fas fa-info-circle"></i> *"No Pension" claims are from legacy data and cannot be modified.
+                        </small>
+                    }
+                </div>
+            }
+
+            <!-- Frequency Summary -->
+            <div class="mt-3">
+                <h6 class="font-weight-bold text-muted mb-2">Frequency Summary:</h6>
+                <div class="d-flex flex-wrap">
+                    <div class="mr-3 mb-2">
+                        <span class="badge frequency-badge frequency-monthly">
+                            <i class="fas fa-calendar-check mr-1"></i>Monthly (12x/year): @monthlyPensions.Count
+                        </span>
+                    </div>
+                    <div class="mr-3 mb-2">
+                        <span class="badge frequency-badge frequency-flexible">
+                            <i class="fas fa-user-clock mr-1"></i>Flexible: @flexiblePensions.Count
+                        </span>
+                    </div>
+                    @if (rmdEligible.Any())
+                    {
+                        <div class="mr-3 mb-2">
+                            <span class="badge badge-warning">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>RMD Required: @rmdEligible.Count
+                            </span>
+                        </div>
+                    }
+                    <div class="mr-3 mb-2">
+                        <span class="badge no-pension-badge">
+                            <i class="fas fa-ban mr-1"></i>No Pension: @Model.Count(p => string.IsNullOrEmpty(p.PensionType) || p.PensionType == "No Pension")
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Pension Table -->
     <div class="card shadow">
-        <div class="card-header py-3">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-primary">
                 Pension for @monthName @selectedYear
-                <span class="badge badge-primary ml-2">@Model.Count pensioners</span>
+                @if (!string.IsNullOrEmpty(selectedPensionType))
+                {
+                    <span class="badge badge-primary ml-2">@selectedPensionType</span>
+                }
+                <span class="badge badge-secondary ml-2">@Model.Count pensioners</span>
             </h6>
+            <div class="text-muted">
+                <small>
+                    <i class="fas fa-chart-pie mr-1"></i>
+                    @pensionTypeStats.Count pension type(s)
+                </small>
+            </div>
         </div>
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="pensionTable" width="100%" cellspacing="0" style="color: #333333 !important;">
-                    <thead class="bg-light" style="color: #333333 !important;">
-                        <tr>
-                            <th style="color: #333333 !important;">#</th>
-                            <th style="color: #333333 !important;">Senior Name</th>
-                            <th style="color: #333333 !important;">Zone</th>
-                            <th style="color: #333333 !important;">Senior Status</th>
-                            <th style="color: #333333 !important;">Claim Status</th>
-                            <th style="color: #333333 !important;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody style="color: #333333 !important;">
-                        @if (Model.Any())
-                        {
-                            var counter = 1;
-                            foreach (var item in Model)
-                            {
-                                <tr data-id="@item.Id" style="color: #333333 !important;">
-                                    <td style="color: #333333 !important;">@counter</td>
-                                    <td style="color: #333333 !important; font-weight: 500;">@item.FullName</td>
-                                    <td style="color: #333333 !important;">
-                                        <span class="badge badge-secondary" style="background-color: #6c757d !important; color: white !important;">Zone @item.Zone</span>
-                                    </td>
-                                    <td style="color: #333333 !important;">
-                                        @if (item.Status == "Active")
-                                        {
-                                            <span class="badge badge-success" style="background-color: #1cc88a !important; color: white !important;">@item.Status</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge badge-warning" style="background-color: #f6c23e !important; color: #333333 !important;">@item.Status</span>
-                                        }
-                                    </td>
-                                    <td style="color: #333333 !important;">
-                                        @if (item.IsClaimed)
-                                        {
-                                            <span class="badge badge-success" style="background-color: #1cc88a !important; color: white !important;">
-                                                <i class="fas fa-check mr-1"></i>CLAIMED
-                                            </span>
-                                            <br />
-                                            <small class="text-muted" style="color: #6c757d !important;">@(item.ClaimedDate?.ToString("MMM dd, yyyy"))</small>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge badge-danger" style="background-color: #e74a3b !important; color: white !important;">
-                                                <i class="fas fa-times mr-1"></i>NOT CLAIMED
-                                            </span>
-                                        }
-                                    </td>
-                                    <td style="color: #333333 !important;">
-                                        @if (item.Status == "Active")
-                                        {
-                                            // For ACTIVE seniors only
-                                            if (!item.IsClaimed)
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="pensionTable" width="100%" cellspacing="0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Senior Name</th>
+                                <th>Zone</th>
+                                <th>Age</th>
+                                <th>Pension Type & Frequency</th>
+                                <th>Senior Status</th>
+                                <th>Claim Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                int counter = 1;
+                                foreach (var item in Model)
+                                {
+                                    bool isMonthly = monthlyPensionTypes.Contains(item.PensionType);
+                                    bool isFlexible = flexiblePensionTypes.Contains(item.PensionType);
+                                    bool requiresRmd = item.Age >= 73 && isFlexible;
+                                    bool hasPension = !string.IsNullOrEmpty(item.PensionType) && item.PensionType != "No Pension";
+
+                                    <tr data-id="@item.Id" @(requiresRmd ? "class=table-warning" : "")>
+                                        <td>@counter</td>
+                                        <td style="font-weight: 500;">
+                                            @item.FullName
+                                            @if (requiresRmd)
                                             {
-                                                // Show "Mark Claimed" button for unclaimed active seniors
-                                                <button class="btn btn-sm btn-success toggle-pension"
-                                                        data-id="@item.Id"
-                                                        data-claimed="false"
-                                                        style="background-color: #1cc88a !important; color: white !important; border: none; font-weight: 500; padding: 0.25rem 0.5rem;">
-                                                    <i class="fas fa-check mr-1"></i>Mark Claimed
-                                                </button>
+                                                <br>
+                                                <small class="text-warning">
+                                                    <i class="fas fa-exclamation-triangle mr-1"></i>RMD Required (Age @item.Age)
+                                                </small>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-secondary">Zone @item.Zone</span>
+                                        </td>
+                                        <td>@item.Age</td>
+                                        <td>
+                                            @if (hasPension)
+                                            {
+                                                <div class="d-flex flex-column">
+                                                    <span class="badge badge-info mb-1">
+                                                        @item.PensionType
+                                                    </span>
+                                                    @if (isMonthly)
+                                                    {
+                                                        <span class="badge frequency-badge frequency-monthly">
+                                                            <i class="fas fa-calendar-check mr-1"></i>Monthly (Required)
+                                                        </span>
+                                                    }
+                                                    else if (isFlexible)
+                                                    {
+                                                        <span class="badge frequency-badge frequency-flexible">
+                                                            <i class="fas fa-user-clock mr-1"></i>Flexible (Optional)
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge badge-secondary">
+                                                            Other Pension Type
+                                                        </span>
+                                                    }
+                                                </div>
                                             }
                                             else
                                             {
-                                                // Show "Claimed" text for claimed active seniors (no toggle button)
-                                                <span class="text-muted">
-                                                    <i class="fas fa-check-circle text-success mr-1"></i>Claimed
-                                                </span>
+                                                <div class="d-flex flex-column">
+                                                    <span class="badge no-pension-badge">
+                                                        No Pension
+                                                    </span>
+                                                    <small class="text-muted mt-1">
+                                                        <i class="fas fa-info-circle mr-1"></i>No pension to claim
+                                                    </small>
+                                                </div>
                                             }
-                                        }
-                                        else
-                                        {
-                                            // Show "Archived" text for Archived seniors
-                                            <span class="text-muted">Archived</span>
-                                        }
-                                    </td>
-                                </tr>
-                                counter++;
+                                        </td>
+                                        <td>
+                                            @if (item.Status == "Active")
+                                            {
+                                                <span class="badge badge-success">@item.Status</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-warning">@item.Status</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.IsClaimed)
+                                            {
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check mr-1"></i>CLAIMED
+                                                </span>
+                                                <br />
+                                                <small class="text-muted">@(item.ClaimedDate?.ToString("MMM dd, yyyy HH:mm"))</small>
+                                            }
+                                            else
+                                            {
+                                                @if (hasPension)
+                                                {
+                                                    <span class="badge badge-danger">
+                                                        <i class="fas fa-times mr-1"></i>NOT CLAIMED
+                                                    </span>
+                                                    @if (isMonthly && item.Status == "Active")
+                                                    {
+                                                        <br />
+                                                        <small class="text-danger">
+                                                            <i class="fas fa-exclamation-circle mr-1"></i>Required this month
+                                                        </small>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge no-pension-badge">
+                                                        <i class="fas fa-ban mr-1"></i>NO PENSION
+                                                    </span>
+                                                    <br />
+                                                    <small class="text-muted">Not applicable</small>
+                                                }
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.Status == "Active")
+                                            {
+                                                if (hasPension)
+                                                {
+                                                    if (!item.IsClaimed)
+                                                    {
+                                                        <button class="btn btn-sm btn-success toggle-pension"
+                                                                data-id="@item.Id"
+                                                                data-claimed="false"
+                                                                data-pension-type="@item.PensionType">
+                                                            <i class="fas fa-check mr-1"></i>
+                                                            @if (isMonthly)
+                                                            {
+                                                                <text>Mark Claimed</text>
+                                                            }
+                                                            else
+                                                            {
+                                                                <text>Record Withdrawal</text>
+                                                            }
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">
+                                                            <i class="fas fa-check-circle text-success mr-1"></i>
+                                                            @if (isMonthly)
+                                                            {
+                                                                <text>Claimed</text>
+                                                            }
+                                                            else
+                                                            {
+                                                                <text>Withdrawn</text>
+                                                            }
+                                                        </span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted" title="No pension to claim">
+                                                        <i class="fas fa-ban mr-1"></i>No Pension
+                                                    </span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Archived</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                    counter++;
+                                }
                             }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                    <p class="mb-0">
+                        @if (!string.IsNullOrEmpty(selectedPensionType))
+                        {
+                            <text>No pension records found for @monthName @selectedYear with pension type: @selectedPensionType</text>
                         }
                         else
                         {
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4" style="color: #6c757d !important;">
-                                    <i class="fas fa-info-circle fa-2x mb-3"></i>
-                                    <p class="mb-0">No pension records found for @monthName @selectedYear</p>
-                                </td>
-                            </tr>
+                            <text>No pension records found for @monthName @selectedYear</text>
                         }
-                    </tbody>
-                </table>
-            </div>
+                    </p>
+                    @if (!string.IsNullOrEmpty(selectedPensionType))
+                    {
+                        <a href="@Url.Action("Pension", "Dues", new { month = selectedMonth, year = selectedYear })" class="btn btn-outline-primary mt-3">
+                            <i class="fas fa-eye mr-1"></i>View All Pension Types
+                        </a>
+                    }
+                </div>
+            }
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        // Toggle Pension Claim Status - Only for marking as Claimed
+        $(document).ready(function() {
+            // Initialize DataTable if table exists
+            if ($('#pensionTable').length) {
+                $('#pensionTable').DataTable({
+                    "pageLength": 25,
+                    "order": [[1, "asc"]],
+                    "language": {
+                        "search": "Search pensioners:",
+                        "lengthMenu": "Show _MENU_ entries",
+                        "info": "Showing _START_ to _END_ of _TOTAL_ pensioners"
+                    }
+                });
+            }
+        });
+
+        // Toggle Pension Claim Status
         $(document).on('click', '.toggle-pension', function () {
             var button = $(this);
             var pensionId = button.data('id');
             var isClaimed = button.data('claimed') === 'true';
+            var pensionType = button.data('pension-type');
 
-            // Only allow marking as Claimed (not Unclaimed)
+            // Check if it's "No Pension" type or empty
+            if (!pensionType || pensionType === "No Pension") {
+                showAlert('This senior has no pension type assigned. Cannot claim pension.', 'warning');
+                return;
+            }
+
             if (isClaimed) {
                 showAlert('Cannot mark unclaimed. Once claimed, status cannot be changed.', 'warning');
                 return;
             }
 
-            // Show confirmation
-            if (confirm('Are you sure you want to mark this pension as CLAIMED? This action cannot be undone.')) {
-                // Show loading state
+            var actionText = pensionType.includes('Social Security') ||
+                            pensionType.includes('Defined Benefit') ||
+                            pensionType.includes('Annuity') ||
+                            pensionType.includes('Government/Military')
+                            ? 'mark as CLAIMED'
+                            : 'record a WITHDRAWAL';
+
+            if (confirm(`Are you sure you want to ${actionText} for this ${pensionType} pension? This action cannot be undone.`)) {
                 var originalHtml = button.html();
                 button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Processing...');
 
@@ -420,34 +761,7 @@
                     data: { id: pensionId },
                     success: function (response) {
                         if (response.success) {
-                            // Update the row
-                            var row = button.closest('tr');
-
-                            // Update claim status badge
-                            var currentDate = new Date();
-                            var formattedDate = currentDate.toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: '2-digit',
-                                year: 'numeric'
-                            });
-
-                            row.find('td:nth-child(5)').html(
-                                '<span class="badge badge-success" style="background-color: #1cc88a !important; color: white !important;">' +
-                                '<i class="fas fa-check mr-1"></i>CLAIMED</span><br>' +
-                                '<small class="text-muted" style="color: #6c757d !important;">' + formattedDate + '</small>'
-                            );
-
-                            // Update actions column
-                            row.find('td:nth-child(6)').html(
-                                '<span class="text-muted">' +
-                                '<i class="fas fa-check-circle text-success mr-1"></i>Claimed' +
-                                '</span>'
-                            );
-
-                            // Show success message
-                            showAlert('Pension marked as CLAIMED successfully!', 'success');
-
-                            // Reload page after 1.5 seconds to update stats
+                            showAlert(`Pension ${actionText} successfully!`, 'success');
                             setTimeout(function() {
                                 location.reload();
                             }, 1500);
@@ -469,8 +783,8 @@
             if (confirm('Are you sure you want to update the pension log for @monthName @selectedYear? This will overwrite the existing log with current data.')) {
                 var month = @selectedMonth;
                 var year = @selectedYear;
+                var pensionType = '@selectedPensionType';
 
-                // Show loading
                 var updateButton = $('button:contains("Update Log")');
                 var originalText = updateButton.html();
                 updateButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Updating...');
@@ -480,7 +794,8 @@
                     type: 'POST',
                     data: {
                         month: month,
-                        year: year
+                        year: year,
+                        pensionType: pensionType
                     },
                     success: function () {
                         showAlert('Pension log updated successfully! The page will reload.', 'success');
@@ -500,7 +815,8 @@
         function exportPensionCsv() {
             var month = @selectedMonth;
             var year = @selectedYear;
-            window.location.href = '@Url.Action("ExportPensionCsv", "Dues")?month=' + month + '&year=' + year;
+            var pensionType = '@selectedPensionType';
+            window.location.href = '@Url.Action("ExportPensionCsv", "Dues")?month=' + month + '&year=' + year + '&pensionType=' + encodeURIComponent(pensionType);
         }
 
         // Save Pension Log
@@ -508,8 +824,8 @@
             if (confirm('Are you sure you want to save a pension log for @monthName @selectedYear? This will create a permanent record that cannot be deleted.')) {
                 var month = @selectedMonth;
                 var year = @selectedYear;
+                var pensionType = '@selectedPensionType';
 
-                // Show loading
                 var saveButton = $('button:contains("Save Log")');
                 var originalText = saveButton.html();
                 saveButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving...');
@@ -519,7 +835,8 @@
                     type: 'POST',
                     data: {
                         month: month,
-                        year: year
+                        year: year,
+                        pensionType: pensionType
                     },
                     success: function () {
                         showAlert('Pension log saved successfully! The page will reload.', 'success');
@@ -539,7 +856,7 @@
         function showAlert(message, type) {
             var alertClass = 'alert-' + type;
             var alertHtml = '<div class="alert ' + alertClass + ' alert-dismissible fade show" role="alert">' +
-                message +
+                '<i class="fas fa-info-circle mr-2"></i>' + message +
                 '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
                 '<span aria-hidden="true">&times;</span>' +
                 '</button>' +
@@ -547,17 +864,9 @@
 
             $('.container-fluid').prepend(alertHtml);
 
-            // Auto-remove alert after 5 seconds
             setTimeout(function() {
                 $('.alert').alert('close');
             }, 5000);
         }
-
-        // Initialize page
-        $(document).ready(function() {
-            console.log('Monthly Pension page loaded');
-            console.log('Selected Month: @selectedMonth, Year: @selectedYear');
-            console.log('Has Log: @hasLog');
-        });
     </script>
 }

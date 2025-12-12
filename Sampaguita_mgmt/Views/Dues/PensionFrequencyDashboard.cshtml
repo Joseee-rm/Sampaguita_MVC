@@ -1,0 +1,870 @@
+﻿@model List<SeniorManagement.Models.PensionContribution>
+@using System.Globalization
+@{
+    ViewData["Title"] = "Pension Frequency Dashboard";
+
+    int currentMonth = DateTime.Now.Month;
+    int currentYear = DateTime.Now.Year;
+    int selectedMonth = ViewBag.Month != null ? (int)ViewBag.Month : currentMonth;
+    int selectedYear = ViewBag.Year != null ? (int)ViewBag.Year : currentYear;
+    string monthName = ViewBag.MonthName != null ? (string)ViewBag.MonthName : CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(selectedMonth);
+
+    // Filter out seniors without pensions for frequency dashboard
+    var pensionsWithPension = Model.Where(p => p.HasPension).ToList();
+
+    // Define pension type frequencies
+    var pensionFrequencies = new Dictionary<string, (int TimesPerYear, string Description, bool IsRequired)>
+    {
+        { "Social Security", (12, "Monthly payout (12x/year)", true) },
+        { "Defined Benefit Plan", (12, "Monthly payout (12x/year)", true) },
+        { "Annuity", (12, "Monthly payout (12x/year, typically)", true) },
+        { "Government/Military Pension", (12, "Monthly payout (12x/year)", true) },
+        { "Defined Contribution Plan (401k/403b)", (0, "Flexible withdrawals (RMDs at 73)", false) },
+        { "IRA (Traditional/Roth)", (0, "Flexible withdrawals (RMDs at 73 for Traditional)", false) }
+        // Note: "No Pension" is excluded from this dashboard
+    };
+
+    // Group pensions by type and frequency
+    var monthlyPensions = pensionsWithPension.Where(p => pensionFrequencies.ContainsKey(p.PensionType) &&
+                                          pensionFrequencies[p.PensionType].TimesPerYear == 12).ToList();
+    var flexiblePensions = pensionsWithPension.Where(p => pensionFrequencies.ContainsKey(p.PensionType) &&
+                                           pensionFrequencies[p.PensionType].TimesPerYear == 0).ToList();
+
+    // Calculate RMD eligible seniors (age 73+ with flexible pensions)
+    var rmdEligible = pensionsWithPension.Where(p =>
+        p.Age >= 73 &&
+        (p.PensionType == "Defined Contribution Plan (401k/403b)" ||
+         p.PensionType == "IRA (Traditional/Roth)")).ToList();
+
+    // Calculate statistics
+    int totalMonthlyExpected = monthlyPensions.Count * 1; // 1 claim per month for monthly pensions
+    int totalMonthlyActual = monthlyPensions.Count(p => p.IsClaimed);
+    int monthlyClaimRate = monthlyPensions.Count > 0 ? (totalMonthlyActual * 100 / monthlyPensions.Count) : 0;
+
+    // For flexible pensions, track claims differently
+    int flexibleClaimed = flexiblePensions.Count(p => p.IsClaimed);
+    int totalFlexible = flexiblePensions.Count;
+}
+
+<style>
+    .frequency-card-monthly {
+        border-left: 4px solid #1cc88a !important;
+    }
+
+    .frequency-card-flexible {
+        border-left: 4px solid #36b9cc !important;
+    }
+
+    .frequency-card-rmd {
+        border-left: 4px solid #f6c23e !important;
+    }
+
+    .frequency-badge-monthly {
+        background-color: #1cc88a !important;
+        color: white !important;
+    }
+
+    .frequency-badge-flexible {
+        background-color: #36b9cc !important;
+        color: white !important;
+    }
+
+    .frequency-badge-rmd {
+        background-color: #f6c23e !important;
+        color: #333333 !important;
+    }
+
+    .pension-type-icon {
+        font-size: 1.2rem;
+        margin-right: 8px;
+    }
+
+    .claim-progress {
+        height: 20px;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .rmd-alert {
+        background-color: #fff3cd;
+        border-left: 4px solid #f6c23e;
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+    }
+
+    .frequency-legend {
+        font-size: 0.85rem;
+        padding: 5px 10px;
+        border-radius: 4px;
+        margin-right: 5px;
+    }
+
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="dashboard-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-1">
+                    <i class="fas fa-calendar-alt mr-2"></i>Pension Frequency Dashboard
+                </h1>
+                <p class="mb-0 opacity-75">
+                    <i class="fas fa-calendar-day mr-1"></i>@monthName @selectedYear
+                    <span class="mx-2">•</span>
+                    <i class="fas fa-users mr-1"></i>@pensionsWithPension.Count seniors with pensions
+                </p>
+            </div>
+            <div class="btn-group">
+                <a href="@Url.Action("Pension", "Dues", new { month = selectedMonth, year = selectedYear })"
+                   class="btn btn-light">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Standard View
+                </a>
+                <button class="btn btn-light ml-2" onclick="exportFrequencyReport()">
+                    <i class="fas fa-file-export mr-1"></i>Export Report
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Info -->
+    <div class="alert alert-info mb-4">
+        <div class="d-flex">
+            <div class="mr-3">
+                <i class="fas fa-info-circle fa-2x"></i>
+            </div>
+            <div>
+                <h6 class="font-weight-bold mb-1">Frequency Dashboard Information</h6>
+                <p class="mb-0">
+                    This dashboard shows only seniors with actual pension types. Seniors with "No Pension" are excluded.
+                    <br>
+                    <small class="text-muted">
+                        <i class="fas fa-filter mr-1"></i>Showing @pensionsWithPension.Count of @Model.Count total seniors
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frequency Legend -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <h6 class="font-weight-bold text-primary mb-3">
+                <i class="fas fa-key mr-2"></i>Pension Frequency Legend
+            </h6>
+            <div class="d-flex flex-wrap">
+                <div class="mr-3 mb-2">
+                    <span class="frequency-legend frequency-badge-monthly">
+                        <i class="fas fa-calendar-check mr-1"></i>Monthly (12x/year)
+                    </span>
+                    <small class="text-muted">- Required monthly claims</small>
+                </div>
+                <div class="mr-3 mb-2">
+                    <span class="frequency-legend frequency-badge-flexible">
+                        <i class="fas fa-user-clock mr-1"></i>Flexible (As needed)
+                    </span>
+                    <small class="text-muted">- Optional withdrawals</small>
+                </div>
+                <div class="mr-3 mb-2">
+                    <span class="frequency-legend frequency-badge-rmd">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>RMD Required (73+)
+                    </span>
+                    <small class="text-muted">- Minimum distributions required</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overview Statistics -->
+    <div class="row mb-4">
+        <!-- Monthly Pensions Card -->
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card frequency-card-monthly shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                <i class="fas fa-calendar-check mr-1"></i>Monthly Pensions
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@monthlyPensions.Count</div>
+                            <div class="mt-2 mb-0">
+                                <div class="claim-progress bg-light">
+                                    <div class="progress-bar bg-success" role="progressbar"
+                                         style="width: @monthlyClaimRate%"
+                                         aria-valuenow="@monthlyClaimRate"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100">
+                                        @monthlyClaimRate%
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    @totalMonthlyActual of @monthlyPensions.Count claimed (@monthlyClaimRate%)
+                                </small>
+                            </div>
+                            <div class="text-xs text-muted mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Social Security, Defined Benefit, Annuity, Gov/Military
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flexible Pensions Card -->
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card frequency-card-flexible shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                <i class="fas fa-user-clock mr-1"></i>Flexible Pensions
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@flexiblePensions.Count</div>
+                            <div class="mt-2 mb-0">
+                                <small class="text-muted">
+                                    <i class="fas fa-check-circle text-success mr-1"></i>
+                                    @flexibleClaimed claimed this month
+                                </small>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock text-warning mr-1"></i>
+                                    @(flexiblePensions.Count - flexibleClaimed) not claimed
+                                </small>
+                            </div>
+                            <div class="text-xs text-muted mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                401k/403b, IRA (withdrawals optional)
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-hand-holding-usd fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RMD Eligible Card -->
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card frequency-card-rmd shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>RMD Required (73+)
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@rmdEligible.Count</div>
+                            <div class="mt-2 mb-0">
+                                @if (rmdEligible.Any())
+                                {
+                                    var rmdClaimed = rmdEligible.Count(p => p.IsClaimed);
+                                    var rmdRate = rmdEligible.Count > 0 ? (rmdClaimed * 100 / rmdEligible.Count) : 0;
+
+                                    <div class="claim-progress bg-light">
+                                        <div class="progress-bar bg-warning" role="progressbar"
+                                             style="width: @rmdRate%"
+                                             aria-valuenow="@rmdRate"
+                                             aria-valuemin="0"
+                                             aria-valuemax="100">
+                                            @rmdRate%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">
+                                        @rmdClaimed of @rmdEligible.Count with RMDs claimed
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small class="text-success">
+                                        <i class="fas fa-check mr-1"></i>No RMD requirements
+                                    </small>
+                                }
+                            </div>
+                            <div class="text-xs text-muted mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Required Minimum Distributions for age 73+
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-plus fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RMD Alert Section -->
+    @if (rmdEligible.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="rmd-alert">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="font-weight-bold text-warning mb-1">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>Required Minimum Distributions (RMD) Alert
+                            </h6>
+                            <p class="mb-0">
+                                @rmdEligible.Count senior(s) age 73+ with flexible pensions require RMDs this year.
+                                Ensure minimum distributions are taken to avoid penalties.
+                            </p>
+                        </div>
+                        <button class="btn btn-sm btn-warning" onclick="viewRmdSeniors()">
+                            <i class="fas fa-list mr-1"></i>View RMD List
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Monthly Pensions Section -->
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-calendar-check mr-2"></i>Monthly Pensions (Required Claims)
+                        <span class="badge badge-success ml-2">@monthlyPensions.Count seniors</span>
+                    </h6>
+                    <div>
+                        @if (monthlyPensions.Any(p => !p.IsClaimed))
+                        {
+                            <button class="btn btn-sm btn-success" onclick="markAllMonthlyAsClaimed()">
+                                <i class="fas fa-check-double mr-1"></i>Mark All as Claimed
+                            </button>
+                        }
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (monthlyPensions.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="monthlyPensionsTable">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Senior</th>
+                                        <th>Pension Type</th>
+                                        <th>Frequency</th>
+                                        <th>Age</th>
+                                        <th>Status</th>
+                                        <th>Last Claim</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var pension in monthlyPensions.OrderBy(p => p.LastName))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@pension.FullName</strong><br>
+                                                <small class="text-muted">Zone @pension.Zone</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-info">@pension.PensionType</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge frequency-badge-monthly">
+                                                    <i class="fas fa-calendar-check mr-1"></i>Monthly (12x/year)
+                                                </span>
+                                            </td>
+                                            <td>@pension.Age</td>
+                                            <td>
+                                                @if (pension.IsClaimed)
+                                                {
+                                                    <span class="badge badge-success">
+                                                        <i class="fas fa-check mr-1"></i>Claimed
+                                                    </span>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        @pension.ClaimedDate?.ToString("MMM dd, yyyy")
+                                                    </small>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge badge-danger">
+                                                        <i class="fas fa-times mr-1"></i>Not Claimed
+                                                    </span>
+                                                    <br>
+                                                    <small class="text-danger">
+                                                        <i class="fas fa-exclamation-circle mr-1"></i>Required this month
+                                                    </small>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (pension.ClaimedDate.HasValue)
+                                                {
+                                                    <span class="text-success">
+                                                        @pension.ClaimedDate?.ToString("MMM dd, yyyy")
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-danger">Never</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!pension.IsClaimed)
+                                                {
+                                                    <button class="btn btn-sm btn-success"
+                                                            onclick="claimPension(@pension.Id, '@pension.PensionType')">
+                                                        <i class="fas fa-check mr-1"></i>Mark Claimed
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-sm btn-outline-secondary" disabled>
+                                                        Already Claimed
+                                                    </button>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-calendar-check fa-2x mb-3"></i>
+                            <p class="mb-0">No monthly pensions found for @monthName @selectedYear</p>
+                            <small class="text-muted">Monthly pensions include: Social Security, Defined Benefit Plans, Annuities, and Government/Military Pensions</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flexible Pensions Section -->
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-user-clock mr-2"></i>Flexible Pensions (Optional Withdrawals)
+                        <span class="badge badge-info ml-2">@flexiblePensions.Count seniors</span>
+                    </h6>
+                    <div>
+                        <button class="btn btn-sm btn-info" onclick="showFlexiblePensionGuide()">
+                            <i class="fas fa-question-circle mr-1"></i>View Guidelines
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <h6><i class="fas fa-info-circle mr-2"></i>Flexible Pension Guidelines</h6>
+                        <ul class="mb-0">
+                            <li><strong>Defined Contribution Plans (401k/403b):</strong> Flexible withdrawals, RMDs required at age 73</li>
+                            <li><strong>IRA (Traditional):</strong> Flexible withdrawals, RMDs required at age 73</li>
+                            <li><strong>IRA (Roth):</strong> Flexible withdrawals, no RMDs required</li>
+                            <li>Claim status is optional and depends on senior's needs</li>
+                        </ul>
+                    </div>
+
+                    @if (flexiblePensions.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="flexiblePensionsTable">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Senior</th>
+                                        <th>Pension Type</th>
+                                        <th>Age</th>
+                                        <th>RMD Status</th>
+                                        <th>Current Status</th>
+                                        <th>Last Withdrawal</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var pension in flexiblePensions.OrderBy(p => p.LastName))
+                                    {
+                                        bool requiresRmd = pension.RequiresRMD;
+
+                                        <tr @(requiresRmd ? "class=table-warning" : "")>
+                                            <td>
+                                                <strong>@pension.FullName</strong><br>
+                                                <small class="text-muted">Zone @pension.Zone</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-info">@pension.PensionType</span>
+                                            </td>
+                                            <td>
+                                                @pension.Age
+                                                @if (requiresRmd)
+                                                {
+                                                    <br>
+                                                    <small class="text-warning">
+                                                        <i class="fas fa-exclamation-triangle mr-1"></i>RMD Required
+                                                    </small>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (requiresRmd)
+                                                {
+                                                    <span class="badge frequency-badge-rmd">
+                                                        <i class="fas fa-exclamation-triangle mr-1"></i>RMD Required
+                                                    </span>
+                                                    <br>
+                                                    <small class="text-muted">Minimum distribution this year</small>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge frequency-badge-flexible">
+                                                        <i class="fas fa-user-clock mr-1"></i>Optional
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (pension.IsClaimed)
+                                                {
+                                                    <span class="badge badge-success">
+                                                        <i class="fas fa-check mr-1"></i>Withdrawn
+                                                    </span>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        @pension.ClaimedDate?.ToString("MMM dd, yyyy")
+                                                    </small>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge badge-secondary">
+                                                        <i class="fas fa-pause mr-1"></i>No Withdrawal
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (pension.ClaimedDate.HasValue)
+                                                {
+                                                    <span class="text-success">
+                                                        @pension.ClaimedDate?.ToString("MMM dd, yyyy")
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">No recent withdrawal</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-info"
+                                                            onclick="recordFlexibleWithdrawal(@pension.Id, '@pension.PensionType')">
+                                                        <i class="fas fa-hand-holding-usd mr-1"></i>Record Withdrawal
+                                                    </button>
+                                                    @if (requiresRmd)
+                                                    {
+                                                        <button class="btn btn-outline-warning ml-1"
+                                                                onclick="recordRmd(@pension.Id)">
+                                                            <i class="fas fa-file-invoice-dollar mr-1"></i>Record RMD
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-user-clock fa-2x mb-3"></i>
+                            <p class="mb-0">No flexible pensions found for @monthName @selectedYear</p>
+                            <small class="text-muted">Flexible pensions include: 401k/403b and IRA accounts</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frequency Summary by Type -->
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-pie mr-2"></i>Pension Type Frequency Summary
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Pension Type</th>
+                                    <th>Frequency</th>
+                                    <th>Total Seniors</th>
+                                    <th>Claimed This Month</th>
+                                    <th>Claim Rate</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var freq in pensionFrequencies)
+                                {
+                                    var typeSeniors = pensionsWithPension.Where(p => p.PensionType == freq.Key).ToList();
+                                    var claimedCount = typeSeniors.Count(p => p.IsClaimed);
+                                    var claimRate = typeSeniors.Count > 0 ? (claimedCount * 100 / typeSeniors.Count) : 0;
+
+                                    <tr>
+                                        <td><strong>@freq.Key</strong></td>
+                                        <td>
+                                            @if (freq.Value.TimesPerYear == 12)
+                                            {
+                                                <span class="badge frequency-badge-monthly">
+                                                    Monthly (@freq.Value.TimesPerYear/year)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge frequency-badge-flexible">
+                                                    Flexible (@freq.Value.TimesPerYear/year)
+                                                </span>
+                                            }
+                                        </td>
+                                        <td>@typeSeniors.Count</td>
+                                        <td>@claimedCount</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar @(freq.Value.TimesPerYear == 12 ? "bg-success" : "bg-info")"
+                                                     role="progressbar" style="width: @claimRate%">
+                                                    @claimRate%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><small>@freq.Value.Description</small></td>
+                                    </tr>
+                                }
+                                @{
+                                    // Add No Pension row for reference
+                                    var noPensionSeniors = Model.Count(p => !p.HasPension);
+                                    if (noPensionSeniors > 0)
+                                    {
+                                        <tr class="bg-light">
+                                            <td><strong>No Pension</strong></td>
+                                            <td>
+                                                <span class="badge badge-secondary">
+                                                    Not Applicable
+                                                </span>
+                                            </td>
+                                            <td>@noPensionSeniors</td>
+                                            <td>N/A</td>
+                                            <td>N/A</td>
+                                            <td><small class="text-muted">Excluded from frequency dashboard</small></td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTables
+            if ($('#monthlyPensionsTable').length) {
+                $('#monthlyPensionsTable').DataTable({
+                    "pageLength": 25,
+                    "order": [[0, "asc"]],
+                    "language": {
+                        "search": "Search monthly pensions:",
+                        "emptyTable": "No monthly pensions found"
+                    }
+                });
+            }
+
+            if ($('#flexiblePensionsTable').length) {
+                $('#flexiblePensionsTable').DataTable({
+                    "pageLength": 25,
+                    "order": [[0, "asc"]],
+                    "language": {
+                        "search": "Search flexible pensions:",
+                        "emptyTable": "No flexible pensions found"
+                    }
+                });
+            }
+        });
+
+        // Action Functions
+        function claimPension(id, pensionType) {
+            if (confirm(`Mark this ${pensionType} pension as claimed for this month?`)) {
+                $.ajax({
+                    url: '@Url.Action("TogglePensionClaim", "Dues")',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert('Pension marked as claimed successfully!', 'success');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            showAlert(response.message, 'danger');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        showAlert('Error: ' + error, 'danger');
+                    }
+                });
+            }
+        }
+
+        function markAllMonthlyAsClaimed() {
+            if (confirm('Mark ALL monthly pensions as claimed for this month? This action cannot be undone.')) {
+                // Get all unclaimed monthly pension IDs
+                var unclaimedIds = [];
+                $('#monthlyPensionsTable tbody tr').each(function() {
+                    var claimBtn = $(this).find('.btn-success');
+                    if (claimBtn.length > 0) {
+                        var id = claimBtn.attr('onclick').match(/claimPension\((\d+),/)[1];
+                        unclaimedIds.push(parseInt(id));
+                    }
+                });
+
+                if (unclaimedIds.length === 0) {
+                    showAlert('All monthly pensions are already claimed!', 'info');
+                    return;
+                }
+
+                // Show loading
+                showAlert(`Processing ${unclaimedIds.length} claims...`, 'info');
+
+                // Process claims sequentially
+                processClaimsSequentially(unclaimedIds, 0);
+            }
+        }
+
+        function processClaimsSequentially(ids, index) {
+            if (index >= ids.length) {
+                showAlert(`Successfully claimed ${ids.length} monthly pensions!`, 'success');
+                setTimeout(() => location.reload(), 2000);
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Action("TogglePensionClaim", "Dues")',
+                type: 'POST',
+                data: { id: ids[index] },
+                success: function(response) {
+                    if (response.success) {
+                        processClaimsSequentially(ids, index + 1);
+                    } else {
+                        showAlert(`Failed to claim pension ID ${ids[index]}: ${response.message}`, 'warning');
+                        processClaimsSequentially(ids, index + 1);
+                    }
+                },
+                error: function() {
+                    showAlert(`Error claiming pension ID ${ids[index]}`, 'warning');
+                    processClaimsSequentially(ids, index + 1);
+                }
+            });
+        }
+
+        function recordFlexibleWithdrawal(id, pensionType) {
+            if (confirm(`Record a withdrawal for this ${pensionType} pension?`)) {
+                // In a real app, this would open a modal for withdrawal details
+                $.ajax({
+                    url: '@Url.Action("TogglePensionClaim", "Dues")',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert('Withdrawal recorded successfully!', 'success');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            showAlert(response.message, 'danger');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        showAlert('Error: ' + error, 'danger');
+                    }
+                });
+            }
+        }
+
+        function recordRmd(id) {
+            if (confirm('Record a Required Minimum Distribution (RMD) for this senior?')) {
+                // In a real app, this would open an RMD-specific modal
+                $.ajax({
+                    url: '@Url.Action("TogglePensionClaim", "Dues")',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert('RMD recorded successfully!', 'success');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            showAlert(response.message, 'danger');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        showAlert('Error: ' + error, 'danger');
+                    }
+                });
+            }
+        }
+
+        function viewRmdSeniors() {
+            // Filter to show only RMD-eligible seniors
+            $('#flexiblePensionsTable').DataTable().search('RMD').draw();
+        }
+
+        function showFlexiblePensionGuide() {
+            alert('Flexible Pension Guidelines:\n\n' +
+                  '1. Defined Contribution Plans (401k/403b):\n' +
+                  '   - Flexible withdrawals anytime\n' +
+                  '   - RMDs required starting at age 73\n' +
+                  '   - No monthly requirement\n\n' +
+                  '2. IRA (Traditional):\n' +
+                  '   - Flexible withdrawals\n' +
+                  '   - RMDs required starting at age 73\n' +
+                  '   - Penalties for early withdrawal before 59½\n\n' +
+                  '3. IRA (Roth):\n' +
+                  '   - Flexible withdrawals\n' +
+                  '   - No RMDs required\n' +
+                  '   - Contributions can be withdrawn tax-free');
+        }
+
+        function exportFrequencyReport() {
+            var month = @selectedMonth;
+            var year = @selectedYear;
+            window.location.href = '@Url.Action("ExportPensionFrequencyReport", "Dues")?month=' + month + '&year=' + year;
+        }
+
+        function showAlert(message, type) {
+            var alertClass = 'alert-' + type;
+            var alertHtml = '<div class="alert ' + alertClass + ' alert-dismissible fade show" role="alert">' +
+                '<i class="fas fa-info-circle mr-2"></i>' + message +
+                '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                '<span aria-hidden="true">&times;</span>' +
+                '</button>' +
+                '</div>';
+
+            $('.container-fluid').prepend(alertHtml);
+
+            setTimeout(() => {
+                $('.alert').alert('close');
+            }, 5000);
+        }
+    </script>
+}

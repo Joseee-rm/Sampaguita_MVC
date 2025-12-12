@@ -12,103 +12,144 @@
         <h3><i class="fas fa-edit me-2"></i>Edit Senior Record</h3>
     </div>
     <div class="card-body">
-        <form asp-action="EditSenior" method="post" id="seniorForm">
+        <form asp-action="EditSenior" method="post" id="seniorForm" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Id" />
             <input type="hidden" asp-for="CreatedAt" />
             <input type="hidden" asp-for="Status" />
             <input type="hidden" asp-for="Barangay" />
 
-            <h5 class="mb-3 text-primary"><i class="fas fa-id-card me-2"></i>Senior Information</h5>
-
-            <!-- SCCN Number -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="SeniorId" class="form-label">OSCA Number *</label>
-                        <div class="input-group">
-                            <input asp-for="SeniorId" class="form-control"
-                                   placeholder="Enter 12-digit OSCN number"
-                                   required
-                                   id="seniorIdInput"
-                                   pattern="\d{12}"
-                                   maxlength="12"
-                                   title="Exactly 12 digits (numbers only)" readonly />
-                            <button type="button" class="btn btn-outline-info" id="formatBtn" title="Format OSCA number">
-                                <i class="fas fa-magic"></i>
-                            </button>
-                        </div>
-                        <span asp-validation-for="SeniorId" class="text-danger"></span>
-                        <div id="seniorIdStatus" class="mt-1">
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle"></i>
-                                Formatted: <span id="formattedSCCN">@Model.FormattedSCCN</span>
-                            </small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="alert alert-info">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        <strong>OSCA Note:</strong> This field cannot be edited once created.
-                    </div>
-                </div>
-            </div>
-
-            <!-- Personal Information -->
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <label asp-for="FirstName" class="form-label">First Name *</label>
-                        <input asp-for="FirstName" class="form-control" placeholder="Enter first name" required />
-                        <span asp-validation-for="FirstName" class="text-danger"></span>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <label asp-for="LastName" class="form-label">Last Name *</label>
-                        <input asp-for="LastName" class="form-control" placeholder="Enter last name" required />
-                        <span asp-validation-for="LastName" class="text-danger"></span>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <label asp-for="MiddleInitial" class="form-label">Middle Initial</label>
-                        <input asp-for="MiddleInitial" class="form-control" placeholder="Enter middle initial" maxlength="1" />
-                        <span asp-validation-for="MiddleInitial" class="text-danger"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
+            <!-- Profile Picture Section -->
+            <div class="row mb-4">
                 <div class="col-md-3">
-                    <div class="form-group mb-3">
-                        <label asp-for="Gender" class="form-label">Gender *</label>
-                        <select asp-for="Gender" class="form-select" required>
-                            <option value="">-- Select Gender --</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
-                        <span asp-validation-for="Gender" class="text-danger"></span>
+                    <div class="profile-picture-section">
+                        <h6 class="mb-3"><i class="fas fa-camera me-2"></i>Profile Picture</h6>
+                        <div class="profile-picture-container text-center">
+                            <div class="profile-picture-placeholder" id="picturePreview">
+                                @if (!string.IsNullOrEmpty(ViewBag.ProfilePictureUrl))
+                                {
+                                    <img src="@ViewBag.ProfilePictureUrl" class="profile-picture-preview" alt="Profile Picture">
+                                }
+                                else
+                                {
+                                    <i class="fas fa-user fa-4x text-muted"></i>
+                                    <div class="mt-2">No picture</div>
+                                }
+                            </div>
+                            <input type="file" id="profilePicture" name="profilePicture"
+                                   class="form-control mt-3" accept=".jpg,.jpeg,.png"
+                                   onchange="previewProfilePicture(this)" />
+                            <small class="text-muted">4x4 size recommended</small>
+                        </div>
                     </div>
                 </div>
+                <div class="col-md-9">
+                    <h5 class="mb-3 text-primary"><i class="fas fa-id-card me-2"></i>Senior Information</h5>
+
+                    <!-- SCCN Number -->
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label asp-for="SeniorId" class="form-label">OSCA Number *</label>
+                                <div class="input-group">
+                                    <input asp-for="SeniorId" class="form-control"
+                                           placeholder="Enter 12-digit OSCA number"
+                                           required
+                                           id="seniorIdInput"
+                                           pattern="\d{12}"
+                                           maxlength="12"
+                                           title="Exactly 12 digits (numbers only)" readonly />
+                                    <button type="button" class="btn btn-outline-info" id="formatBtn" title="Format OSCA number">
+                                        <i class="fas fa-magic"></i>
+                                    </button>
+                                </div>
+                                <span asp-validation-for="SeniorId" class="text-danger"></span>
+                                <div id="seniorIdStatus" class="mt-1">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle"></i>
+                                        Formatted: <span id="formattedSCCN">@Model.FormattedSCCN</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Information -->
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="FirstName" class="form-label">First Name *</label>
+                                <input asp-for="FirstName" class="form-control" placeholder="" required />
+                                <span asp-validation-for="FirstName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="LastName" class="form-label">Last Name *</label>
+                                <input asp-for="LastName" class="form-control" placeholder="" required />
+                                <span asp-validation-for="LastName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group mb-3">
+                                <label asp-for="MiddleInitial" class="form-label">Middle Name</label>
+                                <input asp-for="MiddleInitial" class="form-control" placeholder="" maxlength="100" />
+                                <span asp-validation-for="MiddleInitial" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group mb-3">
+                                <label asp-for="Extension" class="form-label">Extension</label>
+                                <input asp-for="Extension" class="form-control" placeholder="Jr, Sr" maxlength="10" />
+                                <span asp-validation-for="Extension" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group mb-3">
+                                <label asp-for="Gender" class="form-label">Sex *</label>
+                                <select asp-for="Gender" class="form-select" required>
+                                    <option value="">-- Select Gender --</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                                <span asp-validation-for="Gender" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Age, Birth Date & Citizenship -->
+            <div class="row mb-3">
                 <div class="col-md-3">
                     <div class="form-group mb-3">
                         <label asp-for="BirthDate" class="form-label">Birth Date</label>
-                        <input asp-for="BirthDate" type="date" class="form-control" id="birthDateField" />
+                        <input asp-for="BirthDate" type="date" class="form-control" id="birthDateField"
+                               max="@DateTime.Now.ToString("yyyy-MM-dd")" min="1965-01-01"
+                               onchange="calculateAgeFromDate()" />
                         <span asp-validation-for="BirthDate" class="text-danger"></span>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="form-group mb-3">
                         <label asp-for="Age" class="form-label">Age *</label>
                         <input asp-for="Age" type="number" class="form-control" id="ageField"
-                               placeholder="Enter age" min="60" max="120" required />
+                               placeholder="Enter age" min="60" max="120" required
+                               onchange="checkSpecialBenefits()" />
                         <span asp-validation-for="Age" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-md-3">
+                    <div class="form-group mb-3">
+                        <label asp-for="Citizenship" class="form-label">Citizenship</label>
+                        <select asp-for="Citizenship" class="form-select">
+                            <option value="Filipino">Filipino</option>
+                            <option value="DualCitizen">Dual Citizen</option>
+                        </select>
+                        <span asp-validation-for="Citizenship" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
                     <div class="form-group mb-3">
                         <label asp-for="CivilStatus" class="form-label">Civil Status</label>
                         <select asp-for="CivilStatus" class="form-select">
@@ -123,7 +164,261 @@
                 </div>
             </div>
 
-            <!-- Contact Information -->
+            <!-- Special Benefits Alert -->
+            <div id="specialBenefitsAlert" class="alert mb-3" style="display: none;">
+                <i class="fas fa-award me-2"></i>
+                <span id="benefitsText"></span>
+            </div>
+
+            <!-- Permanent Address -->
+            <div class="card mb-3 border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-home me-2"></i>Permanent Address</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="HouseNumber" class="form-label">House Number</label>
+                                <input asp-for="HouseNumber" class="form-control" placeholder="House/Lot/Blk No."
+                                       oninput="updateAddressPreview()" />
+                                <span asp-validation-for="HouseNumber" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="Zone" class="form-label">Zone *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">Zone</span>
+                                    <select asp-for="Zone" class="form-select" required onchange="updateAddressPreview()">
+                                        <option value="">-- Select Zone --</option>
+                                        @for (int i = 1; i <= 7; i++)
+                                        {
+                                            <option value="@i">Zone @i</option>
+                                        }
+                                    </select>
+                                </div>
+                                <span asp-validation-for="Zone" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Barangay</label>
+                                <input type="text" class="form-control" value="Sampaguita" readonly />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label asp-for="CityMunicipality" class="form-label">City/Municipality</label>
+                                <input asp-for="CityMunicipality" class="form-control" value="General Trias"
+                                       oninput="updateAddressPreview()" />
+                                <span asp-validation-for="CityMunicipality" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label asp-for="Province" class="form-label">Province</label>
+                                <input asp-for="Province" class="form-control" value="Cavite"
+                                       oninput="updateAddressPreview()" />
+                                <span asp-validation-for="Province" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label asp-for="ZipCode" class="form-label">Zip Code</label>
+                                <input asp-for="ZipCode" class="form-control" value="4107"
+                                       oninput="updateAddressPreview()" />
+                                <span asp-validation-for="ZipCode" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address Preview -->
+                    <div class="alert alert-light">
+                        <strong><i class="fas fa-eye me-2"></i>Address Preview:</strong>
+                        <div id="addressPreview" class="mt-1">
+                            @Model.PermanentAddress
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Family Information -->
+            <div class="card mb-3 border-success">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-users me-2"></i>Family Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <h6 class="border-bottom pb-2">Spouse Information</h6>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="SpouseFirstName" class="form-label">First Name</label>
+                                <input asp-for="SpouseFirstName" class="form-control" placeholder="First Name" />
+                                <span asp-validation-for="SpouseFirstName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="SpouseLastName" class="form-label">Last Name</label>
+                                <input asp-for="SpouseLastName" class="form-control" placeholder="Last Name" />
+                                <span asp-validation-for="SpouseLastName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="SpouseMiddleName" class="form-label">Middle Name</label>
+                                <input asp-for="SpouseMiddleName" class="form-control" placeholder="Middle Name" />
+                                <span asp-validation-for="SpouseMiddleName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="SpouseExtension" class="form-label">Extension</label>
+                                <input asp-for="SpouseExtension" class="form-control" placeholder="Jr, Sr" />
+                                <span asp-validation-for="SpouseExtension" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label asp-for="SpouseCitizenship" class="form-label">Citizenship</label>
+                                <select asp-for="SpouseCitizenship" class="form-select">
+                                    <option value="">-- Select Citizenship --</option>
+                                    <option value="Filipino">Filipino</option>
+                                    <option value="DualCitizen">Dual Citizen</option>
+                                </select>
+                                <span asp-validation-for="SpouseCitizenship" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-12 mb-3">
+                            <h6 class="border-bottom pb-2">Children Information</h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-group mb-3">
+                                <label asp-for="ChildrenInfo" class="form-label">Children's Names</label>
+                                <textarea asp-for="ChildrenInfo" class="form-control" rows="4"
+                                          placeholder="Format: LastName, GivenName, MiddleName, Extension (if applicable)&#10;Example: Cruz, Juan, Santos, Jr."></textarea>
+                                <small class="text-muted">Enter each child on a new line</small>
+                                <span asp-validation-for="ChildrenInfo" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-12 mb-3">
+                            <h6 class="border-bottom pb-2">Authorized Representative</h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-group mb-3">
+                                <label asp-for="AuthorizedRepInfo" class="form-label">Authorized Representative(s)</label>
+                                <textarea asp-for="AuthorizedRepInfo" class="form-control" rows="3"
+                                          placeholder="Format: LastName, GivenName, MiddleName, Extension, Relationship&#10;Example: Cruz, Maria, Santos, , Daughter"></textarea>
+                                <small class="text-muted">Enter each representative on a new line</small>
+                                <span asp-validation-for="AuthorizedRepInfo" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Designated Beneficiary -->
+            <div class="card mb-3 border-warning">
+                <div class="card-header bg-warning text-white">
+                    <h6 class="mb-0"><i class="fas fa-user-check me-2"></i>Designated Beneficiary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <h6 class="border-bottom pb-2">Primary Beneficiary</h6>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="PrimaryBeneficiaryFirstName" class="form-label">First Name</label>
+                                <input asp-for="PrimaryBeneficiaryFirstName" class="form-control" placeholder="First Name" />
+                                <span asp-validation-for="PrimaryBeneficiaryFirstName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="PrimaryBeneficiaryLastName" class="form-label">Last Name</label>
+                                <input asp-for="PrimaryBeneficiaryLastName" class="form-control" placeholder="Last Name" />
+                                <span asp-validation-for="PrimaryBeneficiaryLastName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="PrimaryBeneficiaryMiddleName" class="form-label">Middle Name</label>
+                                <input asp-for="PrimaryBeneficiaryMiddleName" class="form-control" placeholder="Middle Name" />
+                                <span asp-validation-for="PrimaryBeneficiaryMiddleName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="PrimaryBeneficiaryExtension" class="form-label">Extension</label>
+                                <input asp-for="PrimaryBeneficiaryExtension" class="form-control" placeholder="Jr, Sr" />
+                                <span asp-validation-for="PrimaryBeneficiaryExtension" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label asp-for="PrimaryBeneficiaryRelationship" class="form-label">Relationship</label>
+                                <input asp-for="PrimaryBeneficiaryRelationship" class="form-control" placeholder="e.g., Spouse, Child" />
+                                <span asp-validation-for="PrimaryBeneficiaryRelationship" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-12 mb-3">
+                            <h6 class="border-bottom pb-2">Contingent Beneficiary</h6>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="ContingentBeneficiaryFirstName" class="form-label">First Name</label>
+                                <input asp-for="ContingentBeneficiaryFirstName" class="form-control" placeholder="First Name" />
+                                <span asp-validation-for="ContingentBeneficiaryFirstName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="ContingentBeneficiaryLastName" class="form-label">Last Name</label>
+                                <input asp-for="ContingentBeneficiaryLastName" class="form-control" placeholder="Last Name" />
+                                <span asp-validation-for="ContingentBeneficiaryLastName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="ContingentBeneficiaryMiddleName" class="form-label">Middle Name</label>
+                                <input asp-for="ContingentBeneficiaryMiddleName" class="form-control" placeholder="Middle Name" />
+                                <span asp-validation-for="ContingentBeneficiaryMiddleName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label asp-for="ContingentBeneficiaryExtension" class="form-label">Extension</label>
+                                <input asp-for="ContingentBeneficiaryExtension" class="form-control" placeholder="Jr, Sr" />
+                                <span asp-validation-for="ContingentBeneficiaryExtension" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label asp-for="ContingentBeneficiaryRelationship" class="form-label">Relationship</label>
+                                <input asp-for="ContingentBeneficiaryRelationship" class="form-control" placeholder="e.g., Child, Sibling" />
+                                <span asp-validation-for="ContingentBeneficiaryRelationship" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact & Pension Information -->
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group mb-3">
@@ -132,26 +427,26 @@
                         <span asp-validation-for="ContactNumber" class="text-danger"></span>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-6">
                     <div class="form-group mb-3">
-                        <label asp-for="Zone" class="form-label">Zone *</label>
-                        <select asp-for="Zone" class="form-select" required>
-                            <option value="">-- Select Zone --</option>
-                            @for (int i = 1; i <= 7; i++)
-                            {
-                                <option value="@i">Zone @i</option>
-                            }
-                        </select>
-                        <span asp-validation-for="Zone" class="text-danger"></span>
+                        <label asp-for="Email" class="form-label">Email Address</label>
+                        <input asp-for="Email" type="email" class="form-control" placeholder="senior@example.com" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
                     </div>
                 </div>
-                <div class="col-md-3">
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
                     <div class="form-group mb-3">
-                        <label class="form-label">Barangay</label>
-                        <input type="text" class="form-control" value="Sampaguita" readonly />
+                        <label asp-for="PensionType" class="form-label">Pension Type</label>
+                        <input asp-for="PensionType" class="form-control"
+                               placeholder="e.g., SSS, GSIS, Private Pension (leave empty if none)"
+                               maxlength="50" />
                         <div class="form-text">
-                            <small class="text-muted">Fixed value as per requirement</small>
+                            <small class="text-muted">Leave empty if no pension</small>
                         </div>
+                        <span asp-validation-for="PensionType" class="text-danger"></span>
                     </div>
                 </div>
             </div>
@@ -163,14 +458,25 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-2">
                             <p><strong>Senior ID:</strong> <span id="summarySeniorId">@Model.SeniorId</span></p>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <p><strong>Full Name:</strong> <span id="summaryFullName">@Model.CompleteName</span></p>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-2">
+                            <p><strong>Age:</strong> <span id="summaryAge">@Model.Age</span></p>
+                        </div>
+                        <div class="col-md-2">
                             <p><strong>Zone:</strong> <span id="summaryZone">@Model.Zone</span></p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Pension Type:</strong> <span id="summaryPensionType">@Model.DisplayPensionType</span></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p><strong>Address:</strong> <span id="summaryAddress">@Model.PermanentAddress</span></p>
                         </div>
                     </div>
                 </div>
@@ -203,64 +509,116 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <tbody>
-                            <tr>
-                                <th width="30%">SCCN Number</th>
-                                <td id="previewSeniorId">@Model.FormattedSCCN</td>
-                            </tr>
-                            <tr>
-                                <th>Full Name</th>
-                                <td id="previewFullName">@Model.CompleteName</td>
-                            </tr>
-                            <tr>
-                                <th>Gender</th>
-                                <td id="previewGender">@Model.Gender</td>
-                            </tr>
-                            <tr>
-                                <th>Age</th>
-                                <td id="previewAge">@Model.Age</td>
-                            </tr>
-                            <tr>
-                                <th>Birth Date</th>
-                                <td id="previewBirthDate">
-                                    @if (Model.BirthDate.HasValue)
-                                    {
-                                        @Model.BirthDate.Value.ToString("MMMM dd, yyyy")
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Not specified</span>
-                                    }
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Civil Status</th>
-                                <td id="previewCivilStatus">@Model.CivilStatus</td>
-                            </tr>
-                            <tr>
-                                <th>Contact Number</th>
-                                <td id="previewContact">@(string.IsNullOrEmpty(Model.ContactNumber) ? "Not specified" : Model.ContactNumber)</td>
-                            </tr>
-                            <tr>
-                                <th>Zone</th>
-                                <td id="previewZone">Zone @Model.Zone</td>
-                            </tr>
-                            <tr>
-                                <th>Barangay</th>
-                                <td id="previewBarangay">@Model.Barangay</td>
-                            </tr>
-                            <tr>
-                                <th>Status</th>
-                                <td>
-                                    <span class="badge @(Model.Status == "Active" ? "bg-success" : "bg-warning")">
-                                        @Model.Status
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        <div class="profile-picture-preview mb-3" id="modalPicturePreview">
+                            @if (!string.IsNullOrEmpty(ViewBag.ProfilePictureUrl))
+                            {
+                                <img src="@ViewBag.ProfilePictureUrl" class="img-fluid rounded" alt="Profile Picture">
+                            }
+                            else
+                            {
+                                <i class="fas fa-user fa-5x text-muted"></i>
+                                <div class="mt-2">No picture</div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <th width="30%">SCCN Number</th>
+                                        <td id="previewSeniorId">@Model.FormattedSCCN</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Full Name</th>
+                                        <td id="previewFullName">@Model.CompleteName</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Gender</th>
+                                        <td id="previewGender">@Model.Gender</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Age</th>
+                                        <td id="previewAge">@Model.Age</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Birth Date</th>
+                                        <td id="previewBirthDate">
+                                            @if (Model.BirthDate.HasValue)
+                                            {
+                                                @Model.BirthDate.Value.ToString("MMMM dd, yyyy")
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Citizenship</th>
+                                        <td id="previewCitizenship">@Model.Citizenship</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Civil Status</th>
+                                        <td id="previewCivilStatus">@Model.CivilStatus</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Contact Number</th>
+                                        <td id="previewContact">@(string.IsNullOrEmpty(Model.ContactNumber) ? "Not specified" : Model.ContactNumber)</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Email</th>
+                                        <td id="previewEmail">@(string.IsNullOrEmpty(Model.Email) ? "Not specified" : Model.Email)</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Pension Type</th>
+                                        <td id="previewPensionType">@Model.DisplayPensionType</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Zone</th>
+                                        <td id="previewZone">Zone @Model.Zone</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Barangay</th>
+                                        <td id="previewBarangay">@Model.Barangay</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Permanent Address</th>
+                                        <td id="previewAddress">@Model.PermanentAddress</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Status</th>
+                                        <td>
+                                            <span class="badge @(Model.Status == "Active" ? "bg-success" : "bg-warning")">
+                                                @Model.Status
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Family Information Preview -->
+                <div class="card mt-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-users me-2"></i>Family Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Spouse:</strong> <span id="previewSpouse">@(string.IsNullOrEmpty(Model.SpouseFullName) ? "Not specified" : Model.SpouseFullName)</span><br>
+                                <strong>Spouse Citizenship:</strong> <span id="previewSpouseCitizenship">@(string.IsNullOrEmpty(Model.SpouseCitizenship) ? "Not specified" : Model.SpouseCitizenship)</span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Primary Beneficiary:</strong> <span id="previewPrimaryBeneficiary">@(string.IsNullOrEmpty(Model.PrimaryBeneficiaryFullName) ? "Not specified" : Model.PrimaryBeneficiaryFullName)</span><br>
+                                <strong>Relationship:</strong> <span id="previewPrimaryRelationship">@(string.IsNullOrEmpty(Model.PrimaryBeneficiaryRelationship) ? "Not specified" : Model.PrimaryBeneficiaryRelationship)</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -272,6 +630,81 @@
         </div>
     </div>
 </div>
+
+@section Styles {
+    <style>
+        .profile-picture-section {
+            padding: 1rem;
+            border: 1px solid #e3f2fd;
+            border-radius: 0.5rem;
+            background: #f8fbff;
+        }
+
+        .profile-picture-container {
+            padding: 1rem;
+        }
+
+        .profile-picture-placeholder {
+            width: 150px;
+            height: 150px;
+            border-radius: 0.5rem;
+            background: #e3f2fd;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            color: #5c6bc0;
+        }
+
+        .profile-picture-preview {
+            width: 150px;
+            height: 150px;
+            border-radius: 0.5rem;
+            object-fit: cover;
+            border: 3px solid #2196f3;
+            margin: 0 auto;
+            display: block;
+        }
+
+        .card-header {
+            font-weight: 600;
+        }
+
+        .form-label.required::after {
+            content: " *";
+            color: #f44336;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 1px solid #a5d6a7;
+            color: #2e7d32;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border: 1px solid #ffcc80;
+            color: #f57c00;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 1px solid #90caf9;
+            color: #1565c0;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            border: none;
+        }
+
+        .btn-outline-info {
+            border-color: #17a2b8;
+            color: #17a2b8;
+        }
+    </style>
+}
 
 @section Scripts {
     <script>
@@ -285,9 +718,16 @@
             // Set max date to today for birth date
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('birthDateField').max = today;
+            document.getElementById('birthDateField').min = '1965-01-01';
 
             // Auto-calculate age when birth date changes
             document.getElementById('birthDateField').addEventListener('change', calculateAgeFromDate);
+
+            // Check special benefits
+            checkSpecialBenefits();
+
+            // Update address preview
+            updateAddressPreview();
 
             // Calculate age on load if birth date exists
             if (document.getElementById('birthDateField').value) {
@@ -295,12 +735,51 @@
             }
         });
 
+        // Preview profile picture
+        function previewProfilePicture(input) {
+            const preview = document.getElementById('picturePreview');
+            const modalPreview = document.getElementById('modalPicturePreview');
+
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                const file = input.files[0];
+
+                // Check file size (2MB limit)
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('File size must be less than 2MB');
+                    input.value = '';
+                    return;
+                }
+
+                // Check file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Please select a JPG or PNG image file');
+                    input.value = '';
+                    return;
+                }
+
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" class="profile-picture-preview" alt="Profile Picture">`;
+                    modalPreview.innerHTML = `<img src="${e.target.result}" class="img-fluid rounded" alt="Profile Picture">`;
+                }
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = '<i class="fas fa-user fa-4x text-muted"></i><div class="mt-2">No picture</div>';
+                modalPreview.innerHTML = '<i class="fas fa-user fa-5x text-muted"></i><div class="mt-2">No picture</div>';
+            }
+        }
+
         // Setup real-time form updates
         function setupRealTimeUpdates() {
             const fields = [
-                'FirstName', 'LastName', 'MiddleInitial',
-                'Gender', 'BirthDate', 'Zone', 'Age',
-                'ContactNumber', 'CivilStatus'
+                'FirstName', 'LastName', 'MiddleInitial', 'Extension',
+                'Gender', 'BirthDate', 'Zone', 'Age', 'Citizenship',
+                'ContactNumber', 'Email', 'CivilStatus', 'PensionType',
+                'HouseNumber', 'CityMunicipality', 'Province', 'ZipCode',
+                'SpouseFirstName', 'SpouseLastName', 'SpouseMiddleName', 'SpouseExtension', 'SpouseCitizenship',
+                'PrimaryBeneficiaryFirstName', 'PrimaryBeneficiaryLastName', 'PrimaryBeneficiaryMiddleName',
+                'PrimaryBeneficiaryExtension', 'PrimaryBeneficiaryRelationship'
             ];
 
             fields.forEach(field => {
@@ -320,9 +799,14 @@
             const firstName = document.getElementById('FirstName').value || '';
             const lastName = document.getElementById('LastName').value || '';
             const middleInitial = document.getElementById('MiddleInitial').value || '';
+            const extension = document.getElementById('Extension').value || '';
+            const age = document.getElementById('Age').value || 'Not set';
             const zone = document.getElementById('Zone').value || 'Not set';
+            const pensionType = document.getElementById('PensionType').value || 'None';
 
+            document.getElementById('summaryAge').textContent = age;
             document.getElementById('summaryZone').textContent = zone;
+            document.getElementById('summaryPensionType').textContent = pensionType;
 
             let fullName = '';
             if (firstName || lastName) {
@@ -330,11 +814,15 @@
                 if (middleInitial) {
                     fullName = `${firstName} ${middleInitial}. ${lastName}`.trim();
                 }
+                if (extension) {
+                    fullName = `${fullName} ${extension}`;
+                }
             } else {
                 fullName = 'Not set';
             }
 
             document.getElementById('summaryFullName').textContent = fullName;
+            document.getElementById('summaryAddress').textContent = document.getElementById('addressPreview').innerText;
         }
 
         // Setup SCCN formatting
@@ -378,6 +866,57 @@
             }
 
             ageField.value = age;
+            checkSpecialBenefits();
+        }
+
+        // Check special benefits eligibility
+        function checkSpecialBenefits() {
+            const ageField = document.getElementById('ageField');
+            const alertDiv = document.getElementById('specialBenefitsAlert');
+            const benefitsText = document.getElementById('benefitsText');
+
+            if (ageField.value) {
+                const age = parseInt(ageField.value);
+
+                if (age >= 100) {
+                    alertDiv.className = 'alert alert-success mb-3';
+                    benefitsText.innerHTML = '<strong>Centenarian Benefit Program Eligible!</strong> This senior is eligible for the Centenarian Benefit Program.';
+                    alertDiv.style.display = 'block';
+                } else if (age >= 90) {
+                    alertDiv.className = 'alert alert-warning mb-3';
+                    benefitsText.innerHTML = '<strong>Nonagenarian Benefit Program Eligible!</strong> This senior is eligible for the Nonagenarian Benefit Program.';
+                    alertDiv.style.display = 'block';
+                } else if (age >= 80) {
+                    alertDiv.className = 'alert alert-info mb-3';
+                    benefitsText.innerHTML = '<strong>Octogenarian Benefit Program Eligible!</strong> This senior is eligible for the Octogenarian Benefit Program.';
+                    alertDiv.style.display = 'block';
+                } else {
+                    alertDiv.style.display = 'none';
+                }
+            } else {
+                alertDiv.style.display = 'none';
+            }
+        }
+
+        // Update address preview
+        function updateAddressPreview() {
+            const houseNumber = document.getElementById('HouseNumber').value;
+            const zone = document.getElementById('Zone').value;
+            const city = document.getElementById('CityMunicipality').value;
+            const province = document.getElementById('Province').value;
+            const zipCode = document.getElementById('ZipCode').value;
+
+            const addressParts = [];
+
+            if (houseNumber) addressParts.push(houseNumber);
+            if (zone) addressParts.push(`Zone ${zone}`);
+            addressParts.push('Sampaguita');
+            if (city) addressParts.push(city);
+            if (province) addressParts.push(province);
+            if (zipCode) addressParts.push(zipCode);
+
+            const addressPreview = document.getElementById('addressPreview');
+            addressPreview.innerHTML = addressParts.join(', ');
         }
 
         // Setup form validation
@@ -460,12 +999,32 @@
             const firstName = document.getElementById('FirstName').value || '';
             const lastName = document.getElementById('LastName').value || '';
             const middleInitial = document.getElementById('MiddleInitial').value || '';
+            const extension = document.getElementById('Extension').value || '';
             const gender = document.getElementById('Gender').value || '';
             const age = document.getElementById('Age').value || '';
             const birthDate = document.getElementById('birthDateField').value || '';
+            const citizenship = document.getElementById('Citizenship').value || '';
             const civilStatus = document.getElementById('CivilStatus').value || '';
             const contactNumber = document.getElementById('ContactNumber').value || '';
+            const email = document.getElementById('Email').value || '';
+            const pensionType = document.getElementById('PensionType').value || '';
             const zone = document.getElementById('Zone').value || '';
+            const houseNumber = document.getElementById('HouseNumber').value || '';
+            const city = document.getElementById('CityMunicipality').value || '';
+            const province = document.getElementById('Province').value || '';
+            const zipCode = document.getElementById('ZipCode').value || '';
+
+            // Family information
+            const spouseFirstName = document.getElementById('SpouseFirstName').value || '';
+            const spouseLastName = document.getElementById('SpouseLastName').value || '';
+            const spouseMiddleName = document.getElementById('SpouseMiddleName').value || '';
+            const spouseExtension = document.getElementById('SpouseExtension').value || '';
+            const spouseCitizenship = document.getElementById('SpouseCitizenship').value || '';
+            const primaryFirstName = document.getElementById('PrimaryBeneficiaryFirstName').value || '';
+            const primaryLastName = document.getElementById('PrimaryBeneficiaryLastName').value || '';
+            const primaryMiddleName = document.getElementById('PrimaryBeneficiaryMiddleName').value || '';
+            const primaryExtension = document.getElementById('PrimaryBeneficiaryExtension').value || '';
+            const primaryRelationship = document.getElementById('PrimaryBeneficiaryRelationship').value || '';
 
             // Format SCCN for display
             const formattedSCCN = formatSCCNNumber(seniorId);
@@ -477,10 +1036,14 @@
             if (middleInitial) {
                 fullName = `${firstName} ${middleInitial}. ${lastName}`.trim();
             }
+            if (extension) {
+                fullName = `${fullName} ${extension}`;
+            }
             document.getElementById('previewFullName').textContent = fullName || 'Not specified';
 
             document.getElementById('previewGender').textContent = gender || 'Not specified';
             document.getElementById('previewAge').textContent = age || 'Not specified';
+            document.getElementById('previewCitizenship').textContent = citizenship || 'Not specified';
 
             // Format birth date for display
             let birthDateDisplay = 'Not specified';
@@ -496,7 +1059,46 @@
 
             document.getElementById('previewCivilStatus').textContent = civilStatus || 'Not specified';
             document.getElementById('previewContact').textContent = contactNumber || 'Not specified';
+            document.getElementById('previewEmail').textContent = email || 'Not specified';
+            document.getElementById('previewPensionType').textContent = pensionType || 'None';
             document.getElementById('previewZone').textContent = zone ? `Zone ${zone}` : 'Not specified';
+
+            // Update address
+            const addressParts = [];
+            if (houseNumber) addressParts.push(houseNumber);
+            if (zone) addressParts.push(`Zone ${zone}`);
+            addressParts.push('Sampaguita');
+            if (city) addressParts.push(city);
+            if (province) addressParts.push(province);
+            if (zipCode) addressParts.push(zipCode);
+            document.getElementById('previewAddress').textContent = addressParts.join(', ');
+
+            // Update family information
+            let spouseFullName = '';
+            if (spouseFirstName || spouseLastName) {
+                spouseFullName = `${spouseFirstName} ${spouseLastName}`.trim();
+                if (spouseMiddleName) {
+                    spouseFullName = `${spouseFirstName} ${spouseMiddleName} ${spouseLastName}`.trim();
+                }
+                if (spouseExtension) {
+                    spouseFullName = `${spouseFullName} ${spouseExtension}`;
+                }
+            }
+            document.getElementById('previewSpouse').textContent = spouseFullName || 'Not specified';
+            document.getElementById('previewSpouseCitizenship').textContent = spouseCitizenship || 'Not specified';
+
+            let primaryBeneficiaryName = '';
+            if (primaryFirstName || primaryLastName) {
+                primaryBeneficiaryName = `${primaryFirstName} ${primaryLastName}`.trim();
+                if (primaryMiddleName) {
+                    primaryBeneficiaryName = `${primaryFirstName} ${primaryMiddleName} ${primaryLastName}`.trim();
+                }
+                if (primaryExtension) {
+                    primaryBeneficiaryName = `${primaryBeneficiaryName} ${primaryExtension}`;
+                }
+            }
+            document.getElementById('previewPrimaryBeneficiary').textContent = primaryBeneficiaryName || 'Not specified';
+            document.getElementById('previewPrimaryRelationship').textContent = primaryRelationship || 'Not specified';
 
             // Show modal
             const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));

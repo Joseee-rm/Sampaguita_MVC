@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using SeniorManagement.Models;
 using SeniorManagement.Helpers;
@@ -9,6 +10,8 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.IO;
+using Microsoft.AspNetCore.Http;
 
 namespace SeniorManagement.Controllers
 {
@@ -38,10 +41,10 @@ namespace SeniorManagement.Controllers
             return View(new Senior());
         }
 
-        // CREATE SENIOR - POST (Handle form submission - FIXED VERSION)
+        // CREATE SENIOR - POST (Handle form submission)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateSenior(Senior senior)
+        public async Task<IActionResult> CreateSenior(Senior senior, IFormFile profilePicture)
         {
             // Clear any existing model errors
             ModelState.Clear();
@@ -112,6 +115,12 @@ namespace SeniorManagement.Controllers
                     ModelState.AddModelError("ContactNumber", "Contact Number cannot exceed 20 characters.");
                 }
 
+                // Validate Pension Type length (if provided)
+                if (!string.IsNullOrEmpty(senior.PensionType) && senior.PensionType.Length > 50)
+                {
+                    ModelState.AddModelError("PensionType", "Pension Type cannot exceed 50 characters.");
+                }
+
                 // If there are validation errors, return to view
                 if (!ModelState.IsValid)
                 {
@@ -151,10 +160,16 @@ namespace SeniorManagement.Controllers
 
                 if (newSeniorId > 0)
                 {
+                    // Save profile picture if provided
+                    if (profilePicture != null && profilePicture.Length > 0)
+                    {
+                        await SaveProfilePicture(newSeniorId, profilePicture);
+                    }
+
                     // Log the activity
                     await _activityHelper.LogActivityAsync(
                         "Create Senior",
-                        $"Created new senior record: {senior.FirstName} {senior.LastName} (SCCN: {senior.SeniorId})"
+                        $"Created new senior record: {senior.FirstName} {senior.LastName} (SCCN: {senior.SeniorId}, Pension: {senior.DisplayPensionType})"
                     );
 
                     TempData["SuccessMessage"] = $"Senior record created successfully! SCCN: {senior.SeniorId}";
@@ -187,13 +202,16 @@ namespace SeniorManagement.Controllers
                 return RedirectToAction("Index");
             }
 
+            // Add profile picture URL to ViewBag
+            ViewBag.ProfilePictureUrl = GetProfilePictureUrl(id);
+
             return View(senior);
         }
 
         // Edit Senior - POST
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditSenior(Senior senior)
+        public async Task<IActionResult> EditSenior(Senior senior, IFormFile profilePicture)
         {
             ModelState.Clear();
 
@@ -252,10 +270,23 @@ namespace SeniorManagement.Controllers
                     ModelState.AddModelError("Age", "Age must be between 60 and 120 years.");
                 }
 
+                // Validate Pension Type length (if provided)
+                if (!string.IsNullOrEmpty(senior.PensionType) && senior.PensionType.Length > 50)
+                {
+                    ModelState.AddModelError("PensionType", "Pension Type cannot exceed 50 characters.");
+                }
+
                 if (!ModelState.IsValid)
                 {
                     TempData["ErrorMessage"] = "Please correct the validation errors and try again.";
+                    ViewBag.ProfilePictureUrl = GetProfilePictureUrl(senior.Id);
                     return View(senior);
+                }
+
+                // Handle profile picture upload
+                if (profilePicture != null && profilePicture.Length > 0)
+                {
+                    await SaveProfilePicture(senior.Id, profilePicture);
                 }
 
                 if (UpdateSeniorInDatabase(senior))
@@ -263,7 +294,7 @@ namespace SeniorManagement.Controllers
                     // Log the activity
                     await _activityHelper.LogActivityAsync(
                         "Edit Senior",
-                        $"Updated senior record: {senior.FirstName} {senior.LastName} (SCCN: {senior.SeniorId})"
+                        $"Updated senior record: {senior.FirstName} {senior.LastName} (SCCN: {senior.SeniorId}, Pension: {senior.DisplayPensionType})"
                     );
 
                     TempData["SuccessMessage"] = "Senior record updated successfully!";
@@ -282,6 +313,8 @@ namespace SeniorManagement.Controllers
                 Console.WriteLine($"StackTrace: {ex.StackTrace}");
             }
 
+            // Add profile picture URL to ViewBag for redisplay
+            ViewBag.ProfilePictureUrl = GetProfilePictureUrl(senior.Id);
             return View(senior);
         }
 
@@ -415,6 +448,54 @@ namespace SeniorManagement.Controllers
             return RedirectToAction("ArchivedSeniors");
         }
 
+        // Get Profile Picture
+        [HttpGet]
+        public IActionResult GetProfilePicture(int id)
+        {
+            try
+            {
+                // Paths to check for profile pictures
+                var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "profiles");
+                var defaultImagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "default-profile.png");
+
+                // Check for existing profile pictures
+                var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+                string imagePath = null;
+
+                foreach (var ext in imageExtensions)
+                {
+                    var testPath = Path.Combine(uploadsPath, $"{id}{ext}");
+                    if (System.IO.File.Exists(testPath))
+                    {
+                        imagePath = testPath;
+                        break;
+                    }
+                }
+
+                // If no specific profile picture found, check for default
+                if (imagePath == null && System.IO.File.Exists(defaultImagePath))
+                {
+                    imagePath = defaultImagePath;
+                }
+
+                // If still no image found, return a placeholder
+                if (imagePath == null || !System.IO.File.Exists(imagePath))
+                {
+                    return GetPlaceholderImage();
+                }
+
+                // Determine content type based on file extension
+                var contentType = GetContentType(imagePath);
+                return PhysicalFile(imagePath, contentType);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading profile picture: {ex.Message}");
+                // Return placeholder image on error
+                return GetPlaceholderImage();
+            }
+        }
+
         // View Archived Seniors
         public IActionResult ArchivedSeniors()
         {
@@ -432,6 +513,9 @@ namespace SeniorManagement.Controllers
                 TempData["ErrorMessage"] = "Senior record not found.";
                 return RedirectToAction("Index");
             }
+
+            // Add profile picture URL to ViewBag
+            ViewBag.ProfilePictureUrl = GetProfilePictureUrl(id);
 
             return View(senior);
         }
@@ -452,7 +536,88 @@ namespace SeniorManagement.Controllers
             return Regex.IsMatch(seniorId, @"^\d{12}$");
         }
 
-        // Insert new senior into database (FIXED VERSION)
+        // Get profile picture URL
+        private string GetProfilePictureUrl(int id)
+        {
+            return Url.Action("GetProfilePicture", "Senior", new { id });
+        }
+
+        // Save profile picture
+        private async Task SaveProfilePicture(int seniorId, IFormFile profilePicture)
+        {
+            try
+            {
+                // Validate file
+                if (profilePicture.Length > 2 * 1024 * 1024) // 2MB limit
+                    throw new Exception("File size must be less than 2MB");
+
+                var validTypes = new[] { "image/jpeg", "image/jpg", "image/png" };
+                if (!validTypes.Contains(profilePicture.ContentType.ToLower()))
+                    throw new Exception("Only JPG and PNG images are allowed");
+
+                // Create uploads directory if it doesn't exist
+                var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "profiles");
+                if (!Directory.Exists(uploadsPath))
+                {
+                    Directory.CreateDirectory(uploadsPath);
+                }
+
+                // Determine file extension
+                var extension = profilePicture.ContentType.ToLower() switch
+                {
+                    "image/jpeg" => ".jpg",
+                    "image/jpg" => ".jpg",
+                    "image/png" => ".png",
+                    _ => ".jpg"
+                };
+
+                // Save the file
+                var fileName = $"{seniorId}{extension}";
+                var filePath = Path.Combine(uploadsPath, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await profilePicture.CopyToAsync(stream);
+                }
+
+                Console.WriteLine($"Profile picture saved for senior {seniorId} at {filePath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving profile picture: {ex.Message}");
+                throw;
+            }
+        }
+
+        // Get content type for image
+        private string GetContentType(string path)
+        {
+            var ext = Path.GetExtension(path).ToLower();
+            return ext switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                _ => "application/octet-stream",
+            };
+        }
+
+        // Return placeholder image
+        private IActionResult GetPlaceholderImage()
+        {
+            var placeholderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "default-profile.png");
+            if (System.IO.File.Exists(placeholderPath))
+            {
+                return PhysicalFile(placeholderPath, "image/png");
+            }
+
+            // Simple base64 encoded placeholder image (1x1 transparent pixel)
+            var base64Image = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+            var imageBytes = Convert.FromBase64String(base64Image);
+            return File(imageBytes, "image/png");
+        }
+
+        // Insert new senior into database (UPDATED WITH ALL NEW FIELDS)
         private int InsertSeniorIntoDatabase(Senior senior)
         {
             try
@@ -462,42 +627,75 @@ namespace SeniorManagement.Controllers
                     connection.Open();
 
                     string query = @"INSERT INTO seniors 
-                    (SeniorId, FirstName, LastName, MiddleInitial, Gender, Age, 
-                     BirthDate, ContactNumber, Zone, Barangay, CivilStatus,
+                    (SeniorId, FirstName, LastName, MiddleInitial, Extension, Gender, Age, 
+                     BirthDate, Citizenship, ContactNumber, Email, Zone, Barangay, CivilStatus, PensionType,
+                     HouseNumber, CityMunicipality, Province, ZipCode,
+                     SpouseFirstName, SpouseLastName, SpouseMiddleName, SpouseExtension, SpouseCitizenship,
+                     ChildrenInfo, AuthorizedRepInfo,
+                     PrimaryBeneficiaryFirstName, PrimaryBeneficiaryLastName, PrimaryBeneficiaryMiddleName, 
+                     PrimaryBeneficiaryExtension, PrimaryBeneficiaryRelationship,
+                     ContingentBeneficiaryFirstName, ContingentBeneficiaryLastName, ContingentBeneficiaryMiddleName, 
+                     ContingentBeneficiaryExtension, ContingentBeneficiaryRelationship,
                      Status, CreatedAt, UpdatedAt)
                     VALUES 
-                    (@SeniorId, @FirstName, @LastName, @MiddleInitial, @Gender, @Age,
-                     @BirthDate, @ContactNumber, @Zone, @Barangay, @CivilStatus,
+                    (@SeniorId, @FirstName, @LastName, @MiddleInitial, @Extension, @Gender, @Age,
+                     @BirthDate, @Citizenship, @ContactNumber, @Email, @Zone, @Barangay, @CivilStatus, @PensionType,
+                     @HouseNumber, @CityMunicipality, @Province, @ZipCode,
+                     @SpouseFirstName, @SpouseLastName, @SpouseMiddleName, @SpouseExtension, @SpouseCitizenship,
+                     @ChildrenInfo, @AuthorizedRepInfo,
+                     @PrimaryBeneficiaryFirstName, @PrimaryBeneficiaryLastName, @PrimaryBeneficiaryMiddleName,
+                     @PrimaryBeneficiaryExtension, @PrimaryBeneficiaryRelationship,
+                     @ContingentBeneficiaryFirstName, @ContingentBeneficiaryLastName, @ContingentBeneficiaryMiddleName,
+                     @ContingentBeneficiaryExtension, @ContingentBeneficiaryRelationship,
                      @Status, @CreatedAt, @UpdatedAt);
                     SELECT LAST_INSERT_ID();";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
-                        // Basic Information - Ensure no null values
+                        // Personal Information
                         cmd.Parameters.AddWithValue("@SeniorId", senior.SeniorId ?? "");
                         cmd.Parameters.AddWithValue("@FirstName", senior.FirstName ?? "");
                         cmd.Parameters.AddWithValue("@LastName", senior.LastName ?? "");
-                        cmd.Parameters.AddWithValue("@MiddleInitial",
-                            string.IsNullOrEmpty(senior.MiddleInitial) ? DBNull.Value : senior.MiddleInitial.Trim());
+                        cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrEmpty(senior.MiddleInitial) ? DBNull.Value : senior.MiddleInitial.Trim());
+                        cmd.Parameters.AddWithValue("@Extension", string.IsNullOrEmpty(senior.Extension) ? DBNull.Value : senior.Extension.Trim());
                         cmd.Parameters.AddWithValue("@Gender", senior.Gender ?? "");
                         cmd.Parameters.AddWithValue("@Age", senior.Age);
-
-                        // Handle nullable BirthDate
-                        if (senior.BirthDate.HasValue)
-                        {
-                            cmd.Parameters.AddWithValue("@BirthDate", senior.BirthDate.Value);
-                        }
-                        else
-                        {
-                            cmd.Parameters.AddWithValue("@BirthDate", DBNull.Value);
-                        }
-
-                        cmd.Parameters.AddWithValue("@ContactNumber",
-                            string.IsNullOrEmpty(senior.ContactNumber) ? DBNull.Value : senior.ContactNumber.Trim());
+                        cmd.Parameters.AddWithValue("@BirthDate", senior.BirthDate.HasValue ? (object)senior.BirthDate.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue("@Citizenship", string.IsNullOrEmpty(senior.Citizenship) ? "Filipino" : senior.Citizenship);
+                        cmd.Parameters.AddWithValue("@ContactNumber", string.IsNullOrEmpty(senior.ContactNumber) ? DBNull.Value : senior.ContactNumber.Trim());
+                        cmd.Parameters.AddWithValue("@Email", string.IsNullOrEmpty(senior.Email) ? DBNull.Value : senior.Email.Trim());
                         cmd.Parameters.AddWithValue("@Zone", senior.Zone);
                         cmd.Parameters.AddWithValue("@Barangay", senior.Barangay ?? "Sampaguita");
-                        cmd.Parameters.AddWithValue("@CivilStatus",
-                            string.IsNullOrEmpty(senior.CivilStatus) ? DBNull.Value : senior.CivilStatus);
+                        cmd.Parameters.AddWithValue("@CivilStatus", string.IsNullOrEmpty(senior.CivilStatus) ? DBNull.Value : senior.CivilStatus);
+                        cmd.Parameters.AddWithValue("@PensionType", string.IsNullOrEmpty(senior.PensionType) ? DBNull.Value : senior.PensionType.Trim());
+
+                        // Address Information
+                        cmd.Parameters.AddWithValue("@HouseNumber", string.IsNullOrEmpty(senior.HouseNumber) ? DBNull.Value : senior.HouseNumber.Trim());
+                        cmd.Parameters.AddWithValue("@CityMunicipality", senior.CityMunicipality ?? "General Trias");
+                        cmd.Parameters.AddWithValue("@Province", senior.Province ?? "Cavite");
+                        cmd.Parameters.AddWithValue("@ZipCode", senior.ZipCode ?? "4107");
+
+                        // Family Information
+                        cmd.Parameters.AddWithValue("@SpouseFirstName", string.IsNullOrEmpty(senior.SpouseFirstName) ? DBNull.Value : senior.SpouseFirstName.Trim());
+                        cmd.Parameters.AddWithValue("@SpouseLastName", string.IsNullOrEmpty(senior.SpouseLastName) ? DBNull.Value : senior.SpouseLastName.Trim());
+                        cmd.Parameters.AddWithValue("@SpouseMiddleName", string.IsNullOrEmpty(senior.SpouseMiddleName) ? DBNull.Value : senior.SpouseMiddleName.Trim());
+                        cmd.Parameters.AddWithValue("@SpouseExtension", string.IsNullOrEmpty(senior.SpouseExtension) ? DBNull.Value : senior.SpouseExtension.Trim());
+                        cmd.Parameters.AddWithValue("@SpouseCitizenship", string.IsNullOrEmpty(senior.SpouseCitizenship) ? DBNull.Value : senior.SpouseCitizenship.Trim());
+                        cmd.Parameters.AddWithValue("@ChildrenInfo", string.IsNullOrEmpty(senior.ChildrenInfo) ? DBNull.Value : senior.ChildrenInfo.Trim());
+                        cmd.Parameters.AddWithValue("@AuthorizedRepInfo", string.IsNullOrEmpty(senior.AuthorizedRepInfo) ? DBNull.Value : senior.AuthorizedRepInfo.Trim());
+
+                        // Designated Beneficiary Information
+                        cmd.Parameters.AddWithValue("@PrimaryBeneficiaryFirstName", string.IsNullOrEmpty(senior.PrimaryBeneficiaryFirstName) ? DBNull.Value : senior.PrimaryBeneficiaryFirstName.Trim());
+                        cmd.Parameters.AddWithValue("@PrimaryBeneficiaryLastName", string.IsNullOrEmpty(senior.PrimaryBeneficiaryLastName) ? DBNull.Value : senior.PrimaryBeneficiaryLastName.Trim());
+                        cmd.Parameters.AddWithValue("@PrimaryBeneficiaryMiddleName", string.IsNullOrEmpty(senior.PrimaryBeneficiaryMiddleName) ? DBNull.Value : senior.PrimaryBeneficiaryMiddleName.Trim());
+                        cmd.Parameters.AddWithValue("@PrimaryBeneficiaryExtension", string.IsNullOrEmpty(senior.PrimaryBeneficiaryExtension) ? DBNull.Value : senior.PrimaryBeneficiaryExtension.Trim());
+                        cmd.Parameters.AddWithValue("@PrimaryBeneficiaryRelationship", string.IsNullOrEmpty(senior.PrimaryBeneficiaryRelationship) ? DBNull.Value : senior.PrimaryBeneficiaryRelationship.Trim());
+
+                        cmd.Parameters.AddWithValue("@ContingentBeneficiaryFirstName", string.IsNullOrEmpty(senior.ContingentBeneficiaryFirstName) ? DBNull.Value : senior.ContingentBeneficiaryFirstName.Trim());
+                        cmd.Parameters.AddWithValue("@ContingentBeneficiaryLastName", string.IsNullOrEmpty(senior.ContingentBeneficiaryLastName) ? DBNull.Value : senior.ContingentBeneficiaryLastName.Trim());
+                        cmd.Parameters.AddWithValue("@ContingentBeneficiaryMiddleName", string.IsNullOrEmpty(senior.ContingentBeneficiaryMiddleName) ? DBNull.Value : senior.ContingentBeneficiaryMiddleName.Trim());
+                        cmd.Parameters.AddWithValue("@ContingentBeneficiaryExtension", string.IsNullOrEmpty(senior.ContingentBeneficiaryExtension) ? DBNull.Value : senior.ContingentBeneficiaryExtension.Trim());
+                        cmd.Parameters.AddWithValue("@ContingentBeneficiaryRelationship", string.IsNullOrEmpty(senior.ContingentBeneficiaryRelationship) ? DBNull.Value : senior.ContingentBeneficiaryRelationship.Trim());
 
                         // System Fields
                         cmd.Parameters.AddWithValue("@Status", senior.Status ?? "Active");
@@ -634,13 +832,38 @@ namespace SeniorManagement.Controllers
                 FirstName = reader.GetString("FirstName"),
                 LastName = reader.GetString("LastName"),
                 MiddleInitial = reader.IsDBNull(reader.GetOrdinal("MiddleInitial")) ? "" : reader.GetString("MiddleInitial"),
+                Extension = reader.IsDBNull(reader.GetOrdinal("Extension")) ? "" : reader.GetString("Extension"),
                 Gender = reader.GetString("Gender"),
                 Age = reader.GetInt32("Age"),
                 BirthDate = reader.IsDBNull(reader.GetOrdinal("BirthDate")) ? (DateTime?)null : reader.GetDateTime("BirthDate"),
+                Citizenship = reader.IsDBNull(reader.GetOrdinal("Citizenship")) ? "Filipino" : reader.GetString("Citizenship"),
                 ContactNumber = reader.IsDBNull(reader.GetOrdinal("ContactNumber")) ? "" : reader.GetString("ContactNumber"),
+                Email = reader.IsDBNull(reader.GetOrdinal("Email")) ? "" : reader.GetString("Email"),
                 Zone = reader.GetInt32("Zone"),
                 Barangay = reader.GetString("Barangay"),
                 CivilStatus = reader.IsDBNull(reader.GetOrdinal("CivilStatus")) ? "" : reader.GetString("CivilStatus"),
+                PensionType = reader.IsDBNull(reader.GetOrdinal("PensionType")) ? "" : reader.GetString("PensionType"),
+                HouseNumber = reader.IsDBNull(reader.GetOrdinal("HouseNumber")) ? "" : reader.GetString("HouseNumber"),
+                CityMunicipality = reader.IsDBNull(reader.GetOrdinal("CityMunicipality")) ? "General Trias" : reader.GetString("CityMunicipality"),
+                Province = reader.IsDBNull(reader.GetOrdinal("Province")) ? "Cavite" : reader.GetString("Province"),
+                ZipCode = reader.IsDBNull(reader.GetOrdinal("ZipCode")) ? "4107" : reader.GetString("ZipCode"),
+                SpouseFirstName = reader.IsDBNull(reader.GetOrdinal("SpouseFirstName")) ? "" : reader.GetString("SpouseFirstName"),
+                SpouseLastName = reader.IsDBNull(reader.GetOrdinal("SpouseLastName")) ? "" : reader.GetString("SpouseLastName"),
+                SpouseMiddleName = reader.IsDBNull(reader.GetOrdinal("SpouseMiddleName")) ? "" : reader.GetString("SpouseMiddleName"),
+                SpouseExtension = reader.IsDBNull(reader.GetOrdinal("SpouseExtension")) ? "" : reader.GetString("SpouseExtension"),
+                SpouseCitizenship = reader.IsDBNull(reader.GetOrdinal("SpouseCitizenship")) ? "" : reader.GetString("SpouseCitizenship"),
+                ChildrenInfo = reader.IsDBNull(reader.GetOrdinal("ChildrenInfo")) ? "" : reader.GetString("ChildrenInfo"),
+                AuthorizedRepInfo = reader.IsDBNull(reader.GetOrdinal("AuthorizedRepInfo")) ? "" : reader.GetString("AuthorizedRepInfo"),
+                PrimaryBeneficiaryFirstName = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryFirstName")) ? "" : reader.GetString("PrimaryBeneficiaryFirstName"),
+                PrimaryBeneficiaryLastName = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryLastName")) ? "" : reader.GetString("PrimaryBeneficiaryLastName"),
+                PrimaryBeneficiaryMiddleName = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryMiddleName")) ? "" : reader.GetString("PrimaryBeneficiaryMiddleName"),
+                PrimaryBeneficiaryExtension = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryExtension")) ? "" : reader.GetString("PrimaryBeneficiaryExtension"),
+                PrimaryBeneficiaryRelationship = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryRelationship")) ? "" : reader.GetString("PrimaryBeneficiaryRelationship"),
+                ContingentBeneficiaryFirstName = reader.IsDBNull(reader.GetOrdinal("ContingentBeneficiaryFirstName")) ? "" : reader.GetString("ContingentBeneficiaryFirstName"),
+                ContingentBeneficiaryLastName = reader.IsDBNull(reader.GetOrdinal("ContingentBeneficiaryLastName")) ? "" : reader.GetString("ContingentBeneficiaryLastName"),
+                ContingentBeneficiaryMiddleName = reader.IsDBNull(reader.GetOrdinal("ContingentBeneficiaryMiddleName")) ? "" : reader.GetString("ContingentBeneficiaryMiddleName"),
+                ContingentBeneficiaryExtension = reader.IsDBNull(reader.GetOrdinal("ContingentBeneficiaryExtension")) ? "" : reader.GetString("ContingentBeneficiaryExtension"),
+                ContingentBeneficiaryRelationship = reader.IsDBNull(reader.GetOrdinal("ContingentBeneficiaryRelationship")) ? "" : reader.GetString("ContingentBeneficiaryRelationship"),
                 Status = reader.GetString("Status"),
                 CreatedAt = reader.GetDateTime("CreatedAt"),
                 UpdatedAt = reader.GetDateTime("UpdatedAt")
@@ -657,33 +880,90 @@ namespace SeniorManagement.Controllers
                     connection.Open();
 
                     string query = @"UPDATE seniors 
-                                   SET SeniorId = @SeniorId,
-                                       FirstName = @FirstName,
-                                       LastName = @LastName,
-                                       MiddleInitial = @MiddleInitial,
-                                       Gender = @Gender,
-                                       Age = @Age,
-                                       BirthDate = @BirthDate,
-                                       ContactNumber = @ContactNumber,
-                                       Zone = @Zone,
-                                       CivilStatus = @CivilStatus,
-                                       UpdatedAt = @UpdatedAt
-                                   WHERE Id = @Id";
+                           SET SeniorId = @SeniorId,
+                               FirstName = @FirstName,
+                               LastName = @LastName,
+                               MiddleInitial = @MiddleInitial,
+                               Extension = @Extension,
+                               Gender = @Gender,
+                               Age = @Age,
+                               BirthDate = @BirthDate,
+                               Citizenship = @Citizenship,
+                               ContactNumber = @ContactNumber,
+                               Email = @Email,
+                               Zone = @Zone,
+                               CivilStatus = @CivilStatus,
+                               PensionType = @PensionType,
+                               HouseNumber = @HouseNumber,
+                               CityMunicipality = @CityMunicipality,
+                               Province = @Province,
+                               ZipCode = @ZipCode,
+                               SpouseFirstName = @SpouseFirstName,
+                               SpouseLastName = @SpouseLastName,
+                               SpouseMiddleName = @SpouseMiddleName,
+                               SpouseExtension = @SpouseExtension,
+                               SpouseCitizenship = @SpouseCitizenship,
+                               ChildrenInfo = @ChildrenInfo,
+                               AuthorizedRepInfo = @AuthorizedRepInfo,
+                               PrimaryBeneficiaryFirstName = @PrimaryBeneficiaryFirstName,
+                               PrimaryBeneficiaryLastName = @PrimaryBeneficiaryLastName,
+                               PrimaryBeneficiaryMiddleName = @PrimaryBeneficiaryMiddleName,
+                               PrimaryBeneficiaryExtension = @PrimaryBeneficiaryExtension,
+                               PrimaryBeneficiaryRelationship = @PrimaryBeneficiaryRelationship,
+                               ContingentBeneficiaryFirstName = @ContingentBeneficiaryFirstName,
+                               ContingentBeneficiaryLastName = @ContingentBeneficiaryLastName,
+                               ContingentBeneficiaryMiddleName = @ContingentBeneficiaryMiddleName,
+                               ContingentBeneficiaryExtension = @ContingentBeneficiaryExtension,
+                               ContingentBeneficiaryRelationship = @ContingentBeneficiaryRelationship,
+                               UpdatedAt = @UpdatedAt
+                           WHERE Id = @Id";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
-                        // Basic Information
+                        // Personal Information
                         cmd.Parameters.AddWithValue("@Id", senior.Id);
                         cmd.Parameters.AddWithValue("@SeniorId", senior.SeniorId ?? "");
                         cmd.Parameters.AddWithValue("@FirstName", senior.FirstName ?? "");
                         cmd.Parameters.AddWithValue("@LastName", senior.LastName ?? "");
                         cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrEmpty(senior.MiddleInitial) ? DBNull.Value : senior.MiddleInitial);
+                        cmd.Parameters.AddWithValue("@Extension", string.IsNullOrEmpty(senior.Extension) ? DBNull.Value : senior.Extension);
                         cmd.Parameters.AddWithValue("@Gender", senior.Gender ?? "");
                         cmd.Parameters.AddWithValue("@Age", senior.Age);
                         cmd.Parameters.AddWithValue("@BirthDate", senior.BirthDate.HasValue ? (object)senior.BirthDate.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue("@Citizenship", string.IsNullOrEmpty(senior.Citizenship) ? "Filipino" : senior.Citizenship);
                         cmd.Parameters.AddWithValue("@ContactNumber", string.IsNullOrEmpty(senior.ContactNumber) ? DBNull.Value : senior.ContactNumber);
+                        cmd.Parameters.AddWithValue("@Email", string.IsNullOrEmpty(senior.Email) ? DBNull.Value : senior.Email);
                         cmd.Parameters.AddWithValue("@Zone", senior.Zone);
                         cmd.Parameters.AddWithValue("@CivilStatus", string.IsNullOrEmpty(senior.CivilStatus) ? DBNull.Value : senior.CivilStatus);
+                        cmd.Parameters.AddWithValue("@PensionType", string.IsNullOrEmpty(senior.PensionType) ? DBNull.Value : senior.PensionType);
+
+                        // Address Information
+                        cmd.Parameters.AddWithValue("@HouseNumber", string.IsNullOrEmpty(senior.HouseNumber) ? DBNull.Value : senior.HouseNumber);
+                        cmd.Parameters.AddWithValue("@CityMunicipality", senior.CityMunicipality ?? "General Trias");
+                        cmd.Parameters.AddWithValue("@Province", senior.Province ?? "Cavite");
+                        cmd.Parameters.AddWithValue("@ZipCode", senior.ZipCode ?? "4107");
+
+                        // Family Information
+                        cmd.Parameters.AddWithValue("@SpouseFirstName", string.IsNullOrEmpty(senior.SpouseFirstName) ? DBNull.Value : senior.SpouseFirstName);
+                        cmd.Parameters.AddWithValue("@SpouseLastName", string.IsNullOrEmpty(senior.SpouseLastName) ? DBNull.Value : senior.SpouseLastName);
+                        cmd.Parameters.AddWithValue("@SpouseMiddleName", string.IsNullOrEmpty(senior.SpouseMiddleName) ? DBNull.Value : senior.SpouseMiddleName);
+                        cmd.Parameters.AddWithValue("@SpouseExtension", string.IsNullOrEmpty(senior.SpouseExtension) ? DBNull.Value : senior.SpouseExtension);
+                        cmd.Parameters.AddWithValue("@SpouseCitizenship", string.IsNullOrEmpty(senior.SpouseCitizenship) ? DBNull.Value : senior.SpouseCitizenship);
+                        cmd.Parameters.AddWithValue("@ChildrenInfo", string.IsNullOrEmpty(senior.ChildrenInfo) ? DBNull.Value : senior.ChildrenInfo);
+                        cmd.Parameters.AddWithValue("@AuthorizedRepInfo", string.IsNullOrEmpty(senior.AuthorizedRepInfo) ? DBNull.Value : senior.AuthorizedRepInfo);
+
+                        // Designated Beneficiary Information
+                        cmd.Parameters.AddWithValue("@PrimaryBeneficiaryFirstName", string.IsNullOrEmpty(senior.PrimaryBeneficiaryFirstName) ? DBNull.Value : senior.PrimaryBeneficiaryFirstName);
+                        cmd.Parameters.AddWithValue("@PrimaryBeneficiaryLastName", string.IsNullOrEmpty(senior.PrimaryBeneficiaryLastName) ? DBNull.Value : senior.PrimaryBeneficiaryLastName);
+                        cmd.Parameters.AddWithValue("@PrimaryBeneficiaryMiddleName", string.IsNullOrEmpty(senior.PrimaryBeneficiaryMiddleName) ? DBNull.Value : senior.PrimaryBeneficiaryMiddleName);
+                        cmd.Parameters.AddWithValue("@PrimaryBeneficiaryExtension", string.IsNullOrEmpty(senior.PrimaryBeneficiaryExtension) ? DBNull.Value : senior.PrimaryBeneficiaryExtension);
+                        cmd.Parameters.AddWithValue("@PrimaryBeneficiaryRelationship", string.IsNullOrEmpty(senior.PrimaryBeneficiaryRelationship) ? DBNull.Value : senior.PrimaryBeneficiaryRelationship);
+
+                        cmd.Parameters.AddWithValue("@ContingentBeneficiaryFirstName", string.IsNullOrEmpty(senior.ContingentBeneficiaryFirstName) ? DBNull.Value : senior.ContingentBeneficiaryFirstName);
+                        cmd.Parameters.AddWithValue("@ContingentBeneficiaryLastName", string.IsNullOrEmpty(senior.ContingentBeneficiaryLastName) ? DBNull.Value : senior.ContingentBeneficiaryLastName);
+                        cmd.Parameters.AddWithValue("@ContingentBeneficiaryMiddleName", string.IsNullOrEmpty(senior.ContingentBeneficiaryMiddleName) ? DBNull.Value : senior.ContingentBeneficiaryMiddleName);
+                        cmd.Parameters.AddWithValue("@ContingentBeneficiaryExtension", string.IsNullOrEmpty(senior.ContingentBeneficiaryExtension) ? DBNull.Value : senior.ContingentBeneficiaryExtension);
+                        cmd.Parameters.AddWithValue("@ContingentBeneficiaryRelationship", string.IsNullOrEmpty(senior.ContingentBeneficiaryRelationship) ? DBNull.Value : senior.ContingentBeneficiaryRelationship);
 
                         cmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
 
@@ -709,7 +989,7 @@ namespace SeniorManagement.Controllers
             return age;
         }
 
-        // Check if SeniorId already exists (FIXED VERSION)
+        // Check if SeniorId already exists
         private bool CheckSeniorIdExists(string seniorId, int excludeId = 0)
         {
             if (string.IsNullOrEmpty(seniorId))
@@ -806,7 +1086,8 @@ namespace SeniorManagement.Controllers
                                        AND (SeniorId LIKE @SearchTerm 
                                            OR FirstName LIKE @SearchTerm 
                                            OR LastName LIKE @SearchTerm
-                                           OR CONCAT(FirstName, ' ', LastName) LIKE @SearchTerm)
+                                           OR CONCAT(FirstName, ' ', LastName) LIKE @SearchTerm
+                                           OR PensionType LIKE @SearchTerm)
                                        ORDER BY LastName, FirstName
                                        LIMIT 20";
 
@@ -844,6 +1125,50 @@ namespace SeniorManagement.Controllers
                 format = "12 digits (numbers only)",
                 pattern = "XXXXXXXXXXXX"
             });
+        }
+
+        // Get pension type statistics
+        [HttpGet]
+        public JsonResult GetPensionStatistics()
+        {
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+                    string query = @"SELECT 
+                                    COUNT(*) as TotalSeniors,
+                                    SUM(CASE WHEN PensionType IS NOT NULL AND PensionType != '' THEN 1 ELSE 0 END) as WithPension,
+                                    SUM(CASE WHEN PensionType IS NULL OR PensionType = '' THEN 1 ELSE 0 END) as WithoutPension,
+                                    COALESCE(PensionType, 'None') as PensionCategory,
+                                    COUNT(*) as Count
+                                    FROM seniors 
+                                    WHERE Status = 'Active'
+                                    GROUP BY COALESCE(PensionType, 'None')
+                                    ORDER BY Count DESC";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        var statistics = new List<dynamic>();
+                        while (reader.Read())
+                        {
+                            statistics.Add(new
+                            {
+                                PensionCategory = reader.GetString("PensionCategory"),
+                                Count = reader.GetInt32("Count")
+                            });
+                        }
+
+                        return Json(new { success = true, data = statistics });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting pension statistics: {ex.Message}");
+                return Json(new { success = false, error = ex.Message });
+            }
         }
     }
 }

@@ -34,6 +34,7 @@ namespace SeniorManagement.Controllers
             string status = null, string zone = null, string gender = null,
             string civilStatus = null, string ageRange = null,
             string monthYear = null, string seniorSearch = null,
+            string pensionType = null,
 
             // Event filters
             string eventStatus = null, string eventType = null,
@@ -43,7 +44,7 @@ namespace SeniorManagement.Controllers
             try
             {
                 // Get filtered seniors
-                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, monthYear, seniorSearch);
+                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, monthYear, seniorSearch, pensionType);
 
                 // Get filtered events
                 var events = await GetFilteredEvents(eventStatus, eventType, eventDateFilter, eventSearch, fromDate, toDate);
@@ -56,6 +57,14 @@ namespace SeniorManagement.Controllers
                     .OrderByDescending(x => x.Year)
                     .ThenByDescending(x => x.Month)
                     .Select(x => $"{x.Year}-{x.Month:D2}")
+                    .ToList();
+
+                // Get distinct pension types for filter
+                var pensionTypes = allSeniors
+                    .Where(s => !string.IsNullOrEmpty(s.PensionType))
+                    .Select(s => s.PensionType)
+                    .Distinct()
+                    .OrderBy(p => p)
                     .ToList();
 
                 var viewModel = new ReportViewModel
@@ -72,8 +81,10 @@ namespace SeniorManagement.Controllers
                     SelectedCivilStatus = civilStatus,
                     SelectedAgeRange = ageRange,
                     SelectedMonthYear = monthYear,
+                    SelectedPensionType = pensionType,
                     SeniorSearchTerm = seniorSearch,
                     AvailableMonthsYears = availableMonthsYears,
+                    AvailablePensionTypes = pensionTypes,
 
                     // Event Data
                     TotalEvents = events.Count,
@@ -100,11 +111,12 @@ namespace SeniorManagement.Controllers
         // GET: /Report/ExportSeniorTable
         public IActionResult ExportSeniorTable(string status = null, string zone = null, string gender = null,
                                               string civilStatus = null, string ageRange = null,
-                                              string monthYear = null, string seniorSearch = null)
+                                              string monthYear = null, string seniorSearch = null,
+                                              string pensionType = null)
         {
             try
             {
-                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, monthYear, seniorSearch);
+                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, monthYear, seniorSearch, pensionType);
 
                 if (!seniors.Any())
                 {
@@ -120,11 +132,44 @@ namespace SeniorManagement.Controllers
                     $"Exported senior table with {seniors.Count} records"
                 ).Wait();
 
-                return File(bytes, "text/csv", $"Senior_Table_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+                return File(bytes, "text/csv", $"Senior_Basic_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
             }
             catch (Exception ex)
             {
                 TempData["ErrorMessage"] = $"Error exporting senior table: {ex.Message}";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        // GET: /Report/ExportSeniorDetailed
+        public IActionResult ExportSeniorDetailed(string status = null, string zone = null, string gender = null,
+                                                 string civilStatus = null, string ageRange = null,
+                                                 string monthYear = null, string seniorSearch = null,
+                                                 string pensionType = null)
+        {
+            try
+            {
+                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, monthYear, seniorSearch, pensionType);
+
+                if (!seniors.Any())
+                {
+                    TempData["ErrorMessage"] = "No senior data available for export.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var csvContent = GenerateSeniorDetailedCsvContent(seniors);
+                var bytes = Encoding.UTF8.GetBytes(csvContent);
+
+                _activityHelper.LogActivityAsync(
+                    "Export Senior Detailed",
+                    $"Exported detailed senior data with {seniors.Count} records"
+                ).Wait();
+
+                return File(bytes, "text/csv", $"Senior_Detailed_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Error exporting detailed senior data: {ex.Message}";
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -164,7 +209,7 @@ namespace SeniorManagement.Controllers
         #region Private Helper Methods
 
         private List<Senior> GetFilteredSeniors(string status, string zone, string gender, string civilStatus,
-                                                string ageRange, string monthYear, string searchTerm)
+                                                string ageRange, string monthYear, string searchTerm, string pensionType)
         {
             var seniors = GetAllSeniors();
 
@@ -208,6 +253,12 @@ namespace SeniorManagement.Controllers
                 }
             }
 
+            // Filter by pension type
+            if (!string.IsNullOrEmpty(pensionType))
+            {
+                seniors = seniors.Where(s => s.PensionType == pensionType).ToList();
+            }
+
             // Filter by registration month/year
             if (!string.IsNullOrEmpty(monthYear))
             {
@@ -226,14 +277,17 @@ namespace SeniorManagement.Controllers
                 catch { /* Ignore parsing errors */ }
             }
 
-            // Search by name or SCCN
+            // Search by name, SCCN, or other fields
             if (!string.IsNullOrEmpty(searchTerm))
             {
                 searchTerm = searchTerm.ToLower();
                 seniors = seniors.Where(s =>
                     s.CompleteName.ToLower().Contains(searchTerm) ||
                     s.FormattedSCCN.ToLower().Contains(searchTerm) ||
-                    s.SeniorId.Contains(searchTerm)
+                    s.SeniorId.Contains(searchTerm) ||
+                    (s.ContactNumber != null && s.ContactNumber.Contains(searchTerm)) ||
+                    (s.Email != null && s.Email.ToLower().Contains(searchTerm)) ||
+                    (s.PensionType != null && s.PensionType.ToLower().Contains(searchTerm))
                 ).ToList();
             }
 
@@ -260,7 +314,87 @@ namespace SeniorManagement.Controllers
 
                     var parameters = new List<MySqlParameter>();
 
-                    // ... (same filter logic as before) ...
+                    // Status filter
+                    if (!string.IsNullOrEmpty(status))
+                    {
+                        query += " AND Status = @EventStatus";
+                        parameters.Add(new MySqlParameter("@EventStatus", status));
+                    }
+
+                    // Type filter
+                    if (!string.IsNullOrEmpty(type))
+                    {
+                        query += " AND EventType = @EventType";
+                        parameters.Add(new MySqlParameter("@EventType", type));
+                    }
+
+                    // Date filter
+                    if (!string.IsNullOrEmpty(dateFilter))
+                    {
+                        var today = DateTime.Today;
+                        switch (dateFilter)
+                        {
+                            case "today":
+                                query += " AND DATE(EventDate) = @Today";
+                                parameters.Add(new MySqlParameter("@Today", today));
+                                break;
+                            case "tomorrow":
+                                query += " AND DATE(EventDate) = @Tomorrow";
+                                parameters.Add(new MySqlParameter("@Tomorrow", today.AddDays(1)));
+                                break;
+                            case "thisweek":
+                                var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+                                var endOfWeek = startOfWeek.AddDays(6);
+                                query += " AND EventDate BETWEEN @StartOfWeek AND @EndOfWeek";
+                                parameters.Add(new MySqlParameter("@StartOfWeek", startOfWeek));
+                                parameters.Add(new MySqlParameter("@EndOfWeek", endOfWeek));
+                                break;
+                            case "nextweek":
+                                var nextWeekStart = today.AddDays(7 - (int)today.DayOfWeek);
+                                var nextWeekEnd = nextWeekStart.AddDays(6);
+                                query += " AND EventDate BETWEEN @NextWeekStart AND @NextWeekEnd";
+                                parameters.Add(new MySqlParameter("@NextWeekStart", nextWeekStart));
+                                parameters.Add(new MySqlParameter("@NextWeekEnd", nextWeekEnd));
+                                break;
+                            case "thismonth":
+                                query += " AND MONTH(EventDate) = MONTH(@Today) AND YEAR(EventDate) = YEAR(@Today)";
+                                parameters.Add(new MySqlParameter("@Today", today));
+                                break;
+                            case "nextmonth":
+                                var nextMonth = today.AddMonths(1);
+                                query += " AND MONTH(EventDate) = MONTH(@NextMonth) AND YEAR(EventDate) = YEAR(@NextMonth)";
+                                parameters.Add(new MySqlParameter("@NextMonth", nextMonth));
+                                break;
+                            case "past":
+                                query += " AND EventDate < @Today";
+                                parameters.Add(new MySqlParameter("@Today", today));
+                                break;
+                            case "upcoming":
+                                query += " AND EventDate >= @Today";
+                                parameters.Add(new MySqlParameter("@Today", today));
+                                break;
+                        }
+                    }
+
+                    // Date range filter
+                    if (!string.IsNullOrEmpty(fromDate) && DateTime.TryParse(fromDate, out DateTime fromDateValue))
+                    {
+                        query += " AND EventDate >= @FromDate";
+                        parameters.Add(new MySqlParameter("@FromDate", fromDateValue));
+                    }
+
+                    if (!string.IsNullOrEmpty(toDate) && DateTime.TryParse(toDate, out DateTime toDateValue))
+                    {
+                        query += " AND EventDate <= @ToDate";
+                        parameters.Add(new MySqlParameter("@ToDate", toDateValue));
+                    }
+
+                    // Search filter
+                    if (!string.IsNullOrEmpty(search))
+                    {
+                        query += " AND (EventTitle LIKE @Search OR EventLocation LIKE @Search OR OrganizedBy LIKE @Search)";
+                        parameters.Add(new MySqlParameter("@Search", $"%{search}%"));
+                    }
 
                     query += " ORDER BY EventDate DESC, EventTime DESC";
 
@@ -272,17 +406,14 @@ namespace SeniorManagement.Controllers
                         {
                             while (await reader.ReadAsync())
                             {
-                                // CORRECT WAY: Use GetFieldValue<TimeSpan>() or GetValue()
                                 TimeSpan eventTime;
 
                                 try
                                 {
-                                    // Method 1: GetFieldValue<TimeSpan> (most modern)
                                     eventTime = reader.GetFieldValue<TimeSpan>(reader.GetOrdinal("EventTime"));
                                 }
                                 catch (InvalidCastException)
                                 {
-                                    // Method 2: Get as object and convert
                                     try
                                     {
                                         var timeValue = reader.GetValue(reader.GetOrdinal("EventTime"));
@@ -299,15 +430,9 @@ namespace SeniorManagement.Controllers
                                         {
                                             eventTime = TimeSpan.Parse(timeString);
                                         }
-                                        else if (timeValue is TimeOnly timeOnly) // If using newer .NET
-                                        {
-                                            eventTime = timeOnly.ToTimeSpan();
-                                        }
                                         else
                                         {
-                                            // Try to convert to string and parse
-                                            var stringValue = timeValue.ToString();
-                                            eventTime = TimeSpan.Parse(stringValue);
+                                            eventTime = TimeSpan.Zero;
                                         }
                                     }
                                     catch
@@ -346,6 +471,7 @@ namespace SeniorManagement.Controllers
 
             return events;
         }
+
         private List<Senior> GetAllSeniors()
         {
             var seniors = new List<Senior>();
@@ -355,34 +481,14 @@ namespace SeniorManagement.Controllers
                 using (var connection = _dbHelper.GetConnection())
                 {
                     connection.Open();
-                    string query = @"SELECT Id, SeniorId, FirstName, LastName, MiddleInitial, Gender, Age, 
-                                   BirthDate, ContactNumber, Zone, Barangay, CivilStatus, Status, 
-                                   CreatedAt, UpdatedAt
-                                   FROM seniors ORDER BY LastName, FirstName";
+                    string query = @"SELECT * FROM seniors ORDER BY LastName, FirstName";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            seniors.Add(new Senior
-                            {
-                                Id = reader.GetInt32("Id"),
-                                SeniorId = reader.GetString("SeniorId"),
-                                FirstName = reader.GetString("FirstName"),
-                                LastName = reader.GetString("LastName"),
-                                MiddleInitial = reader.IsDBNull(reader.GetOrdinal("MiddleInitial")) ? "" : reader.GetString("MiddleInitial"),
-                                Gender = reader.GetString("Gender"),
-                                Age = reader.GetInt32("Age"),
-                                BirthDate = reader.IsDBNull(reader.GetOrdinal("BirthDate")) ? (DateTime?)null : reader.GetDateTime("BirthDate"),
-                                ContactNumber = reader.IsDBNull(reader.GetOrdinal("ContactNumber")) ? "" : reader.GetString("ContactNumber"),
-                                Zone = reader.GetInt32("Zone"),
-                                Barangay = reader.GetString("Barangay"),
-                                CivilStatus = reader.IsDBNull(reader.GetOrdinal("CivilStatus")) ? "" : reader.GetString("CivilStatus"),
-                                Status = reader.GetString("Status"),
-                                CreatedAt = reader.GetDateTime("CreatedAt"),
-                                UpdatedAt = reader.GetDateTime("UpdatedAt")
-                            });
+                            seniors.Add(MapSeniorFromReader(reader));
                         }
                     }
                 }
@@ -395,17 +501,80 @@ namespace SeniorManagement.Controllers
             return seniors;
         }
 
+        private Senior MapSeniorFromReader(MySqlDataReader reader)
+        {
+            return new Senior
+            {
+                Id = reader.GetInt32("Id"),
+                SeniorId = reader.GetString("SeniorId"),
+                FirstName = reader.GetString("FirstName"),
+                LastName = reader.GetString("LastName"),
+                MiddleInitial = reader.IsDBNull(reader.GetOrdinal("MiddleInitial")) ? "" : reader.GetString("MiddleInitial"),
+                Extension = reader.IsDBNull(reader.GetOrdinal("Extension")) ? "" : reader.GetString("Extension"),
+                Gender = reader.GetString("Gender"),
+                Age = reader.GetInt32("Age"),
+                BirthDate = reader.IsDBNull(reader.GetOrdinal("BirthDate")) ? (DateTime?)null : reader.GetDateTime("BirthDate"),
+                Citizenship = reader.IsDBNull(reader.GetOrdinal("Citizenship")) ? "Filipino" : reader.GetString("Citizenship"),
+                ContactNumber = reader.IsDBNull(reader.GetOrdinal("ContactNumber")) ? "" : reader.GetString("ContactNumber"),
+                Email = reader.IsDBNull(reader.GetOrdinal("Email")) ? "" : reader.GetString("Email"),
+                Zone = reader.GetInt32("Zone"),
+                Barangay = reader.GetString("Barangay"),
+                CivilStatus = reader.IsDBNull(reader.GetOrdinal("CivilStatus")) ? "" : reader.GetString("CivilStatus"),
+                PensionType = reader.IsDBNull(reader.GetOrdinal("PensionType")) ? "" : reader.GetString("PensionType"),
+                HouseNumber = reader.IsDBNull(reader.GetOrdinal("HouseNumber")) ? "" : reader.GetString("HouseNumber"),
+                CityMunicipality = reader.IsDBNull(reader.GetOrdinal("CityMunicipality")) ? "General Trias" : reader.GetString("CityMunicipality"),
+                Province = reader.IsDBNull(reader.GetOrdinal("Province")) ? "Cavite" : reader.GetString("Province"),
+                ZipCode = reader.IsDBNull(reader.GetOrdinal("ZipCode")) ? "4107" : reader.GetString("ZipCode"),
+                SpouseFirstName = reader.IsDBNull(reader.GetOrdinal("SpouseFirstName")) ? "" : reader.GetString("SpouseFirstName"),
+                SpouseLastName = reader.IsDBNull(reader.GetOrdinal("SpouseLastName")) ? "" : reader.GetString("SpouseLastName"),
+                SpouseMiddleName = reader.IsDBNull(reader.GetOrdinal("SpouseMiddleName")) ? "" : reader.GetString("SpouseMiddleName"),
+                SpouseExtension = reader.IsDBNull(reader.GetOrdinal("SpouseExtension")) ? "" : reader.GetString("SpouseExtension"),
+                SpouseCitizenship = reader.IsDBNull(reader.GetOrdinal("SpouseCitizenship")) ? "" : reader.GetString("SpouseCitizenship"),
+                ChildrenInfo = reader.IsDBNull(reader.GetOrdinal("ChildrenInfo")) ? "" : reader.GetString("ChildrenInfo"),
+                AuthorizedRepInfo = reader.IsDBNull(reader.GetOrdinal("AuthorizedRepInfo")) ? "" : reader.GetString("AuthorizedRepInfo"),
+                PrimaryBeneficiaryFirstName = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryFirstName")) ? "" : reader.GetString("PrimaryBeneficiaryFirstName"),
+                PrimaryBeneficiaryLastName = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryLastName")) ? "" : reader.GetString("PrimaryBeneficiaryLastName"),
+                PrimaryBeneficiaryMiddleName = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryMiddleName")) ? "" : reader.GetString("PrimaryBeneficiaryMiddleName"),
+                PrimaryBeneficiaryExtension = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryExtension")) ? "" : reader.GetString("PrimaryBeneficiaryExtension"),
+                PrimaryBeneficiaryRelationship = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryRelationship")) ? "" : reader.GetString("PrimaryBeneficiaryRelationship"),
+                ContingentBeneficiaryFirstName = reader.IsDBNull(reader.GetOrdinal("ContingentBeneficiaryFirstName")) ? "" : reader.GetString("ContingentBeneficiaryFirstName"),
+                ContingentBeneficiaryLastName = reader.IsDBNull(reader.GetOrdinal("ContingentBeneficiaryLastName")) ? "" : reader.GetString("ContingentBeneficiaryLastName"),
+                ContingentBeneficiaryMiddleName = reader.IsDBNull(reader.GetOrdinal("ContingentBeneficiaryMiddleName")) ? "" : reader.GetString("ContingentBeneficiaryMiddleName"),
+                ContingentBeneficiaryExtension = reader.IsDBNull(reader.GetOrdinal("ContingentBeneficiaryExtension")) ? "" : reader.GetString("ContingentBeneficiaryExtension"),
+                ContingentBeneficiaryRelationship = reader.IsDBNull(reader.GetOrdinal("ContingentBeneficiaryRelationship")) ? "" : reader.GetString("ContingentBeneficiaryRelationship"),
+                Status = reader.GetString("Status"),
+                CreatedAt = reader.GetDateTime("CreatedAt"),
+                UpdatedAt = reader.GetDateTime("UpdatedAt")
+            };
+        }
+
         private string GenerateSeniorCsvContent(List<Senior> seniors)
         {
             var sb = new StringBuilder();
 
-            // Headers
-            sb.AppendLine("SCCN Number,Formatted SCCN,Full Name,Gender,Age,Zone,Civil Status,Contact Number,Status,Registered On");
+            // Headers - Basic information
+            sb.AppendLine("SCCN Number,Formatted SCCN,Full Name,Gender,Age,Birth Date,Zone,Barangay,Civil Status,Contact Number,Email,Citizenship,Pension Type,House Number,City/Municipality,Province,Zip Code,Status,Registered On,Last Updated");
 
             // Data
             foreach (var senior in seniors)
             {
-                sb.AppendLine($"\"{senior.SeniorId}\",\"{senior.FormattedSCCN}\",\"{senior.CompleteName}\",\"{senior.Gender}\",\"{senior.Age}\",\"Zone {senior.Zone}\",\"{senior.CivilStatus}\",\"{senior.ContactNumber}\",\"{senior.Status}\",\"{senior.CreatedAt:yyyy-MM-dd}\"");
+                sb.AppendLine($"\"{senior.SeniorId}\",\"{senior.FormattedSCCN}\",\"{senior.CompleteName}\",\"{senior.Gender}\",\"{senior.Age}\",\"{senior.BirthDate?.ToString("yyyy-MM-dd")}\",\"Zone {senior.Zone}\",\"{senior.Barangay}\",\"{senior.CivilStatus}\",\"{senior.ContactNumber}\",\"{senior.Email}\",\"{senior.Citizenship}\",\"{senior.PensionType}\",\"{senior.HouseNumber}\",\"{senior.CityMunicipality}\",\"{senior.Province}\",\"{senior.ZipCode}\",\"{senior.Status}\",\"{senior.CreatedAt:yyyy-MM-dd}\",\"{senior.UpdatedAt:yyyy-MM-dd}\"");
+            }
+
+            return sb.ToString();
+        }
+
+        private string GenerateSeniorDetailedCsvContent(List<Senior> seniors)
+        {
+            var sb = new StringBuilder();
+
+            // Headers - Complete data export (all 40+ fields)
+            sb.AppendLine("ID,SCCN Number,Formatted SCCN,First Name,Last Name,Middle Initial,Extension,Gender,Age,Birth Date,Citizenship,Contact Number,Email,Zone,Barangay,Civil Status,Pension Type,House Number,City/Municipality,Province,Zip Code,Spouse First Name,Spouse Last Name,Spouse Middle Name,Spouse Extension,Spouse Citizenship,Children Info,Authorized Representative Info,Primary Beneficiary First Name,Primary Beneficiary Last Name,Primary Beneficiary Middle Name,Primary Beneficiary Extension,Primary Beneficiary Relationship,Contingent Beneficiary First Name,Contingent Beneficiary Last Name,Contingent Beneficiary Middle Name,Contingent Beneficiary Extension,Contingent Beneficiary Relationship,Status,Created At,Updated At");
+
+            // Data
+            foreach (var senior in seniors)
+            {
+                sb.AppendLine($"\"{senior.Id}\",\"{senior.SeniorId}\",\"{senior.FormattedSCCN}\",\"{senior.FirstName}\",\"{senior.LastName}\",\"{senior.MiddleInitial}\",\"{senior.Extension}\",\"{senior.Gender}\",\"{senior.Age}\",\"{senior.BirthDate?.ToString("yyyy-MM-dd")}\",\"{senior.Citizenship}\",\"{senior.ContactNumber}\",\"{senior.Email}\",\"{senior.Zone}\",\"{senior.Barangay}\",\"{senior.CivilStatus}\",\"{senior.PensionType}\",\"{senior.HouseNumber}\",\"{senior.CityMunicipality}\",\"{senior.Province}\",\"{senior.ZipCode}\",\"{senior.SpouseFirstName}\",\"{senior.SpouseLastName}\",\"{senior.SpouseMiddleName}\",\"{senior.SpouseExtension}\",\"{senior.SpouseCitizenship}\",\"{senior.ChildrenInfo}\",\"{senior.AuthorizedRepInfo}\",\"{senior.PrimaryBeneficiaryFirstName}\",\"{senior.PrimaryBeneficiaryLastName}\",\"{senior.PrimaryBeneficiaryMiddleName}\",\"{senior.PrimaryBeneficiaryExtension}\",\"{senior.PrimaryBeneficiaryRelationship}\",\"{senior.ContingentBeneficiaryFirstName}\",\"{senior.ContingentBeneficiaryLastName}\",\"{senior.ContingentBeneficiaryMiddleName}\",\"{senior.ContingentBeneficiaryExtension}\",\"{senior.ContingentBeneficiaryRelationship}\",\"{senior.Status}\",\"{senior.CreatedAt:yyyy-MM-dd HH:mm:ss}\",\"{senior.UpdatedAt:yyyy-MM-dd HH:mm:ss}\"");
             }
 
             return sb.ToString();

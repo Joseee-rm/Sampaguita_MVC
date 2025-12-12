@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Extensions.FileProviders;
 using SeniorManagement.Helpers;
 using SeniorManagement.Hubs;
 using SeniorManagement.Repositories;
@@ -71,12 +72,23 @@ builder.Services.AddScoped<IMonthlyContributionRepository, MonthlyContributionRe
 // Add HTTP context accessor
 builder.Services.AddHttpContextAccessor();
 
-
 // Add logging configuration
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+
+// Configure file upload size limits (for profile pictures)
+builder.Services.Configure<IISServerOptions>(options =>
+{
+    options.MaxRequestBodySize = 20971520; // 20MB limit
+});
+
+// Configure Kestrel for file uploads
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 20971520; // 20MB
+});
 
 var app = builder.Build();
 
@@ -92,7 +104,70 @@ else
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+
+// Configure static files for profile pictures uploads
+app.UseStaticFiles(); // This serves wwwroot
+
+// ==============================================
+// 2. Directory Structure Implementation
+// ==============================================
+var contentRootPath = app.Environment.ContentRootPath;
+
+// Create base uploads directory
+var uploadsPath = Path.Combine(contentRootPath, "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+    Console.WriteLine($"Created uploads directory: {uploadsPath}");
+}
+
+// Create profiles directory for profile pictures
+var profilesDir = Path.Combine(uploadsPath, "profiles");
+if (!Directory.Exists(profilesDir))
+{
+    Directory.CreateDirectory(profilesDir);
+    Console.WriteLine($"Created profiles directory: {profilesDir}");
+}
+
+// Create logs directory for contribution logs
+var logsDir = Path.Combine(contentRootPath, "logs", "contributions");
+if (!Directory.Exists(logsDir))
+{
+    Directory.CreateDirectory(logsDir);
+    Console.WriteLine($"Created logs directory: {logsDir}");
+}
+
+// Create exports directory for export files
+var exportsDir = Path.Combine(contentRootPath, "exports");
+if (!Directory.Exists(exportsDir))
+{
+    Directory.CreateDirectory(exportsDir);
+    Console.WriteLine($"Created exports directory: {exportsDir}");
+}
+
+// Create temp directory for temporary files
+var tempDir = Path.Combine(contentRootPath, "temp");
+if (!Directory.Exists(tempDir))
+{
+    Directory.CreateDirectory(tempDir);
+    Console.WriteLine($"Created temp directory: {tempDir}");
+}
+
+// Configure static file serving for uploads directory
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
+
+// Configure static file serving for exports directory (if needed for downloads)
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(exportsDir),
+    RequestPath = "/exports",
+    // Optional: Add security restrictions for exports
+    ServeUnknownFileTypes = false
+});
 
 app.UseRouting();
 
@@ -116,15 +191,6 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// Create logs directory on startup
-var webRootPath = app.Environment.WebRootPath;
-var logsDir = Path.Combine(webRootPath, "logs", "contributions");
-if (!Directory.Exists(logsDir))
-{
-    Directory.CreateDirectory(logsDir);
-    Console.WriteLine($"Created logs directory: {logsDir}");
-}
-
 // Map controllers
 app.MapControllerRoute(
     name: "default",
@@ -136,6 +202,12 @@ app.MapControllerRoute(
     pattern: "Dues/{action=Index}/{id?}",
     defaults: new { controller = "Dues" });
 
+// Map Senior controller routes
+app.MapControllerRoute(
+    name: "senior",
+    pattern: "Senior/{action=Index}/{id?}",
+    defaults: new { controller = "Senior" });
+
 // Add SignalR hub endpoint
 app.MapHub<ActivityHub>("/activityHub");
 
@@ -145,8 +217,41 @@ app.MapGet("/test", async (context) =>
     await context.Response.WriteAsync("Senior Management System is running!");
 });
 
-// Startup message
+// Health check endpoint
+app.MapGet("/health", async (context) =>
+{
+    await context.Response.WriteAsync("OK");
+});
+
+// Directory cleanup for temp files (optional - run on startup)
+try
+{
+    // Clean up temp files older than 1 day
+    var tempFiles = Directory.GetFiles(tempDir);
+    foreach (var file in tempFiles)
+    {
+        var fileInfo = new FileInfo(file);
+        if (fileInfo.CreationTime < DateTime.Now.AddDays(-1))
+        {
+            fileInfo.Delete();
+            Console.WriteLine($"Cleaned up old temp file: {file}");
+        }
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error cleaning temp directory: {ex.Message}");
+}
+
+// Startup message with directory info
+Console.WriteLine("==============================================");
 Console.WriteLine("Senior Management System Started Successfully!");
 Console.WriteLine($"Environment: {app.Environment.EnvironmentName}");
+Console.WriteLine("Directory Structure Created:");
+Console.WriteLine($"  • Profiles: {profilesDir}");
+Console.WriteLine($"  • Logs: {logsDir}");
+Console.WriteLine($"  • Exports: {exportsDir}");
+Console.WriteLine($"  • Temp: {tempDir}");
+Console.WriteLine("==============================================");
 
 app.Run();

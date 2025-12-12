@@ -1,8 +1,24 @@
 ﻿@model SeniorManagement.Models.ReportViewModel
 @{
     ViewData["Title"] = "";
+    
+    // Declare variables at the top so they're accessible throughout the view
+    bool hasSeniorFilters = !string.IsNullOrEmpty(Model.SelectedStatus) || 
+                           !string.IsNullOrEmpty(Model.SelectedZoneFilter) || 
+                           !string.IsNullOrEmpty(Model.SelectedGender) || 
+                           !string.IsNullOrEmpty(Model.SelectedCivilStatus) ||
+                           !string.IsNullOrEmpty(Model.SelectedAgeRange) || 
+                           !string.IsNullOrEmpty(Model.SelectedMonthYear) ||
+                           !string.IsNullOrEmpty(Model.SelectedPensionType) || 
+                           !string.IsNullOrEmpty(Model.SeniorSearchTerm);
+    
+    bool hasEventFilters = !string.IsNullOrEmpty(Model.SelectedEventStatus) || 
+                          !string.IsNullOrEmpty(Model.SelectedEventType) || 
+                          !string.IsNullOrEmpty(Model.SelectedEventDateFilter) || 
+                          !string.IsNullOrEmpty(Model.EventSearchTerm) ||
+                          !string.IsNullOrEmpty(Model.SelectedFromDate) || 
+                          !string.IsNullOrEmpty(Model.SelectedToDate);
 }
-
 <div class="container-fluid">
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -37,7 +53,7 @@
                     <input type="hidden" name="toDate" value="@Model.SelectedToDate" />
 
                     <!-- Status Filter -->
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="small font-weight-bold">Status</label>
                         <select class="form-control form-control-sm" name="status">
                             <option value="">All Status</option>
@@ -69,7 +85,7 @@
                     </div>
 
                     <!-- Civil Status Filter -->
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="small font-weight-bold">Civil Status</label>
                         <select class="form-control form-control-sm" name="civilStatus">
                             <option value="">All Status</option>
@@ -92,6 +108,19 @@
                         </select>
                     </div>
 
+                    <!-- Pension Type Filter -->
+                    <div class="col-md-3">
+                        <label class="small font-weight-bold">Pension Type</label>
+                        <select class="form-control form-control-sm" name="pensionType">
+                            <option value="">All Pension Types</option>
+                            @foreach (var pensionType in Model.AvailablePensionTypes)
+                            {
+                                bool isSelected = Model.SelectedPensionType == pensionType;
+                                <option value="@pensionType" selected="@isSelected">@pensionType</option>
+                            }
+                        </select>
+                    </div>
+
                     <!-- Month/Year Registered Filter -->
                     <div class="col-md-3">
                         <label class="small font-weight-bold">Month/Year Registered</label>
@@ -100,17 +129,18 @@
                             @foreach (var monthYear in Model.AvailableMonthsYears)
                             {
                                 var displayText = DateTime.ParseExact($"{monthYear}-01", "yyyy-MM-dd", null).ToString("MMMM yyyy");
-                                <option value="@monthYear" selected="@(Model.SelectedMonthYear == monthYear)">@displayText</option>
+                                bool isSelected = Model.SelectedMonthYear == monthYear;
+                                <option value="@monthYear" selected="@isSelected">@displayText</option>
                             }
                         </select>
                     </div>
 
                     <!-- Search by Name or SCCN -->
                     <div class="col-md-5">
-                        <label class="small font-weight-bold">Search by Name or SCCN</label>
+                        <label class="small font-weight-bold">Search by Name, SCCN, or Pension</label>
                         <div class="input-group input-group-sm">
                             <input type="text" class="form-control" name="seniorSearch"
-                                   value="@Model.SeniorSearchTerm" placeholder="Search by name or SCCN number...">
+                                   value="@Model.SeniorSearchTerm" placeholder="Search by name, SCCN, pension type...">
                             <div class="input-group-append">
                                 <button class="btn btn-primary" type="submit">
                                     <i class="fas fa-search"></i>
@@ -124,10 +154,7 @@
                         <button type="submit" class="btn btn-sm btn-primary mr-2">
                             <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        @if (!string.IsNullOrEmpty(Model.SelectedStatus) || !string.IsNullOrEmpty(Model.SelectedZoneFilter) || 
-                           !string.IsNullOrEmpty(Model.SelectedGender) || !string.IsNullOrEmpty(Model.SelectedCivilStatus) ||
-                           !string.IsNullOrEmpty(Model.SelectedAgeRange) || !string.IsNullOrEmpty(Model.SelectedMonthYear) ||
-                           !string.IsNullOrEmpty(Model.SeniorSearchTerm))
+                        @if (hasSeniorFilters)
                         {
                             <a href="@Url.Action("Index", "Report", new {
                                 eventStatus = Model.SelectedEventStatus,
@@ -146,7 +173,8 @@
                 <!-- Results Summary -->
                 @if (!string.IsNullOrEmpty(Model.SelectedStatus) || !string.IsNullOrEmpty(Model.SelectedZoneFilter) || 
                    !string.IsNullOrEmpty(Model.SelectedGender) || !string.IsNullOrEmpty(Model.SelectedCivilStatus) ||
-                   !string.IsNullOrEmpty(Model.SelectedAgeRange) || !string.IsNullOrEmpty(Model.SelectedMonthYear))
+                   !string.IsNullOrEmpty(Model.SelectedAgeRange) || !string.IsNullOrEmpty(Model.SelectedMonthYear) ||
+                   !string.IsNullOrEmpty(Model.SelectedPensionType))
                 {
                     <div class="mt-3">
                         <span class="badge badge-info">Showing @Model.SeniorList.Count senior records</span>
@@ -161,6 +189,10 @@
                         @if (!string.IsNullOrEmpty(Model.SelectedGender))
                         {
                             <span class="badge badge-secondary ml-2">Gender: @Model.SelectedGender</span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.SelectedPensionType))
+                        {
+                            <span class="badge badge-secondary ml-2">Pension: @Model.SelectedPensionType</span>
                         }
                     </div>
                 }
@@ -177,6 +209,7 @@
                             <th>Age</th>
                             <th>Zone</th>
                             <th>Civil Status</th>
+                            <th>Pension Type</th>
                             <th>Contact Number</th>
                             <th>Status</th>
                             <th>Registered On</th>
@@ -185,7 +218,7 @@
                     <tbody>
                         @if (Model.SeniorList.Any())
                         {
-                            @foreach (var senior in Model.SeniorList)
+                            foreach (var senior in Model.SeniorList)
                             {
                                 <tr>
                                     <td>
@@ -203,6 +236,16 @@
                                         else
                                         {
                                             @senior.CivilStatus
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (string.IsNullOrEmpty(senior.PensionType))
+                                        {
+                                            <span class="text-muted">None</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info">@senior.PensionType</span>
                                         }
                                     </td>
                                     <td>
@@ -227,13 +270,10 @@
                         else
                         {
                             <tr>
-                                <td colspan="9" class="text-center py-3">
+                                <td colspan="10" class="text-center py-3">
                                     <i class="fas fa-search fa-2x text-muted mb-2"></i>
                                     <p class="text-muted mb-0">No senior records found</p>
-                                    @if (!string.IsNullOrEmpty(Model.SelectedStatus) || !string.IsNullOrEmpty(Model.SelectedZoneFilter) || 
-                                       !string.IsNullOrEmpty(Model.SelectedGender) || !string.IsNullOrEmpty(Model.SelectedCivilStatus) ||
-                                       !string.IsNullOrEmpty(Model.SelectedAgeRange) || !string.IsNullOrEmpty(Model.SelectedMonthYear) ||
-                                       !string.IsNullOrEmpty(Model.SeniorSearchTerm))
+                                    @if (hasSeniorFilters)
                                     {
                                         <a href="@Url.Action("Index", "Report", new {
                                             eventStatus = Model.SelectedEventStatus,
@@ -258,20 +298,35 @@
                 <span class="small text-muted">
                     Total Records: @Model.SeniorList.Count
                 </span>
-                @if (Model.SeniorList.Any())
-                {
-                    <a href="@Url.Action("ExportSeniorTable", "Report", new {
-                        status = Model.SelectedStatus,
-                        zone = Model.SelectedZoneFilter,
-                        gender = Model.SelectedGender,
-                        civilStatus = Model.SelectedCivilStatus,
-                        ageRange = Model.SelectedAgeRange,
-                        monthYear = Model.SelectedMonthYear,
-                        seniorSearch = Model.SeniorSearchTerm
-                    })" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> Export Senior Table Data
-                    </a>
-                }
+                <div class="btn-group">
+                    @if (Model.SeniorList.Any())
+                    {
+                        <a href="@Url.Action("ExportSeniorTable", "Report", new {
+                            status = Model.SelectedStatus,
+                            zone = Model.SelectedZoneFilter,
+                            gender = Model.SelectedGender,
+                            civilStatus = Model.SelectedCivilStatus,
+                            ageRange = Model.SelectedAgeRange,
+                            monthYear = Model.SelectedMonthYear,
+                            seniorSearch = Model.SeniorSearchTerm,
+                            pensionType = Model.SelectedPensionType
+                        })" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-file-export me-1"></i> Export Basic
+                        </a>
+                        <a href="@Url.Action("ExportSeniorDetailed", "Report", new {
+                            status = Model.SelectedStatus,
+                            zone = Model.SelectedZoneFilter,
+                            gender = Model.SelectedGender,
+                            civilStatus = Model.SelectedCivilStatus,
+                            ageRange = Model.SelectedAgeRange,
+                            monthYear = Model.SelectedMonthYear,
+                            seniorSearch = Model.SeniorSearchTerm,
+                            pensionType = Model.SelectedPensionType
+                        })" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-file-alt me-1"></i> Export Detailed
+                        </a>
+                    }
+                </div>
             </div>
         </div>
     </div>
@@ -295,6 +350,7 @@
                     <input type="hidden" name="ageRange" value="@Model.SelectedAgeRange" />
                     <input type="hidden" name="monthYear" value="@Model.SelectedMonthYear" />
                     <input type="hidden" name="seniorSearch" value="@Model.SeniorSearchTerm" />
+                    <input type="hidden" name="pensionType" value="@Model.SelectedPensionType" />
 
                     <!-- Event Status Filter -->
                     <div class="col-md-3">
@@ -367,9 +423,7 @@
                         <button type="submit" class="btn btn-sm btn-primary mr-2">
                             <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        @if (!string.IsNullOrEmpty(Model.SelectedEventStatus) || !string.IsNullOrEmpty(Model.SelectedEventType) || 
-                           !string.IsNullOrEmpty(Model.SelectedEventDateFilter) || !string.IsNullOrEmpty(Model.EventSearchTerm) ||
-                           !string.IsNullOrEmpty(Model.SelectedFromDate) || !string.IsNullOrEmpty(Model.SelectedToDate))
+                        @if (hasEventFilters)
                         {
                             <a href="@Url.Action("Index", "Report", new {
                                 status = Model.SelectedStatus,
@@ -378,7 +432,8 @@
                                 civilStatus = Model.SelectedCivilStatus,
                                 ageRange = Model.SelectedAgeRange,
                                 monthYear = Model.SelectedMonthYear,
-                                seniorSearch = Model.SeniorSearchTerm
+                                seniorSearch = Model.SeniorSearchTerm,
+                                pensionType = Model.SelectedPensionType
                             })" class="btn btn-sm btn-secondary">
                                 <i class="fas fa-times me-1"></i> Clear Event Filters
                             </a>
@@ -434,7 +489,7 @@
                     <tbody>
                         @if (Model.EventList.Any())
                         {
-                            @foreach (var eventItem in Model.EventList)
+                            foreach (var eventItem in Model.EventList)
                             {
                                 <tr>
                                     <td>@eventItem.EventTitle</td>
@@ -491,9 +546,7 @@
                                 <td colspan="11" class="text-center py-3">
                                     <i class="fas fa-calendar-times fa-2x text-muted mb-2"></i>
                                     <p class="text-muted mb-0">No event records found</p>
-                                    @if (!string.IsNullOrEmpty(Model.SelectedEventStatus) || !string.IsNullOrEmpty(Model.SelectedEventType) || 
-                                       !string.IsNullOrEmpty(Model.SelectedEventDateFilter) || !string.IsNullOrEmpty(Model.EventSearchTerm) ||
-                                       !string.IsNullOrEmpty(Model.SelectedFromDate) || !string.IsNullOrEmpty(Model.SelectedToDate))
+                                    @if (hasEventFilters)
                                     {
                                         <a href="@Url.Action("Index", "Report", new {
                                             status = Model.SelectedStatus,
@@ -502,7 +555,8 @@
                                             civilStatus = Model.SelectedCivilStatus,
                                             ageRange = Model.SelectedAgeRange,
                                             monthYear = Model.SelectedMonthYear,
-                                            seniorSearch = Model.SeniorSearchTerm
+                                            seniorSearch = Model.SeniorSearchTerm,
+                                            pensionType = Model.SelectedPensionType
                                         })" class="btn btn-sm btn-outline-primary mt-2">
                                             <i class="fas fa-times me-1"></i> Clear Event Filters
                                         </a>
@@ -540,14 +594,19 @@
 @functions {
     string GetEventStatusBadgeClass(string status)
     {
-        return status switch
+        switch (status)
         {
-            "Scheduled" => "badge-primary",
-            "Ongoing" => "badge-warning",
-            "Completed" => "badge-success",
-            "Cancelled" => "badge-danger",
-            _ => "badge-secondary"
-        };
+            case "Scheduled":
+                return "badge-primary";
+            case "Ongoing":
+                return "badge-warning";
+            case "Completed":
+                return "badge-success";
+            case "Cancelled":
+                return "badge-danger";
+            default:
+                return "badge-secondary";
+        }
     }
 
     string GetAttendanceBadgeClass(string percentage)
@@ -592,6 +651,10 @@
         
         .card-header {
             background-color: #f8f9fa;
+        }
+        
+        .btn-group .btn {
+            margin-right: 5px;
         }
     </style>
 }

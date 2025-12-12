@@ -6,14 +6,49 @@
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-lg-8 mx-auto">
+        <div class="col-lg-10 mx-auto">
             <div class="card">
                 <div class="card-header">
                     <h3 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create New Senior Citizen</h3>
                 </div>
                 <div class="card-body">
-                    <form asp-action="CreateSenior" method="post" id="createSeniorForm">
+                    <form asp-action="CreateSenior" method="post" id="createSeniorForm" enctype="multipart/form-data">
                         @Html.AntiForgeryToken()
+
+                        <!-- Profile Picture Section -->
+                        <div class="section-card mb-4">
+                            <div class="section-header">
+                                <h5><i class="fas fa-camera me-2"></i>Profile Picture (4x4)</h5>
+                            </div>
+                            <div class="section-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <div class="profile-picture-container text-center">
+                                            <div class="profile-picture-placeholder" id="picturePreview">
+                                                <i class="fas fa-user fa-4x text-muted"></i>
+                                                <div class="mt-2">No picture</div>
+                                            </div>
+                                            <input type="file" id="profilePicture" name="profilePicture"
+                                                   class="form-control mt-3" accept=".jpg,.jpeg,.png"
+                                                   onchange="previewProfilePicture(this)" />
+                                            <small class="text-muted">4x4 size recommended (JPG, PNG)</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <strong>Picture Guidelines:</strong>
+                                            <ul class="mb-0 mt-2">
+                                                <li>Recent passport size photo (4x4)</li>
+                                                <li>Clear face visible</li>
+                                                <li>File size limit: 2MB</li>
+                                                <li>Accepted formats: JPG, PNG</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- SCCN Number Section - MANUAL INPUT -->
                         <div class="section-card mb-4">
@@ -48,7 +83,7 @@
                                     <div class="d-flex align-items-start">
                                         <i class="fas fa-lightbulb me-2 mt-1"></i>
                                         <div>
-                                            <h6 class="alert-heading mb-1">SCCN Format Example</h6>
+                                            <h6 class="alert-heading mb-1">OSCA Format Example</h6>
                                             <p class="mb-1">Format: <code class="bg-light px-2 py-1 rounded">202-312-340-001</code></p>
                                             <p class="mb-0">Raw: <code class="bg-light px-2 py-1 rounded">202312340001</code> (12 digits)</p>
                                         </div>
@@ -64,34 +99,39 @@
                             </div>
                             <div class="section-body">
                                 <div class="row">
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label asp-for="FirstName" class="form-label required">First Name</label>
-                                        <input asp-for="FirstName" class="form-control" placeholder="Enter first name" />
+                                        <input asp-for="FirstName" class="form-control" placeholder="Enter first name" required />
                                         <span asp-validation-for="FirstName" class="text-danger small"></span>
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label asp-for="LastName" class="form-label required">Last Name</label>
-                                        <input asp-for="LastName" class="form-control" placeholder="Enter last name" />
+                                        <input asp-for="LastName" class="form-control" placeholder="Enter last name" required />
                                         <span asp-validation-for="LastName" class="text-danger small"></span>
                                     </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label asp-for="MiddleInitial" class="form-label">Middle Initial</label>
-                                        <input asp-for="MiddleInitial" class="form-control" maxlength="1" placeholder="M" />
+                                    <div class="col-md-2 mb-3">
+                                        <label asp-for="MiddleInitial" class="form-label">Middle Name</label>
+                                        <input asp-for="MiddleInitial" class="form-control" maxlength="100" placeholder="M" />
                                         <span asp-validation-for="MiddleInitial" class="text-danger small"></span>
                                     </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label asp-for="Gender" class="form-label required">Gender</label>
-                                        <select asp-for="Gender" class="form-select">
+                                    <div class="col-md-2 mb-3">
+                                        <label asp-for="Extension" class="form-label">Extension</label>
+                                        <input asp-for="Extension" class="form-control" maxlength="10" placeholder="Jr, Sr, III" />
+                                        <span asp-validation-for="Extension" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label asp-for="Gender" class="form-label required">Sex</label>
+                                        <select asp-for="Gender" class="form-select" required>
                                             <option value="">Select Gender</option>
                                             <option value="Male">Male</option>
                                             <option value="Female">Female</option>
                                         </select>
                                         <span asp-validation-for="Gender" class="text-danger small"></span>
                                     </div>
-                                    <div class="col-md-6 mb-3">
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
                                         <label asp-for="CivilStatus" class="form-label">Civil Status</label>
                                         <select asp-for="CivilStatus" class="form-select">
                                             <option value="">Select Civil Status</option>
@@ -99,8 +139,17 @@
                                             <option value="Married">Married</option>
                                             <option value="Widowed">Widowed</option>
                                             <option value="Separated">Separated</option>
+                                            <option value="Divorced">Divorced</option>
                                         </select>
                                         <span asp-validation-for="CivilStatus" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="Citizenship" class="form-label">Citizenship</label>
+                                        <select asp-for="Citizenship" class="form-select">
+                                            <option value="Filipino">Filipino</option>
+                                            <option value="DualCitizen">Dual Citizen</option>
+                                        </select>
+                                        <span asp-validation-for="Citizenship" class="text-danger small"></span>
                                     </div>
                                 </div>
                             </div>
@@ -117,54 +166,299 @@
                                         <label asp-for="Age" class="form-label required">Age</label>
                                         <div class="input-group">
                                             <input asp-for="Age" type="number" class="form-control"
-                                                   min="60" max="120" placeholder="Enter age (60-120)" />
+                                                   min="60" max="120" placeholder="Enter age (60-120)" required
+                                                   onchange="checkSpecialBenefits()" />
                                             <span class="input-group-text">years old</span>
                                         </div>
                                         <span asp-validation-for="Age" class="text-danger small"></span>
+                                        <div id="specialBenefitsAlert" class="alert mt-2" style="display: none;">
+                                            <i class="fas fa-award me-2"></i>
+                                            <span id="benefitsText"></span>
+                                        </div>
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label asp-for="BirthDate" class="form-label">Birth Date</label>
-                                        <input asp-for="BirthDate" type="date" class="form-control" />
-                                        <small class="text-muted">Optional - will auto-calculate age</small>
+                                        <input asp-for="BirthDate" type="date" class="form-control birth-date-picker"
+                                               max="@DateTime.Now.ToString("yyyy-MM-dd")"
+                                               min="1965-01-01" onchange="calculateAgeFromDate()" />
+                                        <small class="text-muted">Start year: 1965 (minimum 60 years old)</small>
                                         <span asp-validation-for="BirthDate" class="text-danger small"></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Contact & Location Section -->
+                        <!-- Permanent Address Section -->
                         <div class="section-card mb-4">
                             <div class="section-header">
-                                <h5><i class="fas fa-map-marker-alt me-2"></i>Contact & Location</h5>
+                                <h5><i class="fas fa-home me-2"></i>Permanent Address</h5>
                             </div>
                             <div class="section-body">
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label asp-for="Zone" class="form-label required">Zone</label>
-                                        <select asp-for="Zone" class="form-select">
-                                            <option value="">Select Zone</option>
-                                            <option value="1">Zone 1</option>
-                                            <option value="2">Zone 2</option>
-                                            <option value="3">Zone 3</option>
-                                            <option value="4">Zone 4</option>
-                                            <option value="5">Zone 5</option>
-                                            <option value="6">Zone 6</option>
-                                            <option value="7">Zone 7</option>
-                                        </select>
+                                    <div class="col-md-4 mb-3">
+                                        <label asp-for="HouseNumber" class="form-label">House Number</label>
+                                        <input asp-for="HouseNumber" class="form-control" placeholder="House/Lot/Blk No." />
+                                        <span asp-validation-for="HouseNumber" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Street (Zone)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">Zone</span>
+                                            <select asp-for="Zone" class="form-select" required onchange="updateAddressPreview()">
+                                                <option value="">Select Zone</option>
+                                                <option value="1">Zone 1</option>
+                                                <option value="2">Zone 2</option>
+                                                <option value="3">Zone 3</option>
+                                                <option value="4">Zone 4</option>
+                                                <option value="5">Zone 5</option>
+                                                <option value="6">Zone 6</option>
+                                                <option value="7">Zone 7</option>
+                                            </select>
+                                        </div>
                                         <span asp-validation-for="Zone" class="text-danger small"></span>
                                     </div>
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <label class="form-label">Barangay</label>
-                                        <input type="text" class="form-control" value="Sampaguita" disabled readonly />
-                                        <small class="text-muted">Fixed barangay for all seniors</small>
+                                        <input type="text" class="form-control" value="Sampaguita" readonly />
+                                        <small class="text-muted">Default barangay</small>
                                     </div>
                                 </div>
 
                                 <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label asp-for="CityMunicipality" class="form-label">City/Municipality</label>
+                                        <input asp-for="CityMunicipality" class="form-control" value="Naujan" />
+                                        <span asp-validation-for="CityMunicipality" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label asp-for="Province" class="form-label">Province</label>
+                                        <input asp-for="Province" class="form-control" value="Oriental Mindoro" />
+                                        <span asp-validation-for="Province" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label asp-for="ZipCode" class="form-label">Zip Code</label>
+                                        <input asp-for="ZipCode" class="form-control" value="5204" />
+                                        <span asp-validation-for="ZipCode" class="text-danger small"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Address Preview -->
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="card bg-light">
+                                            <div class="card-body">
+                                                <h6 class="card-title"><i class="fas fa-eye me-2"></i>Address Preview</h6>
+                                                <p class="card-text" id="addressPreview">
+                                                    <em>Address will appear here as you fill the fields...</em>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Family Information Section -->
+                        <div class="section-card mb-4">
+                            <div class="section-header">
+                                <h5><i class="fas fa-users me-2"></i>Family Information</h5>
+                            </div>
+                            <div class="section-body">
+                                <div class="row">
                                     <div class="col-md-12 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-ring me-2"></i>Spouse Information</h6>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="SpouseFirstName" class="form-label">First Name</label>
+                                        <input asp-for="SpouseFirstName" class="form-control" placeholder="First Name" />
+                                        <span asp-validation-for="SpouseFirstName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="SpouseLastName" class="form-label">Last Name</label>
+                                        <input asp-for="SpouseLastName" class="form-control" placeholder="Last Name" />
+                                        <span asp-validation-for="SpouseLastName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="SpouseMiddleName" class="form-label">Middle Name</label>
+                                        <input asp-for="SpouseMiddleName" class="form-control" placeholder="Middle Name" />
+                                        <span asp-validation-for="SpouseMiddleName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="SpouseExtension" class="form-label">Extension</label>
+                                        <input asp-for="SpouseExtension" class="form-control" placeholder="Jr, Sr, III" />
+                                        <span asp-validation-for="SpouseExtension" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="SpouseCitizenship" class="form-label">Citizenship</label>
+                                        <select asp-for="SpouseCitizenship" class="form-select">
+                                            <option value="">Select Citizenship</option>
+                                            <option value="Filipino">Filipino</option>
+                                            <option value="DualCitizen">Dual Citizen</option>
+                                        </select>
+                                        <span asp-validation-for="SpouseCitizenship" class="text-danger small"></span>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-4">
+                                    <div class="col-md-12 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-child me-2"></i>Children Information</h6>
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label asp-for="ChildrenInfo" class="form-label">Children's Names</label>
+                                        <textarea asp-for="ChildrenInfo" class="form-control" rows="4"
+                                                  placeholder="Format: LastName, GivenName, MiddleName, Extension (if applicable)&#10;Example: Cruz, Juan, Santos, Jr.&#10;Example: Cruz, Maria, Santos, (leave empty if no extension)"></textarea>
+                                        <div class="form-text">
+                                            <small><i class="fas fa-info-circle text-primary"></i> Enter each child on a new line. Use commas to separate fields.</small>
+                                        </div>
+                                        <span asp-validation-for="ChildrenInfo" class="text-danger small"></span>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-4">
+                                    <div class="col-md-12 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-user-tie me-2"></i>Authorized Representative</h6>
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label asp-for="AuthorizedRepInfo" class="form-label">Authorized Representative(s)</label>
+                                        <textarea asp-for="AuthorizedRepInfo" class="form-control" rows="3"
+                                                  placeholder="Format: LastName, GivenName, MiddleName, Extension, Relationship&#10;Example: Cruz, Maria, Santos, , Daughter&#10;Example: Reyes, Juan, , Jr., Son"></textarea>
+                                        <div class="form-text">
+                                            <small><i class="fas fa-info-circle text-primary"></i> Enter each representative on a new line. Use commas to separate fields.</small>
+                                        </div>
+                                        <span asp-validation-for="AuthorizedRepInfo" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Designated Beneficiary Section -->
+                        <div class="section-card mb-4">
+                            <div class="section-header">
+                                <h5><i class="fas fa-user-check me-2"></i>Designated Beneficiary</h5>
+                            </div>
+                            <div class="section-body">
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-star me-2"></i>Primary Beneficiary</h6>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="PrimaryBeneficiaryFirstName" class="form-label">First Name</label>
+                                        <input asp-for="PrimaryBeneficiaryFirstName" class="form-control" placeholder="First Name" />
+                                        <span asp-validation-for="PrimaryBeneficiaryFirstName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="PrimaryBeneficiaryLastName" class="form-label">Last Name</label>
+                                        <input asp-for="PrimaryBeneficiaryLastName" class="form-control" placeholder="Last Name" />
+                                        <span asp-validation-for="PrimaryBeneficiaryLastName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="PrimaryBeneficiaryMiddleName" class="form-label">Middle Name</label>
+                                        <input asp-for="PrimaryBeneficiaryMiddleName" class="form-control" placeholder="Middle Name" />
+                                        <span asp-validation-for="PrimaryBeneficiaryMiddleName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="PrimaryBeneficiaryExtension" class="form-label">Extension</label>
+                                        <input asp-for="PrimaryBeneficiaryExtension" class="form-control" placeholder="Jr, Sr, III" />
+                                        <span asp-validation-for="PrimaryBeneficiaryExtension" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="PrimaryBeneficiaryRelationship" class="form-label">Relationship</label>
+                                        <input asp-for="PrimaryBeneficiaryRelationship" class="form-control" placeholder="e.g., Spouse, Child, Sibling" />
+                                        <span asp-validation-for="PrimaryBeneficiaryRelationship" class="text-danger small"></span>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-4">
+                                    <div class="col-md-12 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-star-half-alt me-2"></i>Contingent Beneficiary</h6>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="ContingentBeneficiaryFirstName" class="form-label">First Name</label>
+                                        <input asp-for="ContingentBeneficiaryFirstName" class="form-control" placeholder="First Name" />
+                                        <span asp-validation-for="ContingentBeneficiaryFirstName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="ContingentBeneficiaryLastName" class="form-label">Last Name</label>
+                                        <input asp-for="ContingentBeneficiaryLastName" class="form-control" placeholder="Last Name" />
+                                        <span asp-validation-for="ContingentBeneficiaryLastName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="ContingentBeneficiaryMiddleName" class="form-label">Middle Name</label>
+                                        <input asp-for="ContingentBeneficiaryMiddleName" class="form-control" placeholder="Middle Name" />
+                                        <span asp-validation-for="ContingentBeneficiaryMiddleName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="ContingentBeneficiaryExtension" class="form-label">Extension</label>
+                                        <input asp-for="ContingentBeneficiaryExtension" class="form-control" placeholder="Jr, Sr, III" />
+                                        <span asp-validation-for="ContingentBeneficiaryExtension" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="ContingentBeneficiaryRelationship" class="form-label">Relationship</label>
+                                        <input asp-for="ContingentBeneficiaryRelationship" class="form-control" placeholder="e.g., Child, Sibling, Relative" />
+                                        <span asp-validation-for="ContingentBeneficiaryRelationship" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information Section -->
+                        <div class="section-card mb-4">
+                            <div class="section-header">
+                                <h5><i class="fas fa-address-book me-2"></i>Contact Information</h5>
+                            </div>
+                            <div class="section-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
                                         <label asp-for="ContactNumber" class="form-label">Contact Number</label>
-                                        <input asp-for="ContactNumber" class="form-control" placeholder="09XXXXXXXXX" />
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                            <input asp-for="ContactNumber" class="form-control" placeholder="09XXXXXXXXX" />
+                                        </div>
                                         <span asp-validation-for="ContactNumber" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Email" class="form-label">Email Address</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                            <input asp-for="Email" type="email" class="form-control" placeholder="senior@example.com" />
+                                        </div>
+                                        <span asp-validation-for("Email", class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pension Information Section -->
+                        <div class="section-card mb-4">
+                            <div class="section-header">
+                                <h5><i class="fas fa-money-check-alt me-2"></i>Pension Information</h5>
+                            </div>
+                            <div class="section-body">
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label asp-for="PensionType" class="form-label">Pension Type</label>
+                                        <input asp-for="PensionType" class="form-control"
+                                               placeholder="e.g., SSS, GSIS, Private Pension, None (leave empty if none)"
+                                               maxlength="50" />
+                                        <div class="form-text">
+                                            <small><i class="fas fa-info-circle text-primary"></i> Enter the type of pension (SSS, GSIS, Private, etc.). Leave empty if none.</small>
+                                        </div>
+                                        <span asp-validation-for="PensionType" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                                <div class="alert alert-light mt-2">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-lightbulb me-2 mt-1 text-warning"></i>
+                                        <div>
+                                            <h6 class="alert-heading mb-1">Common Pension Types</h6>
+                                            <p class="mb-1">
+                                                Examples: <code class="bg-light px-2 py-1 rounded">SSS</code>,
+                                                <code class="bg-light px-2 py-1 rounded">GSIS</code>,
+                                                <code class="bg-light px-2 py-1 rounded">Private Pension</code>,
+                                                <code class="bg-light px-2 py-1 rounded">Veteran Pension</code>,
+                                                <code class="bg-light px-2 py-1 rounded">None</code>
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -251,18 +545,61 @@
                 border-color: #78909c;
             }
 
-        /* SCCN Input Styling */
-        .input-group .btn-outline-secondary {
-            border-top-left-radius: 0;
-            border-bottom-left-radius: 0;
-            border-left: 1px solid #dee2e6;
+        /* Profile Picture Styles */
+        .profile-picture-container {
+            padding: 1.5rem;
+            border: 2px dashed #bbdefb;
+            border-radius: 0.5rem;
+            background: #f8fbff;
         }
 
-        /* Alert Styling */
+        .profile-picture-placeholder {
+            width: 150px;
+            height: 150px;
+            border-radius: 0.5rem;
+            background: #e3f2fd;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            color: #5c6bc0;
+            cursor: pointer;
+        }
+
+        .profile-picture-preview {
+            width: 150px;
+            height: 150px;
+            border-radius: 0.5rem;
+            object-fit: cover;
+            border: 3px solid #2196f3;
+            margin: 0 auto;
+            display: block;
+        }
+
+        /* Alert Styles */
         .alert-info {
             background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
             border: 1px solid #90caf9;
             color: #1565c0;
+        }
+
+        .alert-light {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 1px solid #dee2e6;
+            color: #495057;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 1px solid #a5d6a7;
+            color: #2e7d32;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border: 1px solid #ffcc80;
+            color: #f57c00;
         }
 
         .alert-heading {
@@ -274,6 +611,51 @@
             font-family: 'Courier New', monospace;
             font-weight: 600;
         }
+
+        /* Address Preview */
+        .bg-light {
+            background-color: #f8fbff !important;
+        }
+
+        /* Custom birth date picker */
+        .birth-date-picker {
+            position: relative;
+        }
+
+            .birth-date-picker::-webkit-calendar-picker-indicator {
+                cursor: pointer;
+            }
+
+        .birth-date-dropdown {
+            position: absolute;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            display: none;
+        }
+
+        .year-selector {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        .year-option {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 0.25rem;
+        }
+
+            .year-option:hover {
+                background-color: #f8f9fa;
+            }
+
+            .year-option.selected {
+                background-color: #007bff;
+                color: white;
+            }
     </style>
 }
 
@@ -294,14 +676,184 @@
             }
         }
 
-        // Auto-format on blur
+        // Preview profile picture
+        function previewProfilePicture(input) {
+            const preview = document.getElementById('picturePreview');
+
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                const file = input.files[0];
+
+                // Check file size (2MB limit)
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('File size must be less than 2MB');
+                    input.value = '';
+                    return;
+                }
+
+                // Check file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Please select a JPG or PNG image file');
+                    input.value = '';
+                    return;
+                }
+
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" class="profile-picture-preview" alt="Profile Picture">`;
+                }
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = '<i class="fas fa-user fa-4x text-muted"></i><div class="mt-2">No picture</div>';
+            }
+        }
+
+        // Calculate age from birth date
+        function calculateAgeFromDate() {
+            const birthDateInput = document.querySelector('input[name="BirthDate"]');
+            const ageInput = document.querySelector('input[name="Age"]');
+
+            if (birthDateInput.value) {
+                const birthDate = new Date(birthDateInput.value);
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const monthDiff = today.getMonth() - birthDate.getMonth();
+
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+
+                if (age >= 60 && age <= 120) {
+                    ageInput.value = age;
+                    checkSpecialBenefits();
+                } else {
+                    alert('Age must be between 60 and 120 years old.');
+                    birthDateInput.value = '';
+                    ageInput.value = '';
+                }
+            }
+        }
+
+        // Check special benefits eligibility
+        function checkSpecialBenefits() {
+            const ageInput = document.querySelector('input[name="Age"]');
+            const alertDiv = document.getElementById('specialBenefitsAlert');
+            const benefitsText = document.getElementById('benefitsText');
+
+            if (ageInput.value) {
+                const age = parseInt(ageInput.value);
+
+                if (age >= 100) {
+                    alertDiv.className = 'alert alert-success mt-2';
+                    benefitsText.innerHTML = '<strong>Centenarian Benefit Program Eligible!</strong> This senior is eligible for the Centenarian Benefit Program.';
+                    alertDiv.style.display = 'block';
+                } else if (age >= 90) {
+                    alertDiv.className = 'alert alert-warning mt-2';
+                    benefitsText.innerHTML = '<strong>Nonagenarian Benefit Program Eligible!</strong> This senior is eligible for the Nonagenarian Benefit Program.';
+                    alertDiv.style.display = 'block';
+                } else if (age >= 80) {
+                    alertDiv.className = 'alert alert-info mt-2';
+                    benefitsText.innerHTML = '<strong>Octogenarian Benefit Program Eligible!</strong> This senior is eligible for the Octogenarian Benefit Program.';
+                    alertDiv.style.display = 'block';
+                } else {
+                    alertDiv.style.display = 'none';
+                }
+            } else {
+                alertDiv.style.display = 'none';
+            }
+        }
+
+        // Update address preview
+        function updateAddressPreview() {
+            const houseNumber = document.querySelector('input[name="HouseNumber"]').value;
+            const zone = document.querySelector('select[name="Zone"]').value;
+            const city = document.querySelector('input[name="CityMunicipality"]').value;
+            const province = document.querySelector('input[name="Province"]').value;
+            const zipCode = document.querySelector('input[name="ZipCode"]').value;
+
+            const addressParts = [];
+
+            if (houseNumber) addressParts.push(houseNumber);
+            if (zone) addressParts.push(`Zone ${zone}`);
+            addressParts.push('Sampaguita');
+            if (city) addressParts.push(city);
+            if (province) addressParts.push(province);
+            if (zipCode) addressParts.push(zipCode);
+
+            const addressPreview = document.getElementById('addressPreview');
+            if (addressParts.length > 2) {
+                addressPreview.innerHTML = addressParts.join(', ');
+            } else {
+                addressPreview.innerHTML = '<em>Address will appear here as you fill the fields...</em>';
+            }
+        }
+
+        // Custom birth date picker with descending years
+        function setupBirthDatePicker() {
+            const birthDateInput = document.querySelector('.birth-date-picker');
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const startYear = 1965;
+            const endYear = currentYear;
+
+            // Create custom dropdown for years
+            const dropdown = document.createElement('div');
+            dropdown.className = 'birth-date-dropdown';
+
+            const yearSelector = document.createElement('div');
+            yearSelector.className = 'year-selector';
+
+            // Add years in descending order
+            for (let year = endYear; year >= startYear; year--) {
+                const yearOption = document.createElement('div');
+                yearOption.className = 'year-option';
+                yearOption.textContent = year;
+                yearOption.addEventListener('click', function() {
+                    const selectedDate = new Date(year, 0, 1);
+                    birthDateInput.value = selectedDate.toISOString().split('T')[0];
+                    dropdown.style.display = 'none';
+                    calculateAgeFromDate();
+                });
+                yearSelector.appendChild(yearOption);
+            }
+
+            dropdown.appendChild(yearSelector);
+            birthDateInput.parentNode.appendChild(dropdown);
+
+            // Show dropdown on click
+            birthDateInput.addEventListener('click', function(e) {
+                e.preventDefault();
+                dropdown.style.display = 'block';
+
+                // Position dropdown
+                const rect = birthDateInput.getBoundingClientRect();
+                dropdown.style.position = 'fixed';
+                dropdown.style.left = rect.left + 'px';
+                dropdown.style.top = (rect.bottom + 5) + 'px';
+                dropdown.style.width = rect.width + 'px';
+            });
+
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!birthDateInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+            });
+
+            // Set max date to today for birth date
+            birthDateInput.max = today.toISOString().split('T')[0];
+            birthDateInput.min = startYear + '-01-01';
+        }
+
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             const sccnInput = document.querySelector('input[name="SeniorId"]');
+            const birthDateInput = document.querySelector('input[name="BirthDate"]');
+            const ageInput = document.querySelector('input[name="Age"]');
 
-            // Format when user leaves the field
+            // Format SCCN on blur
             sccnInput.addEventListener('blur', function() {
                 let value = this.value.replace(/[^0-9]/g, '');
-
                 if (value.length === 12) {
                     this.value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{3})/, '$1-$2-$3-$4');
                 }
@@ -333,44 +885,34 @@
                 }
             });
 
-            // Birth date change triggers age calculation
-            const birthDateInput = document.querySelector('input[name="BirthDate"]');
-            const ageInput = document.querySelector('input[name="Age"]');
+            // Setup custom birth date picker
+            setupBirthDatePicker();
 
-            birthDateInput.addEventListener('change', function() {
-                if (this.value) {
-                    const birthDate = new Date(this.value);
-                    const today = new Date();
-                    let age = today.getFullYear() - birthDate.getFullYear();
-                    const monthDiff = today.getMonth() - birthDate.getMonth();
+            // Calculate age when birth date changes
+            birthDateInput.addEventListener('change', calculateAgeFromDate);
 
-                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                        age--;
-                    }
+            // Check benefits when age changes
+            ageInput.addEventListener('change', checkSpecialBenefits);
 
-                    if (age >= 60 && age <= 120) {
-                        ageInput.value = age;
-                    }
+            // Update address preview when address fields change
+            const addressFields = ['HouseNumber', 'Zone', 'CityMunicipality', 'Province', 'ZipCode'];
+            addressFields.forEach(field => {
+                const element = document.querySelector(`[name="${field}"]`);
+                if (element) {
+                    element.addEventListener('input', updateAddressPreview);
+                    element.addEventListener('change', updateAddressPreview);
                 }
             });
 
-            // Age change triggers estimated birth date
-            ageInput.addEventListener('change', function() {
-                if (this.value && !birthDateInput.value) {
-                    const age = parseInt(this.value);
-                    if (age >= 60 && age <= 120) {
-                        const today = new Date();
-                        const estimatedBirthYear = today.getFullYear() - age;
-                        birthDateInput.value = `${estimatedBirthYear}-01-01`;
-                    }
-                }
-            });
+            // Initial checks
+            if (ageInput.value) checkSpecialBenefits();
+            updateAddressPreview();
 
-            // SCCN input validation on submit
+            // Form validation
             const form = document.getElementById('createSeniorForm');
             form.addEventListener('submit', function(e) {
+                // Validate SCCN
                 const sccnValue = sccnInput.value.replace(/[^0-9]/g, '');
-
                 if (sccnValue.length !== 12) {
                     e.preventDefault();
                     alert('SCCN number must be exactly 12 digits.');
@@ -378,8 +920,19 @@
                     return false;
                 }
 
-                // Ensure we submit the raw digits (no dashes)
+                // Validate age
+                const age = parseInt(ageInput.value);
+                if (age < 60 || age > 120) {
+                    e.preventDefault();
+                    alert('Age must be between 60 and 120 years.');
+                    ageInput.focus();
+                    return false;
+                }
+
+                // Submit raw SCCN digits
                 sccnInput.value = sccnValue;
+
+                return true;
             });
         });
     </script>

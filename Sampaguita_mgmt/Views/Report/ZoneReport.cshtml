@@ -11,11 +11,11 @@
             <p class="mb-0">Senior citizens in Zone @Model.SelectedZoneFilter</p>
         </div>
         <div class="btn-group">
-            <a asp-action="ExportZonePdf" asp-route-zone="@Model.SelectedZoneFilter" class="btn btn-outline-primary">
-                <i class="fas fa-download me-2"></i>Export PDF
+            <a href="@Url.Action("ExportSeniorTable", "Report", new { zone = Model.SelectedZoneFilter })" class="btn btn-outline-primary">
+                <i class="fas fa-download me-2"></i>Export CSV
             </a>
             <a asp-action="Index" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Back to Registry
+                <i class="fas fa-arrow-left me-2"></i>Back to Reports
             </a>
         </div>
     </div>
@@ -39,15 +39,106 @@
                 </div>
             </div>
         </div>
+
+        <div class="col-md-3">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Active Seniors
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @{
+                                    int activeCount = 0;
+                                    if (Model.SeniorList != null)
+                                    {
+                                        activeCount = Model.SeniorList.Count(s => s.Status == "Active");
+                                    }
+                                }
+                                @activeCount
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Average Age
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @{
+                                    double averageAge = 0;
+                                    if (Model.SeniorList != null && Model.SeniorList.Any())
+                                    {
+                                        averageAge = Model.SeniorList.Average(s => s.Age);
+                                    }
+                                }
+                                @averageAge.ToString("F1")
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-birthday-cake fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                With Pension
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @{
+                                    int pensionCount = 0;
+                                    if (Model.SeniorList != null)
+                                    {
+                                        pensionCount = Model.SeniorList.Count(s => !string.IsNullOrEmpty(s.PensionType));
+                                    }
+                                }
+                                @pensionCount
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-money-check-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Senior Registry Table -->
     <div class="card shadow">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Senior Citizens in Zone @Model.SelectedZoneFilter</h6>
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-users me-2"></i>Senior Citizens in Zone @Model.SelectedZoneFilter
+            </h6>
+            <div class="btn-group">
+                <a href="@Url.Action("ExportSeniorTable", "Report", new { zone = Model.SelectedZoneFilter })" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-file-export me-1"></i> Basic Export
+                </a>
+                <a href="@Url.Action("ExportSeniorDetailed", "Report", new { zone = Model.SelectedZoneFilter })" class="btn btn-sm btn-outline-success">
+                    <i class="fas fa-file-alt me-1"></i> Detailed Export
+                </a>
+            </div>
         </div>
         <div class="card-body">
-            @if (Model.SeniorList.Any())
+            @if (Model.SeniorList != null && Model.SeniorList.Any())
             {
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover" width="100%" cellspacing="0">
@@ -58,6 +149,7 @@
                                 <th>Gender</th>
                                 <th>Age</th>
                                 <th>Civil Status</th>
+                                <th>Pension Type</th>
                                 <th>Contact Number</th>
                                 <th>Status</th>
                                 <th>Registered On</th>
@@ -82,6 +174,16 @@
                                         else
                                         {
                                             @senior.CivilStatus
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (string.IsNullOrEmpty(senior.PensionType))
+                                        {
+                                            <span class="text-muted">None</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info">@senior.PensionType</span>
                                         }
                                     </td>
                                     <td>
@@ -124,7 +226,7 @@
                     <i class="fas fa-users fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">No senior records found in Zone @Model.SelectedZoneFilter</h5>
                     <a asp-action="Index" class="btn btn-primary mt-2">
-                        <i class="fas fa-arrow-left me-1"></i> Back to Registry
+                        <i class="fas fa-arrow-left me-1"></i> Back to Reports
                     </a>
                 </div>
             }

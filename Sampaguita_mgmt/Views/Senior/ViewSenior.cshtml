@@ -1,203 +1,417 @@
 ﻿@model SeniorManagement.Models.Senior
-
 @{
     ViewData["Title"] = "";
+
+    // Calculate age with more detail
+    string ageDetail = "";
+    if (Model.BirthDate.HasValue)
+    {
+        var today = DateTime.Today;
+        var age = today.Year - Model.BirthDate.Value.Year;
+        if (Model.BirthDate.Value.Date > today.AddYears(-age)) age--;
+        var months = today.Month - Model.BirthDate.Value.Month;
+        if (months < 0)
+        {
+            months += 12;
+            age--;
+        }
+        ageDetail = $"{age} years, {months} months";
+    }
 }
 
 <div class="container-fluid">
-    <!-- Back Button -->
-    <div class="mb-4">
-        <a href="@Url.Action("Index", "Senior")" class="btn btn-outline-primary">
-            <i class="fas fa-arrow-left me-2"></i>Back to Senior Records
-        </a>
-    </div>
-
-    <!-- Main Card -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h3 class="mb-0">
-                <i class="fas fa-user-circle me-2"></i>Senior Citizen Details
-            </h3>
-            <div class="d-flex gap-2">
-                <a href="@Url.Action("EditSenior", "Senior", new { id = Model.Id })"
-                   class="btn btn-primary btn-sm">
-                    <i class="fas fa-edit me-1"></i> Edit
-                </a>
-                @if (Model.Status == "Active")
-                {
-                    <form method="post" action="@Url.Action("ArchiveSenior", "Senior")"
-                          onsubmit="return confirm('Are you sure you want to archive this senior record?')">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@Model.Id" />
-                        <button type="submit" class="btn btn-warning btn-sm">
-                            <i class="fas fa-archive me-1"></i> Archive
-                        </button>
-                    </form>
-                }
+    <div class="row">
+        <div class="col-lg-12">
+            <!-- Header Section -->
+            <div class="card mb-4 non-printable">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">
+                                <i class="fas fa-user-circle me-2"></i>Senior Citizen Details
+                            </h3>
+                            <p class="mb-0 opacity-75">Complete profile information for @Model.CompleteName</p>
+                        </div>
+                        <div>
+                            <a href="@Url.Action("Index", "Senior")" class="btn btn-light me-2">
+                                <i class="fas fa-arrow-left me-1"></i> Back to List
+                            </a>
+                            <button onclick="window.print()" class="btn btn-info me-2">
+                                <i class="fas fa-print me-1"></i> Print
+                            </button>
+                            <a href="@Url.Action("EditSenior", "Senior", new { id = Model.Id })" class="btn btn-warning me-2">
+                                <i class="fas fa-edit me-1"></i> Edit Record
+                            </a>
+                            <form asp-action="ArchiveSenior" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <button type="submit" class="btn btn-danger"
+                                        onclick="return confirm('Are you sure you want to archive this senior record?')">
+                                    <i class="fas fa-archive me-1"></i> Archive Record
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="card-body">
-            <!-- Status Banner -->
-            <div class="alert @(Model.Status == "Active" ? "alert-success" : "alert-warning") mb-4">
-                <div class="d-flex align-items-center">
-                    <i class="fas @(Model.Status == "Active" ? "fa-check-circle" : "fa-archive") me-2"></i>
-                    <strong>Status:</strong>
-                    <span class="ms-2 badge @(Model.Status == "Active" ? "bg-success" : "bg-warning")">
-                        @Model.Status
-                    </span>
-                    <span class="ms-auto text-muted">
-                        Last Updated: @Model.UpdatedAt.ToString("MMM dd, yyyy hh:mm tt")
-                    </span>
+            <!-- Print Header (only visible when printing) -->
+            <div class="print-header printable-only" style="display: none;">
+                <div class="row">
+                    <div class="col-12 text-center mb-4">
+                        <h1 class="print-title">SENIOR CITIZEN OFFICIAL RECORD</h1>
+                        <p class="print-subtitle">Office of the Senior Citizens Affairs (OSCA)</p>
+                        <hr class="print-divider" />
+                    </div>
                 </div>
             </div>
 
             <div class="row">
-                <!-- SCCN Badge -->
-                <div class="col-12 mb-4">
-                    <div class="sccn-display-card">
-                        <div class="sccn-label">SCCN NUMBER</div>
-                        <div class="sccn-number">@Model.FormattedSCCN</div>
-                    </div>
-                </div>
+                <!-- Left Column - Profile Picture and Basic Info -->
+                <div class="col-md-4">
+                    <!-- Profile Picture Card -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-camera me-2"></i>Profile Picture</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="profile-picture-container mb-3">
+                                @if (!string.IsNullOrEmpty(ViewBag.ProfilePictureUrl))
+                                {
+                                    <img src="@ViewBag.ProfilePictureUrl"
+                                         class="profile-picture-view img-fluid rounded"
+                                         alt="Profile Picture"
+                                         id="profilePictureDisplay">
+                                }
+                                else
+                                {
+                                    <div class="profile-picture-placeholder-view">
+                                        <i class="fas fa-user fa-5x text-muted"></i>
+                                        <div class="mt-2 text-muted">No picture available</div>
+                                    </div>
+                                }
+                            </div>
 
-                <!-- Personal Information -->
-                <div class="col-lg-6 mb-4">
-                    <div class="info-section">
-                        <h5 class="section-title">
-                            <i class="fas fa-user me-2"></i>Personal Information
-                        </h5>
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <span class="info-label">Complete Name</span>
-                                <span class="info-value">@Model.CompleteName</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Gender</span>
-                                <span class="info-value">
-                                    <span class="badge @(Model.Gender == "Male" ? "badge-male" : "badge-female")">
-                                        @Model.Gender
-                                    </span>
-                                </span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Age</span>
-                                <span class="info-value age-display">@Model.Age years old</span>
-                            </div>
-                            @if (Model.BirthDate.HasValue)
-                            {
-                                <div class="info-item">
-                                    <span class="info-label">Birth Date</span>
-                                    <span class="info-value">@Model.BirthDate.Value.ToString("MMMM dd, yyyy")</span>
+                            <div class="senior-info">
+                                <h4 class="mb-2">@Model.CompleteName</h4>
+                                <div class="badge bg-success mb-2">Senior Citizen</div>
+                                <div class="row text-start">
+                                    <div class="col-12 mb-1">
+                                        <i class="fas fa-venus-mars me-2 text-primary"></i>
+                                        <strong>Gender:</strong> @Model.Gender
+                                    </div>
+                                    <div class="col-12 mb-1">
+                                        <i class="fas fa-birthday-cake me-2 text-primary"></i>
+                                        <strong>Age:</strong> @Model.Age years
+                                        @if (!string.IsNullOrEmpty(ageDetail))
+                                        {
+                                            <br />
+                                        
+                                            <small class="text-muted">(@ageDetail)</small>
+                                        }
+                                    </div>
+                                    <div class="col-12 mb-1">
+                                        <i class="fas fa-calendar me-2 text-primary"></i>
+                                        <strong>Birth Date:</strong>
+                                        @if (Model.BirthDate.HasValue)
+                                        {
+                                            @Model.BirthDate.Value.ToString("MMMM dd, yyyy")
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not specified</span>
+                                        }
+                                    </div>
                                 </div>
-                            }
-                            @if (!string.IsNullOrEmpty(Model.CivilStatus))
-                            {
-                                <div class="info-item">
-                                    <span class="info-label">Civil Status</span>
-                                    <span class="info-value">@Model.CivilStatus</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OSCA Number Card -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-id-card me-2"></i>OSCA IDENTIFICATION</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="sccn-number-display">
+                                <h2 class="text-primary mb-2">@Model.FormattedSCCN</h2>
+                                <div class="print-barcode">
+                                    <svg id="barcode"></svg>
                                 </div>
-                            }
+                                <p class="text-muted mb-0">OSCA Identification Number</p>
+                                <p class="text-muted small">Issued: @DateTime.Now.ToString("MMMM dd, yyyy")</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Contact & Location -->
-                <div class="col-lg-6 mb-4">
-                    <div class="info-section">
-                        <h5 class="section-title">
-                            <i class="fas fa-map-marker-alt me-2"></i>Contact & Location
-                        </h5>
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <span class="info-label">Zone</span>
-                                <span class="info-value">
-                                    <span class="zone-display">Zone @Model.Zone</span>
-                                </span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Barangay</span>
-                                <span class="info-value">@Model.Barangay</span>
-                            </div>
-                            @if (!string.IsNullOrEmpty(Model.ContactNumber))
-                            {
-                                <div class="info-item">
-                                    <span class="info-label">Contact Number</span>
-                                    <span class="info-value">
-                                        <i class="fas fa-phone me-2 text-primary"></i>
-                                        @Model.ContactNumber
-                                    </span>
+                <!-- Right Column - Detailed Information -->
+                <div class="col-md-8">
+                    <!-- Personal Information Card -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-user me-2"></i>Personal Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Complete Name</label>
+                                        <div class="info-value">@Model.CompleteName</div>
+                                    </div>
                                 </div>
-                            }
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Age</label>
+                                        <div class="info-value">
+                                            @Model.Age years old
+                                            @if (!string.IsNullOrEmpty(ageDetail))
+                                            {
+                                                <br />
+                                            
+                                                <small class="text-muted">(@ageDetail)</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Civil Status</label>
+                                        <div class="info-value">
+                                            <span class="badge bg-info">@(string.IsNullOrEmpty(Model.CivilStatus) ? "Not specified" : Model.CivilStatus)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Sex</label>
+                                        <div class="info-value">
+                                            <i class="fas @(Model.Gender == "Male" ? "fa-mars text-primary" : "fa-venus text-danger") me-2"></i>@Model.Gender
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Birth Date</label>
+                                        <div class="info-value">
+                                            @if (Model.BirthDate.HasValue)
+                                            {
+                                                @Model.BirthDate.Value.ToString("MMMM dd, yyyy")
+                                                <br />
+                                            
+                                                <small class="text-muted">(@Model.BirthDate.Value.ToString("MM/dd/yyyy"))</small>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Citizenship</label>
+                                        <div class="info-value">
+                                            <i class="fas fa-flag me-2 text-primary"></i>@(string.IsNullOrEmpty(Model.Citizenship) ? "Filipino" : Model.Citizenship)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- System Information -->
-                <div class="col-12">
-                    <div class="info-section">
-                        <h5 class="section-title">
-                            <i class="fas fa-database me-2"></i>System Information
-                        </h5>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="system-info-item">
-                                    <span class="system-label">Record Created</span>
-                                    <span class="system-value">@Model.CreatedAt.ToString("MMMM dd, yyyy hh:mm tt")</span>
+                    <!-- Contact Information Card -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-address-book me-2"></i>Contact Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Contact Number</label>
+                                        <div class="info-value">
+                                            @if (!string.IsNullOrEmpty(Model.ContactNumber))
+                                            {
+                                                <span><i class="fas fa-phone me-2 text-primary"></i>@Model.ContactNumber</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Email Address</label>
+                                        <div class="info-value">
+                                            @if (!string.IsNullOrEmpty(Model.Email))
+                                            {
+                                                <span><i class="fas fa-envelope me-2 text-primary"></i>@Model.Email</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="system-info-item">
-                                    <span class="system-label">Last Updated</span>
-                                    <span class="system-value">@Model.UpdatedAt.ToString("MMMM dd, yyyy hh:mm tt")</span>
+
+                            <div class="address-section">
+                                <div class="info-item">
+                                    <label class="info-label">Permanent Address</label>
+                                    <div class="address-box p-3 bg-light rounded">
+                                        <div class="d-flex align-items-start">
+                                            <i class="fas fa-home mt-1 me-3 text-primary fa-lg"></i>
+                                            <div>
+                                                <strong>@Model.PermanentAddress</strong><br />
+                                                <small class="text-muted">
+                                                    Zone: @Model.Zone | Barangay: @Model.Barangay<br />
+                                                    Municipality: @Model.CityMunicipality | Province: @Model.Province<br />
+                                                    ZIP Code: @Model.ZipCode
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="system-info-item">
-                                    <span class="system-label">Senior ID</span>
-                                    <span class="system-value">@Model.Id</span>
+                        </div>
+                    </div>
+
+                    <!-- Family Information Card -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Family Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Spouse Name</label>
+                                        <div class="info-value">
+                                            @if (!string.IsNullOrEmpty(Model.SpouseFullName))
+                                            {
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-user-friends me-2 text-success"></i>
+                                                    <div>
+                                                        @Model.SpouseFullName
+                                                        @if (!string.IsNullOrEmpty(Model.SpouseCitizenship))
+                                                        {
+                                                            <br />
+                                                    
+                                                            <small class="text-muted">Citizenship: @Model.SpouseCitizenship</small>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Designated Beneficiary</label>
+                                        <div class="info-value">
+                                            @if (!string.IsNullOrEmpty(Model.PrimaryBeneficiaryFullName))
+                                            {
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-user-check me-2 text-success"></i>
+                                                    <div>
+                                                        @Model.PrimaryBeneficiaryFullName
+                                                        @if (!string.IsNullOrEmpty(Model.PrimaryBeneficiaryRelationship))
+                                                        {
+                                                            <br />
+                                                    
+                                                            <small class="text-muted">Relationship: @Model.PrimaryBeneficiaryRelationship</small>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pension Information Card -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-money-check-alt me-2"></i>Pension Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="info-item">
+                                        <label class="info-label">Pension Type</label>
+                                        <div class="info-value">
+                                            @if (!string.IsNullOrEmpty(Model.PensionType))
+                                            {
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-university me-3 text-success fa-lg"></i>
+                                                    <div>
+                                                        <h5 class="mb-1">@Model.DisplayPensionType</h5>
+                                                        <small class="text-muted">Registered Pension Type</small>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-times-circle me-3 text-secondary fa-lg"></i>
+                                                    <div>
+                                                        <h5 class="mb-1 text-muted">No Registered Pension</h5>
+                                                        <small class="text-muted">No pension information recorded</small>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Action Buttons Footer -->
-        <div class="card-footer d-flex justify-content-between">
-            <div>
-                <a href="@Url.Action("Index", "Senior")" class="btn btn-outline-secondary">
-                    <i class="fas fa-list me-1"></i> Back to List
-                </a>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="@Url.Action("EditSenior", "Senior", new { id = Model.Id })"
-                   class="btn btn-primary">
-                    <i class="fas fa-edit me-1"></i> Edit Record
-                </a>
-                @if (Model.Status == "Active")
-                {
-                    <form method="post" action="@Url.Action("ArchiveSenior", "Senior")"
-                          onsubmit="return confirm('Are you sure you want to archive this senior record?')">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@Model.Id" />
-                        <button type="submit" class="btn btn-warning">
-                            <i class="fas fa-archive me-1"></i> Archive Record
-                        </button>
-                    </form>
-                }
-                else
-                {
-                    <form method="post" action="@Url.Action("RestoreSenior", "Senior")"
-                          onsubmit="return confirm('Are you sure you want to restore this senior record?')">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@Model.Id" />
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-undo me-1"></i> Restore Record
-                        </button>
-                    </form>
-                }
+            <!-- Print Footer (only visible when printing) -->
+            <div class="print-footer printable-only" style="display: none;">
+                <hr class="print-divider" />
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="signature-box">
+                            <p class="mb-0">_________________________________</p>
+                            <p class="mb-0">Senior Citizen's Signature</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="signature-box">
+                            <p class="mb-0">_________________________________</p>
+                            <p class="mb-0">OSCA Officer's Signature</p>
+                            <p class="mb-0 text-muted small">Date: @DateTime.Now.ToString("MMMM dd, yyyy")</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-12 text-center">
+                        <p class="footer-note mb-0">
+                            <strong>Note:</strong> This is an official document issued by the Office of the Senior Citizens Affairs.
+                            For verification, please contact OSCA Office at +63 123 456 7890.
+                        </p>
+                        <p class="document-id mb-0 small text-muted">
+                            Document ID: OSCA-@Model.Id-@DateTime.Now.ToString("yyyyMMdd") | Printed on: @DateTime.Now.ToString("MMMM dd, yyyy hh:mm tt")
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -205,336 +419,417 @@
 
 @section Styles {
     <style>
-        /* Card Styles */
-        .card {
-            border: none;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 150, 243, 0.1);
-            border-radius: 0.75rem;
-            border-left: 4px solid #2196f3;
+        /* Screen Styles */
+        .profile-picture-container {
+            position: relative;
+            margin: 0 auto;
         }
 
-        .card-header {
-            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-            color: white;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding: 1.5rem;
+        .profile-picture-view {
+            width: 250px;
+            height: 250px;
+            object-fit: cover;
+            border: 5px solid #e3f2fd;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
-        .card-footer {
-            background: #f8fbff;
-            border-top: 1px solid #e3f2fd;
-            padding: 1.5rem;
+        .profile-picture-placeholder-view {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            color: #5c6bc0;
+            border: 5px solid #e3f2fd;
         }
 
-        /* SCCN Display */
-        .sccn-display-card {
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-            border: 2px solid #2196f3;
-            border-radius: 0.5rem;
-            padding: 1.5rem;
-            text-align: center;
-        }
-
-        .sccn-label {
-            font-size: 0.875rem;
+        .senior-info h4 {
             color: #1976d2;
-            text-transform: uppercase;
-            letter-spacing: 1px;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
         }
 
-        .sccn-number {
-            font-size: 2rem;
+        .sccn-number-display h2 {
+            font-size: 2.5rem;
             font-weight: 700;
-            color: #0d47a1;
-            font-family: 'Courier New', monospace;
             letter-spacing: 2px;
+            color: #1565c0;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
 
-        /* Info Sections */
-        .info-section {
+        .print-barcode {
+            margin: 15px auto;
+            padding: 10px;
             background: white;
-            border: 1px solid #e3f2fd;
-            border-radius: 0.5rem;
-            padding: 1.5rem;
-            height: 100%;
-        }
-
-        .section-title {
-            color: #1976d2;
-            border-bottom: 2px solid #e3f2fd;
-            padding-bottom: 0.75rem;
-            margin-bottom: 1.5rem;
-            font-weight: 600;
-        }
-
-            .section-title i {
-                color: #2196f3;
-            }
-
-        /* Info Grid */
-        .info-grid {
-            display: grid;
-            gap: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            max-width: 300px;
         }
 
         .info-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem;
-            background: #f8fbff;
-            border-radius: 0.375rem;
-            transition: all 0.2s ease;
+            margin-bottom: 1.25rem;
         }
 
-            .info-item:hover {
-                background: #e3f2fd;
-                transform: translateX(5px);
-            }
-
         .info-label {
-            color: #5c6bc0;
+            font-size: 0.8rem;
+            color: #6c757d;
             font-weight: 600;
-            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .info-value {
-            color: #1976d2;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #2c3e50;
+            padding: 0.5rem 0;
+            min-height: 2.5rem;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .address-box {
+            background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
+            border: 1px solid #bbdefb;
+            color: #1565c0;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .badge {
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .card-header {
+            border-bottom: none;
+        }
+
+        .bg-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+        }
+
+        .bg-primary {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%) !important;
+        }
+
+        .btn-light {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 1px solid #dee2e6;
+            color: #495057;
             font-weight: 500;
         }
 
-        /* Badge Styles */
-        .badge-male {
-            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-            color: white;
-            padding: 0.375rem 0.75rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-        }
-
-        .badge-female {
-            background: linear-gradient(135deg, #f06292 0%, #ec407a 100%);
-            color: white;
-            padding: 0.375rem 0.75rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-        }
-
-        .zone-display {
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-            color: #1565c0;
-            padding: 0.25rem 1rem;
-            border-radius: 1rem;
-            font-weight: 600;
-            border: 1px solid #bbdefb;
-        }
-
-        .age-display {
-            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-            color: #2e7d32;
-            padding: 0.25rem 1rem;
-            border-radius: 1rem;
-            font-weight: 600;
-            border: 1px solid #c8e6c9;
-        }
-
-        /* System Information */
-        .system-info-item {
-            text-align: center;
-            padding: 1rem;
-            background: #f8fbff;
-            border-radius: 0.5rem;
-            border: 1px solid #e3f2fd;
-        }
-
-        .system-label {
-            display: block;
-            color: #5c6bc0;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.25rem;
-        }
-
-        .system-value {
-            display: block;
-            color: #1976d2;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        /* Alert Styles */
-        .alert {
-            border: none;
-            border-radius: 0.5rem;
-            padding: 1rem 1.5rem;
-        }
-
-        .alert-success {
-            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-            color: #2e7d32;
-            border-left: 4px solid #4caf50;
-        }
-
-        .alert-warning {
-            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-            color: #f57c00;
-            border-left: 4px solid #ff9800;
-        }
-
-        /* Button Styles */
-        .btn {
-            padding: 0.5rem 1.5rem;
-            border-radius: 0.375rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-            border: none;
-        }
-
-            .btn-primary:hover {
-                background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
-            }
-
-        .btn-outline-primary {
-            border: 2px solid #2196f3;
-            color: #2196f3;
-        }
-
-            .btn-outline-primary:hover {
-                background: #2196f3;
-                color: white;
-                border-color: #2196f3;
-            }
-
-        .btn-success {
-            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
-            border: none;
-        }
-
-            .btn-success:hover {
-                background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
-                transform: translateY(-2px);
-            }
-
         .btn-warning {
-            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            border: none;
+            color: #212529;
+            font-weight: 500;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             border: none;
             color: white;
+            font-weight: 500;
         }
 
-            .btn-warning:hover {
-                background: linear-gradient(135deg, #f57c00 0%, #ef6c00 100%);
-                transform: translateY(-2px);
-            }
-
-        .btn-outline-secondary {
-            border: 2px solid #78909c;
-            color: #78909c;
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            border: none;
+            color: white;
+            font-weight: 500;
         }
 
-            .btn-outline-secondary:hover {
-                background: #78909c;
-                color: white;
-                border-color: #78909c;
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Print-specific styles */
+        @@media print {
+            /* Hide non-printable elements */
+            .non-printable {
+                display: none !important;
+            }
+            /* Show printable-only elements */
+            .printable-only {
+                display: block !important;
+            }
+            /* General print styles */
+            body {
+                font-family: 'Times New Roman', Times, serif !important;
+                line-height: 1.4;
+                color: #000 !important;
+                background: white !important;
             }
 
-        /* Responsive Design */
-        @@media (max-width: 768px) {
-            .sccn-number {
-                font-size: 1.5rem;
+            .container-fluid {
+                max-width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            /* Print header */
+            .print-header {
+                margin-bottom: 30px;
+            }
+
+            .print-title {
+                font-size: 28px !important;
+                font-weight: bold !important;
+                text-transform: uppercase;
+                letter-spacing: 1.5px;
+                margin-bottom: 5px !important;
+                color: #2c3e50 !important;
+            }
+
+            .print-subtitle {
+                font-size: 14px !important;
+                color: #6c757d !important;
+                font-style: italic;
+                margin-bottom: 15px !important;
+            }
+
+            .print-divider {
+                border: none;
+                border-top: 3px double #2c3e50;
+                margin: 20px 0;
+            }
+            /* Profile picture for print */
+            .profile-picture-view {
+                width: 180px !important;
+                height: 180px !important;
+                border: 2px solid #000 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+
+            .profile-picture-placeholder-view {
+                width: 180px !important;
+                height: 180px !important;
+                border: 2px dashed #ccc !important;
+                border-radius: 0 !important;
+            }
+            /* Cards for print */
+            .card {
+                border: 1px solid #000 !important;
+                box-shadow: none !important;
+                page-break-inside: avoid;
+                margin-bottom: 15px !important;
             }
 
             .card-header {
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
+                background: #f8f9fa !important;
+                color: #000 !important;
+                border-bottom: 2px solid #000 !important;
+                padding: 8px 15px !important;
             }
 
-            .info-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.25rem;
-            }
-
-            .card-footer {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-                .card-footer .d-flex {
-                    width: 100%;
-                    justify-content: stretch;
+                .card-header h5 {
+                    font-size: 16px !important;
+                    font-weight: bold !important;
+                    margin: 0 !important;
                 }
 
-                .card-footer .btn {
-                    flex: 1;
+            .card-body {
+                padding: 15px !important;
+            }
+            /* Information layout */
+            .info-label {
+                font-size: 11px !important;
+                font-weight: bold !important;
+                color: #000 !important;
+                margin-bottom: 2px !important;
+            }
+
+            .info-value {
+                font-size: 13px !important;
+                border-bottom: 1px solid #ddd !important;
+                padding: 3px 0 !important;
+                min-height: auto !important;
+            }
+            /* OSCA number styling */
+            .sccn-number-display h2 {
+                font-size: 24px !important;
+                color: #000 !important;
+                text-shadow: none !important;
+                letter-spacing: 3px !important;
+            }
+            /* Address box */
+            .address-box {
+                background: none !important;
+                border: 1px solid #ddd !important;
+                padding: 10px !important;
+            }
+            /* Badges for print */
+            .badge {
+                background: #f8f9fa !important;
+                color: #000 !important;
+                border: 1px solid #000 !important;
+                padding: 2px 8px !important;
+                font-size: 10px !important;
+            }
+            /* Icons for print */
+            .fas, .fa {
+                color: #000 !important;
+                font-size: 12px !important;
+            }
+            /* Print footer */
+            .print-footer {
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 2px solid #000;
+            }
+
+            .signature-box {
+                margin-top: 30px;
+            }
+
+                .signature-box p {
+                    font-size: 12px !important;
+                    line-height: 1.2;
                 }
-        }
 
-        /* Animations */
-        @@keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
+            .footer-note {
+                font-size: 10px !important;
+                color: #666 !important;
+                font-style: italic;
             }
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            .document-id {
+                font-size: 9px !important;
+                color: #999 !important;
+                margin-top: 5px;
+            }
+            /* Layout adjustments for print */
+            .row {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                margin: 0 !important;
+            }
+
+            .col-md-4, .col-md-6, .col-md-8, .col-md-12 {
+                padding: 5px !important;
+            }
+            /* Remove gradients and fancy effects */
+            .bg-info, .bg-primary, .bg-success, .bg-warning, .bg-danger {
+                background: #f8f9fa !important;
+                color: #000 !important;
+            }
+            /* Ensure proper page breaks */
+            .page-break {
+                page-break-before: always;
+            }
+            /* Hide decorative elements */
+            .btn, .btn-*, .shadow, .rounded, .rounded-* {
+                display: none !important;
+            }
+            /* QR/Barcode styling */
+            .print-barcode {
+                border: 1px solid #000 !important;
+                padding: 5px !important;
+                background: white !important;
+            }
+            /* Text colors for print */
+            .text-primary, .text-success, .text-warning, .text-danger, .text-info {
+                color: #000 !important;
+            }
+
+            .text-muted {
+                color: #666 !important;
             }
         }
 
-        .card {
-            animation: fadeInUp 0.5s ease-out;
+        /* Barcode styling */
+        @@media screen {
+            .print-barcode {
+                display: block;
+                max-width: 250px;
+                margin: 20px auto;
+            }
         }
     </style>
 }
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Add print functionality
-            const printBtn = document.createElement('button');
-            printBtn.className = 'btn btn-info ms-2';
-            printBtn.innerHTML = '<i class="fas fa-print me-1"></i> Print';
-            printBtn.onclick = function() {
-                window.print();
-            };
-
-            // Add to card header actions
-            const cardHeader = document.querySelector('.card-header .d-flex');
-            if (cardHeader) {
-                cardHeader.appendChild(printBtn);
+            // Generate barcode for OSCA number
+            const oscaNumber = '@Model.SeniorId';
+            if (oscaNumber && oscaNumber.length === 12) {
+                try {
+                    JsBarcode("#barcode", oscaNumber, {
+                        format: "CODE128",
+                        lineColor: "#000",
+                        width: 2,
+                        height: 50,
+                        displayValue: true,
+                        fontOptions: "bold",
+                        font: "Arial",
+                        text: `OSCA: ${oscaNumber}`,
+                        textMargin: 5,
+                        fontSize: 14
+                    });
+                } catch (e) {
+                    console.log("Barcode generation failed:", e);
+                }
             }
 
-            // Add confirmation to archive/restore buttons
-            const archiveForms = document.querySelectorAll('form[onsubmit*="archive"]');
-            archiveForms.forEach(form => {
-                form.addEventListener('submit', function(e) {
+            // Archive confirmation
+            const archiveForm = document.querySelector('form[action*="ArchiveSenior"]');
+            if (archiveForm) {
+                const archiveBtn = archiveForm.querySelector('button[type="submit"]');
+                archiveBtn.addEventListener('click', function(e) {
                     if (!confirm('Are you sure you want to archive this senior record?')) {
                         e.preventDefault();
-                        return false;
                     }
                 });
-            });
+            }
 
-            const restoreForms = document.querySelectorAll('form[onsubmit*="restore"]');
-            restoreForms.forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    if (!confirm('Are you sure you want to restore this senior record?')) {
-                        e.preventDefault();
-                        return false;
-                    }
+            // Print button functionality
+            const printBtn = document.querySelector('button[onclick="window.print()"]');
+            if (printBtn) {
+                printBtn.addEventListener('click', function() {
+                    // Show printable elements before printing
+                    const printableElements = document.querySelectorAll('.printable-only');
+                    printableElements.forEach(el => el.style.display = 'block');
+
+                    // Trigger print
+                    window.print();
+
+                    // Hide printable elements after printing
+                    setTimeout(() => {
+                        printableElements.forEach(el => el.style.display = 'none');
+                    }, 100);
                 });
-            });
+            }
+
+            // Add copy OSCA ID functionality
+            const oscaDisplay = document.querySelector('.sccn-number-display h2');
+            if (oscaDisplay) {
+                oscaDisplay.style.cursor = 'pointer';
+                oscaDisplay.title = 'Click to copy OSCA ID';
+                oscaDisplay.addEventListener('click', function() {
+                    navigator.clipboard.writeText('@Model.FormattedSCCN').then(function() {
+                        const originalText = oscaDisplay.textContent;
+                        oscaDisplay.textContent = 'Copied!';
+                        oscaDisplay.style.color = '#28a745';
+                        setTimeout(function() {
+                            oscaDisplay.textContent = originalText;
+                            oscaDisplay.style.color = '#1565c0';
+                        }, 1500);
+                    });
+                });
+            }
         });
     </script>
 }

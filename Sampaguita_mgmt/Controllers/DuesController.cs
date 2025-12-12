@@ -3,8 +3,8 @@ using SeniorManagement.Models;
 using SeniorManagement.Repositories;
 using System.Globalization;
 using System.Text;
-using System.IO; // For Path.Combine and Directory.CreateDirectory
-using System.Linq; // For LINQ methods like .Where(), .Count()
+using System.IO;
+using System.Linq;
 
 namespace SeniorManagement.Controllers
 {
@@ -57,7 +57,7 @@ namespace SeniorManagement.Controllers
                 ViewBag.TotalAmount = totalAmount;
                 ViewBag.CollectedAmount = collectedAmount;
                 ViewBag.NewSeniorsCount = newSeniorsCount;
-                ViewBag.HasLog = existingLog != null; // This ensures boolean value
+                ViewBag.HasLog = existingLog != null;
                 ViewBag.Message = message;
                 ViewBag.MessageType = messageType;
 
@@ -68,7 +68,7 @@ namespace SeniorManagement.Controllers
                 _logger.LogError(ex, "Error loading monthly contributions");
                 ViewBag.Message = "Error loading contributions: " + ex.Message;
                 ViewBag.MessageType = "danger";
-                ViewBag.HasLog = false; // Ensure HasLog is set even on error
+                ViewBag.HasLog = false;
                 return View(new List<MonthlyContribution>());
             }
         }
@@ -314,7 +314,6 @@ namespace SeniorManagement.Controllers
                 foreach (var log in filteredLogs)
                 {
                     // Parse the notes to extract paid count and total seniors
-                    // Format: "Total Seniors: X, Paid: Y, Unpaid: Z"
                     var notesParts = log.Notes.Split(',');
                     if (notesParts.Length >= 2)
                     {
@@ -412,10 +411,10 @@ namespace SeniorManagement.Controllers
             }
         }
 
-        // Add these methods to your existing DuesController
+        // ==================== PENSION METHODS WITH PENSION TYPE FILTERING ====================
 
         // GET: Dues/Pension
-        public async Task<IActionResult> Pension(int? month, int? year, string message = "", string messageType = "")
+        public async Task<IActionResult> Pension(int? month, int? year, string pensionType = null, string message = "", string messageType = "")
         {
             try
             {
@@ -423,8 +422,11 @@ namespace SeniorManagement.Controllers
                 month ??= DateTime.Now.Month;
                 year ??= DateTime.Now.Year;
 
-                // Get pension contributions for the selected month/year
-                var pensions = await _repository.GetMonthlyPensionsAsync(month.Value, year.Value);
+                // Get pension types for filter dropdown
+                var pensionTypes = await _repository.GetDistinctPensionTypesAsync();
+
+                // Get pension contributions for the selected month/year with pension type filter
+                var pensions = await _repository.GetMonthlyPensionsAsync(month.Value, year.Value, pensionType);
 
                 // Get new pension seniors count for notification
                 var newPensionSeniorsCount = await _repository.GetNewPensionSeniorsCountAsync(month.Value, year.Value);
@@ -439,6 +441,19 @@ namespace SeniorManagement.Controllers
                 var totalPensionAmount = pensions.Count * 500; // Assuming ₱500 per pension
                 var claimedAmount = claimedCount * 500;
 
+                // Calculate statistics by pension type for the current filter
+                var pensionTypeStats = new Dictionary<string, (int Total, int Claimed)>();
+                foreach (var pension in pensions)
+                {
+                    var type = string.IsNullOrEmpty(pension.PensionType) ? "No Pension" : pension.PensionType;
+                    if (!pensionTypeStats.ContainsKey(type))
+                    {
+                        pensionTypeStats[type] = (0, 0);
+                    }
+                    var stats = pensionTypeStats[type];
+                    pensionTypeStats[type] = (stats.Total + 1, stats.Claimed + (pension.IsClaimed ? 1 : 0));
+                }
+
                 ViewBag.Month = month;
                 ViewBag.Year = year;
                 ViewBag.MonthName = monthName;
@@ -450,6 +465,9 @@ namespace SeniorManagement.Controllers
                 ViewBag.HasLog = existingLog != null;
                 ViewBag.Message = message;
                 ViewBag.MessageType = messageType;
+                ViewBag.PensionTypes = pensionTypes;
+                ViewBag.SelectedPensionType = pensionType;
+                ViewBag.PensionTypeStats = pensionTypeStats;
 
                 return View(pensions);
             }
@@ -469,6 +487,20 @@ namespace SeniorManagement.Controllers
         {
             try
             {
+                // Get the pension contribution first to check if it has a pension type
+                var pension = await _repository.GetPensionContributionByIdAsync(id);
+
+                if (pension == null)
+                {
+                    return Json(new { success = false, message = "Pension record not found." });
+                }
+
+                // Check if senior has a pension type
+                if (string.IsNullOrEmpty(pension.PensionType) || pension.PensionType == "No Pension")
+                {
+                    return Json(new { success = false, message = "Cannot claim pension for senior with no pension type." });
+                }
+
                 var success = await _repository.TogglePensionClaimAsync(id);
 
                 if (success)
@@ -482,6 +514,45 @@ namespace SeniorManagement.Controllers
             {
                 _logger.LogError(ex, "Error toggling pension claim");
                 return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+        }
+
+        // GET: Dues/PensionFrequencyDashboard
+        public async Task<IActionResult> PensionFrequencyDashboard(int? month, int? year, string pensionType = null)
+        {
+            try
+            {
+                // Set default to current month/year if not specified
+                month ??= DateTime.Now.Month;
+                year ??= DateTime.Now.Year;
+
+                // Get pension contributions for the selected month/year
+                var pensions = await _repository.GetMonthlyPensionsAsync(month.Value, year.Value, pensionType);
+
+                // Filter out "No Pension" types since they shouldn't be in the frequency dashboard
+                pensions = pensions.Where(p => !string.IsNullOrEmpty(p.PensionType) && p.PensionType != "No Pension").ToList();
+
+                // Get pension types for filter dropdown
+                var pensionTypes = await _repository.GetDistinctPensionTypesAsync();
+
+                // Remove "No Pension" from the filter list for frequency dashboard
+                pensionTypes = pensionTypes.Where(pt => pt != "No Pension").ToList();
+
+                var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month.Value);
+
+                ViewBag.Month = month;
+                ViewBag.Year = year;
+                ViewBag.MonthName = monthName;
+                ViewBag.PensionTypes = pensionTypes;
+                ViewBag.SelectedPensionType = pensionType;
+
+                return View(pensions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading pension frequency dashboard");
+                TempData["ErrorMessage"] = "Error loading frequency dashboard: " + ex.Message;
+                return RedirectToAction("Pension", new { month, year });
             }
         }
 
@@ -511,19 +582,20 @@ namespace SeniorManagement.Controllers
 
         // POST: Dues/SavePensionLog
         [HttpPost]
-        public async Task<IActionResult> SavePensionLog(int month, int year)
+        public async Task<IActionResult> SavePensionLog(int month, int year, string pensionType = null)
         {
             try
             {
-                // Generate CSV file
-                var pensions = await _repository.GetPensionsForExportAsync(month, year);
+                // Generate CSV file with pension type filter
+                var pensions = await _repository.GetPensionsForExportAsync(month, year, pensionType);
                 var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
 
                 // Create CSV content
-                var csvContent = GeneratePensionCsvContent(pensions, monthName, year);
+                var csvContent = GeneratePensionCsvContent(pensions, monthName, year, pensionType);
 
                 // Define file path
-                var fileName = $"PensionContributions_{monthName}_{year}_{DateTime.Now:yyyyMMddHHmmss}.csv";
+                var fileNameSuffix = !string.IsNullOrEmpty(pensionType) ? $"_{pensionType.Replace("/", "_").Replace(" ", "_")}" : "";
+                var fileName = $"PensionContributions_{monthName}_{year}{fileNameSuffix}_{DateTime.Now:yyyyMMddHHmmss}.csv";
                 var logsFolder = Path.Combine(_environment.WebRootPath, "logs", "pensions");
 
                 // Ensure directory exists
@@ -536,7 +608,8 @@ namespace SeniorManagement.Controllers
 
                 // Save log entry
                 var relativePath = $"/logs/pensions/{fileName}";
-                var notes = $"Total Seniors: {pensions.Count}, Claimed: {pensions.Count(c => c.IsClaimed)}, Unclaimed: {pensions.Count(c => !c.IsClaimed)}";
+                var notes = $"Total Seniors: {pensions.Count}, Claimed: {pensions.Count(c => c.IsClaimed)}, Unclaimed: {pensions.Count(c => !c.IsClaimed)}" +
+                           (!string.IsNullOrEmpty(pensionType) ? $", Pension Type: {pensionType}" : "");
 
                 var log = await _repository.SavePensionLogAsync(monthName, year, relativePath, notes);
 
@@ -544,6 +617,7 @@ namespace SeniorManagement.Controllers
                 {
                     month,
                     year,
+                    pensionType,
                     message = $"Pension log saved successfully! File: {fileName}",
                     messageType = "success"
                 });
@@ -555,6 +629,7 @@ namespace SeniorManagement.Controllers
                 {
                     month,
                     year,
+                    pensionType,
                     message = "Error saving pension log: " + ex.Message,
                     messageType = "danger"
                 });
@@ -563,7 +638,7 @@ namespace SeniorManagement.Controllers
 
         // POST: Dues/UpdatePensionLog
         [HttpPost]
-        public async Task<IActionResult> UpdatePensionLog(int month, int year)
+        public async Task<IActionResult> UpdatePensionLog(int month, int year, string pensionType = null)
         {
             try
             {
@@ -577,19 +652,21 @@ namespace SeniorManagement.Controllers
                     {
                         month,
                         year,
+                        pensionType,
                         message = "No pension log found to update. Please save a log first.",
                         messageType = "warning"
                     });
                 }
 
-                // Generate new CSV file
-                var pensions = await _repository.GetPensionsForExportAsync(month, year);
+                // Generate new CSV file with pension type filter
+                var pensions = await _repository.GetPensionsForExportAsync(month, year, pensionType);
 
                 // Create CSV content
-                var csvContent = GeneratePensionCsvContent(pensions, monthName, year);
+                var csvContent = GeneratePensionCsvContent(pensions, monthName, year, pensionType);
 
                 // Define file path
-                var fileName = $"PensionContributions_{monthName}_{year}_{DateTime.Now:yyyyMMddHHmmss}.csv";
+                var fileNameSuffix = !string.IsNullOrEmpty(pensionType) ? $"_{pensionType.Replace("/", "_").Replace(" ", "_")}" : "";
+                var fileName = $"PensionContributions_{monthName}_{year}{fileNameSuffix}_{DateTime.Now:yyyyMMddHHmmss}.csv";
                 var logsFolder = Path.Combine(_environment.WebRootPath, "logs", "pensions");
 
                 // Ensure directory exists
@@ -602,7 +679,9 @@ namespace SeniorManagement.Controllers
 
                 // Update log entry with new file
                 var relativePath = $"/logs/pensions/{fileName}";
-                var notes = $"Total Seniors: {pensions.Count}, Claimed: {pensions.Count(c => c.IsClaimed)}, Unclaimed: {pensions.Count(c => !c.IsClaimed)}. Updated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                var notes = $"Total Seniors: {pensions.Count}, Claimed: {pensions.Count(c => c.IsClaimed)}, Unclaimed: {pensions.Count(c => !c.IsClaimed)}" +
+                           (!string.IsNullOrEmpty(pensionType) ? $", Pension Type: {pensionType}" : "") +
+                           $". Updated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
 
                 var log = await _repository.SavePensionLogAsync(monthName, year, relativePath, notes);
 
@@ -620,6 +699,7 @@ namespace SeniorManagement.Controllers
                 {
                     month,
                     year,
+                    pensionType,
                     message = $"Pension log updated successfully! New file: {fileName}",
                     messageType = "success"
                 });
@@ -631,6 +711,7 @@ namespace SeniorManagement.Controllers
                 {
                     month,
                     year,
+                    pensionType,
                     message = "Error updating pension log: " + ex.Message,
                     messageType = "danger"
                 });
@@ -638,15 +719,16 @@ namespace SeniorManagement.Controllers
         }
 
         // GET: Dues/ExportPensionCsv
-        public async Task<IActionResult> ExportPensionCsv(int month, int year)
+        public async Task<IActionResult> ExportPensionCsv(int month, int year, string pensionType = null)
         {
             try
             {
-                var pensions = await _repository.GetPensionsForExportAsync(month, year);
+                var pensions = await _repository.GetPensionsForExportAsync(month, year, pensionType);
                 var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
 
-                var csvContent = GeneratePensionCsvContent(pensions, monthName, year);
-                var fileName = $"PensionContributions_{monthName}_{year}.csv";
+                var csvContent = GeneratePensionCsvContent(pensions, monthName, year, pensionType);
+                var fileNameSuffix = !string.IsNullOrEmpty(pensionType) ? $"_{pensionType.Replace("/", "_").Replace(" ", "_")}" : "";
+                var fileName = $"PensionContributions_{monthName}_{year}{fileNameSuffix}.csv";
 
                 return File(Encoding.UTF8.GetBytes(csvContent), "text/csv", fileName);
             }
@@ -654,7 +736,7 @@ namespace SeniorManagement.Controllers
             {
                 _logger.LogError(ex, "Error exporting pension CSV");
                 TempData["ErrorMessage"] = "Error exporting pension CSV: " + ex.Message;
-                return RedirectToAction("Pension", new { month, year });
+                return RedirectToAction("Pension", new { month, year, pensionType });
             }
         }
 
@@ -801,12 +883,127 @@ namespace SeniorManagement.Controllers
             }
         }
 
-        private string GeneratePensionCsvContent(List<PensionContribution> pensions, string monthName, int year)
+        // GET: Dues/ExportPensionFrequencyReport
+        public async Task<IActionResult> ExportPensionFrequencyReport(int month, int year)
+        {
+            try
+            {
+                var pensions = await _repository.GetMonthlyPensionsAsync(month, year);
+
+                // Filter out "No Pension" types for frequency report
+                pensions = pensions.Where(p => !string.IsNullOrEmpty(p.PensionType) && p.PensionType != "No Pension").ToList();
+
+                var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
+
+                // Generate specialized frequency report
+                var sb = new StringBuilder();
+
+                // Add headers
+                sb.AppendLine("Pension Frequency Report");
+                sb.AppendLine($"Month: {monthName}");
+                sb.AppendLine($"Year: {year}");
+                sb.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                sb.AppendLine();
+
+                // Add summary
+                sb.AppendLine("SUMMARY");
+                sb.AppendLine("=======");
+                sb.AppendLine($"Total Pensioners with Actual Pensions: {pensions.Count}");
+
+                // Monthly pensions
+                var monthlyPensions = pensions.Where(p => p.IsMonthlyPension).ToList();
+                sb.AppendLine($"Monthly Pensions (12x/year): {monthlyPensions.Count}");
+                sb.AppendLine($"  - Claimed this month: {monthlyPensions.Count(p => p.IsClaimed)}");
+                sb.AppendLine($"  - Not claimed: {monthlyPensions.Count(p => !p.IsClaimed)}");
+
+                // Flexible pensions
+                var flexiblePensions = pensions.Where(p => p.IsFlexiblePension).ToList();
+                sb.AppendLine($"Flexible Pensions: {flexiblePensions.Count}");
+                sb.AppendLine($"  - Withdrawn this month: {flexiblePensions.Count(p => p.IsClaimed)}");
+                sb.AppendLine($"  - No withdrawal: {flexiblePensions.Count(p => !p.IsClaimed)}");
+
+                // RMD eligible
+                var rmdEligible = pensions.Where(p => p.RequiresRMD).ToList();
+                sb.AppendLine($"RMD Required (Age 73+): {rmdEligible.Count}");
+                sb.AppendLine($"  - RMD taken this month: {rmdEligible.Count(p => p.IsClaimed)}");
+                sb.AppendLine($"  - RMD pending: {rmdEligible.Count(p => !p.IsClaimed)}");
+                sb.AppendLine();
+
+                // Detailed breakdown by pension type
+                sb.AppendLine("DETAILED BREAKDOWN BY PENSION TYPE");
+                sb.AppendLine("==================================");
+
+                var groupedByType = pensions.GroupBy(p => p.PensionType)
+                    .Select(g => new
+                    {
+                        Type = g.Key,
+                        Count = g.Count(),
+                        Claimed = g.Count(p => p.IsClaimed),
+                        Monthly = g.Count(p => p.IsMonthlyPension),
+                        Flexible = g.Count(p => p.IsFlexiblePension),
+                        RMD = g.Count(p => p.RequiresRMD)
+                    })
+                    .OrderByDescending(g => g.Count);
+
+                foreach (var group in groupedByType)
+                {
+                    sb.AppendLine($"{group.Type}:");
+                    sb.AppendLine($"  - Total: {group.Count}");
+                    sb.AppendLine($"  - Claimed/Withdrawn: {group.Claimed}");
+                    sb.AppendLine($"  - Monthly: {group.Monthly}");
+                    sb.AppendLine($"  - Flexible: {group.Flexible}");
+                    sb.AppendLine($"  - RMD Required: {group.RMD}");
+                    sb.AppendLine();
+                }
+
+                // Monthly pensions list
+                if (monthlyPensions.Any())
+                {
+                    sb.AppendLine("MONTHLY PENSIONS (REQUIRED CLAIMS)");
+                    sb.AppendLine("===================================");
+                    sb.AppendLine("Senior Name,Zone,Age,Pension Type,Claim Status,Last Claim");
+
+                    foreach (var pension in monthlyPensions.OrderBy(p => p.LastName))
+                    {
+                        var claimStatus = pension.IsClaimed ? "CLAIMED" : "NOT CLAIMED";
+                        var lastClaim = pension.ClaimedDate?.ToString("MM/dd/yyyy") ?? "Never";
+                        sb.AppendLine($"\"{pension.FullName}\",\"Zone {pension.Zone}\",{pension.Age},\"{pension.PensionType}\",\"{claimStatus}\",\"{lastClaim}\"");
+                    }
+                    sb.AppendLine();
+                }
+
+                // RMD eligible list
+                if (rmdEligible.Any())
+                {
+                    sb.AppendLine("RMD REQUIRED SENIORS (AGE 73+)");
+                    sb.AppendLine("===============================");
+                    sb.AppendLine("Senior Name,Zone,Age,Pension Type,Withdrawal Status,Last Withdrawal");
+
+                    foreach (var pension in rmdEligible.OrderBy(p => p.LastName))
+                    {
+                        var withdrawalStatus = pension.IsClaimed ? "WITHDRAWN" : "PENDING";
+                        var lastWithdrawal = pension.ClaimedDate?.ToString("MM/dd/yyyy") ?? "No withdrawal";
+                        sb.AppendLine($"\"{pension.FullName}\",\"Zone {pension.Zone}\",{pension.Age},\"{pension.PensionType}\",\"{withdrawalStatus}\",\"{lastWithdrawal}\"");
+                    }
+                }
+
+                var fileName = $"Pension_Frequency_Report_{monthName}_{year}_{DateTime.Now:yyyyMMddHHmmss}.csv";
+                return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting pension frequency report");
+                TempData["ErrorMessage"] = "Error exporting frequency report: " + ex.Message;
+                return RedirectToAction("PensionFrequencyDashboard", new { month, year });
+            }
+        }
+
+        private string GeneratePensionCsvContent(List<PensionContribution> pensions, string monthName, int year, string pensionType = null)
         {
             var sb = new StringBuilder();
 
             // Add headers
-            sb.AppendLine("Senior ID,Full Name,Zone,Status,Claim Status,Claimed Date,Month,Year");
+            sb.AppendLine("Senior ID,Full Name,Zone,Pension Type,Status,Claim Status,Claimed Date,Month,Year");
 
             // Add data
             foreach (var pension in pensions)
@@ -816,17 +1013,39 @@ namespace SeniorManagement.Controllers
                     ? pension.ClaimedDate?.ToString("MM/dd/yyyy HH:mm") ?? "Claimed (Date Not Recorded)"
                     : "Not Claimed";
 
-                sb.AppendLine($"\"{pension.SeniorId}\",\"{pension.FullName}\",\"{pension.Zone}\",\"{pension.Status}\",\"{claimStatus}\",\"{claimedDate}\",\"{monthName}\",\"{year}\"");
+                sb.AppendLine($"\"{pension.SeniorId}\",\"{pension.FullName}\",\"Zone {pension.Zone}\",\"{pension.DisplayPensionType}\",\"{pension.Status}\",\"{claimStatus}\",\"{claimedDate}\",\"{monthName}\",\"{year}\"");
             }
 
             // Add summary
             sb.AppendLine();
-            sb.AppendLine($"Pension Summary for {monthName} {year}");
+            sb.AppendLine($"Pension Summary for {monthName} {year}" + (!string.IsNullOrEmpty(pensionType) ? $" - {pensionType}" : ""));
             sb.AppendLine($"Total Seniors: {pensions.Count}");
             sb.AppendLine($"Claimed: {pensions.Count(c => c.IsClaimed)}");
             sb.AppendLine($"Not Claimed: {pensions.Count(c => !c.IsClaimed)}");
             sb.AppendLine($"Claimed Amount: ₱{pensions.Count(c => c.IsClaimed) * 500}.00");
             sb.AppendLine($"Total Pension Amount: ₱{pensions.Count * 500}.00");
+
+            // Add breakdown by pension type
+            var typeBreakdown = pensions.GroupBy(p => p.DisplayPensionType)
+                .Select(g => new
+                {
+                    Type = g.Key,
+                    Count = g.Count(),
+                    Claimed = g.Count(p => p.IsClaimed)
+                })
+                .OrderByDescending(g => g.Count)
+                .ToList();
+
+            if (typeBreakdown.Any())
+            {
+                sb.AppendLine();
+                sb.AppendLine("Breakdown by Pension Type:");
+                foreach (var breakdown in typeBreakdown)
+                {
+                    sb.AppendLine($"{breakdown.Type}: {breakdown.Count} seniors ({breakdown.Claimed} claimed)");
+                }
+            }
+
             sb.AppendLine($"Generated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
 
             return sb.ToString();
@@ -850,7 +1069,7 @@ namespace SeniorManagement.Controllers
                     ? contribution.PaidDate?.ToString("MM/dd/yyyy HH:mm") ?? "Paid (Date Not Recorded)"
                     : "Not Paid";
 
-                sb.AppendLine($"\"{contribution.SeniorId}\",\"{contribution.FullName}\",\"{contribution.Zone}\",\"{contribution.Status}\",\"{paymentStatus}\",\"{paidDate}\",\"{monthName}\",\"{year}\"");
+                sb.AppendLine($"\"{contribution.SeniorId}\",\"{contribution.FullName}\",\"Zone {contribution.Zone}\",\"{contribution.Status}\",\"{paymentStatus}\",\"{paidDate}\",\"{monthName}\",\"{year}\"");
             }
 
             // Add summary
