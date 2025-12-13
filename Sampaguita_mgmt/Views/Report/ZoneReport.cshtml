@@ -1,6 +1,6 @@
 ﻿@model SeniorManagement.Models.ReportViewModel
 @{
-    ViewData["Title"] = $"";
+    ViewData["Title"] = $"Zone Report";
 }
 
 <div class="container-fluid">
@@ -148,11 +148,11 @@
                                 <th>Full Name</th>
                                 <th>Gender</th>
                                 <th>Age</th>
+                                <th>Birth Date</th>
                                 <th>Civil Status</th>
                                 <th>Pension Type</th>
                                 <th>Contact Number</th>
                                 <th>Status</th>
-                                <th>Registered On</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -166,6 +166,7 @@
                                     <td>@senior.CompleteName</td>
                                     <td>@senior.Gender</td>
                                     <td>@senior.Age</td>
+                                    <td>@(senior.BirthDate?.ToString("MMM dd, yyyy") ?? "N/A")</td>
                                     <td>
                                         @if (string.IsNullOrEmpty(senior.CivilStatus))
                                         {
@@ -179,7 +180,7 @@
                                     <td>
                                         @if (string.IsNullOrEmpty(senior.PensionType))
                                         {
-                                            <span class="text-muted">None</span>
+                                            <span class="badge bg-warning">NoPension</span>
                                         }
                                         else
                                         {
@@ -201,7 +202,6 @@
                                             @senior.Status
                                         </span>
                                     </td>
-                                    <td>@senior.CreatedAt.ToString("MMM dd, yyyy")</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
                                             <a href="@Url.Action("ViewSenior", "Senior", new { id = senior.Id })"

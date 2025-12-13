@@ -1,14 +1,14 @@
 ﻿@model SeniorManagement.Models.Senior
 
 @{
-    ViewData["Title"] = "";
+    ViewData["Title"] = "Create New Senior";
 }
 
 <div class="container-fluid">
     <div class="row">
         <div class="col-lg-10 mx-auto">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header bg-primary text-white">
                     <h3 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create New Senior Citizen</h3>
                 </div>
                 <div class="card-body">
@@ -31,7 +31,7 @@
                                             <input type="file" id="profilePicture" name="profilePicture"
                                                    class="form-control mt-3" accept=".jpg,.jpeg,.png"
                                                    onchange="previewProfilePicture(this)" />
-                                            <small class="text-muted">4x4 size recommended (JPG, PNG)</small>
+                                            <small class="text-muted">2x2 size recommended (JPG, PNG)</small>
                                         </div>
                                     </div>
                                     <div class="col-md-8">
@@ -50,35 +50,45 @@
                             </div>
                         </div>
 
-                        <!-- SCCN Number Section - MANUAL INPUT -->
+                        <!-- OSCA Identification Section -->
                         <div class="section-card mb-4">
                             <div class="section-header">
                                 <h5><i class="fas fa-id-card me-2"></i>OSCA Identification</h5>
                             </div>
                             <div class="section-body">
-                                <div class="mb-3">
-                                    <label asp-for="SeniorId" class="form-label required">OSCA Number</label>
-                                    <div class="input-group">
-                                        <input asp-for="SeniorId"
-                                               class="form-control"
-                                               placeholder="Enter 12-digit OSCA number"
-                                               maxlength="12"
-                                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 12)"
-                                               required />
-                                        <button type="button"
-                                                class="btn btn-outline-secondary"
-                                                onclick="formatSCCN()"
-                                                title="Format as XXX-XXX-XXX-XXX">
-                                            <i class="fas fa-magic"></i> Format
-                                        </button>
+                                <div class="row">
+                                    <div class="col-md-8 mb-3">
+                                        <label asp-for="SeniorId" class="form-label required">OSCA Number *</label>
+                                        <div class="input-group">
+                                            <input asp-for="SeniorId"
+                                                   class="form-control"
+                                                   placeholder="Enter 12-digit OSCA number"
+                                                   maxlength="12"
+                                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 12)"
+                                                   required />
+                                            <button type="button"
+                                                    class="btn btn-outline-secondary"
+                                                    onclick="formatSCCN()"
+                                                    title="Format as XXX-XXX-XXX-XXX">
+                                                <i class="fas fa-magic"></i> Format
+                                            </button>
+                                        </div>
+                                        <div class="form-text">
+                                            <small><i class="fas fa-info-circle text-primary"></i> Must be exactly 12 digits (numbers only)</small>
+                                        </div>
+                                        <span asp-validation-for="SeniorId" class="text-danger small"></span>
                                     </div>
-                                    <div class="form-text">
-                                        <small><i class="fas fa-info-circle text-primary"></i> Must be exactly 12 digits (numbers only)</small>
+                                    <div class="col-md-4 mb-3">
+                                        <label asp-for="NCSRegistrationNumber" class="form-label">NCSC Registration Number</label>
+                                        <input asp-for="NCSRegistrationNumber" class="form-control"
+                                               placeholder="Optional NCSC reference"
+                                               maxlength="50" />
+                                        <small class="text-muted">NCSC Registration Reference Number (Optional)</small>
+                                        <span asp-validation-for="NCSRegistrationNumber" class="text-danger small"></span>
                                     </div>
-                                    <span asp-validation-for="SeniorId" class="text-danger small"></span>
                                 </div>
 
-                                <!-- SCCN Format Example -->
+                                <!-- OSCA Format Example -->
                                 <div class="alert alert-info mt-3">
                                     <div class="d-flex align-items-start">
                                         <i class="fas fa-lightbulb me-2 mt-1"></i>
@@ -122,7 +132,7 @@
                                     <div class="col-md-2 mb-3">
                                         <label asp-for="Gender" class="form-label required">Sex</label>
                                         <select asp-for="Gender" class="form-select" required>
-                                            <option value="">Select Gender</option>
+                                            <option value="">Select Sex</option>
                                             <option value="Male">Male</option>
                                             <option value="Female">Female</option>
                                         </select>
@@ -142,14 +152,6 @@
                                             <option value="Divorced">Divorced</option>
                                         </select>
                                         <span asp-validation-for="CivilStatus" class="text-danger small"></span>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label asp-for="Citizenship" class="form-label">Citizenship</label>
-                                        <select asp-for="Citizenship" class="form-select">
-                                            <option value="Filipino">Filipino</option>
-                                            <option value="DualCitizen">Dual Citizen</option>
-                                        </select>
-                                        <span asp-validation-for="Citizenship" class="text-danger small"></span>
                                     </div>
                                 </div>
                             </div>
@@ -177,12 +179,44 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label asp-for="BirthDate" class="form-label">Birth Date</label>
-                                        <input asp-for="BirthDate" type="date" class="form-control birth-date-picker"
-                                               max="@DateTime.Now.ToString("yyyy-MM-dd")"
-                                               min="1965-01-01" onchange="calculateAgeFromDate()" />
-                                        <small class="text-muted">Start year: 1965 (minimum 60 years old)</small>
+                                        <label asp-for="BirthDate" class="form-label required">Birth Date</label>
+                                        <div class="input-group">
+                                            <input asp-for="BirthDate" type="date" class="form-control"
+                                                   max="@DateTime.Now.AddYears(-60).ToString("yyyy-MM-dd")"
+                                                   min="@DateTime.Now.AddYears(-120).ToString("yyyy-MM-dd")"
+                                                   onchange="calculateAgeFromDate()" />
+                                            <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                        </div>
+                                        <div class="form-text">
+                                            <small><i class="fas fa-info-circle text-primary"></i> Senior must be at least 60 years old.</small>
+                                        </div>
                                         <span asp-validation-for="BirthDate" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Citizenship Information -->
+                        <div class="section-card mb-4">
+                            <div class="section-header">
+                                <h5><i class="fas fa-passport me-2"></i>Citizenship Information</h5>
+                            </div>
+                            <div class="section-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Citizenship" class="form-label">Citizenship</label>
+                                        <select asp-for="Citizenship" class="form-select" id="citizenshipSelect">
+                                            <option value="Filipino">Filipino</option>
+                                            <option value="DualCitizen">Dual Citizen</option>
+                                        </select>
+                                        <span asp-validation-for="Citizenship" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="DualCitizenshipCountry" class="form-label" id="dualCitizenshipLabel" style="display: none;">Dual Citizenship Country</label>
+                                        <input asp-for="DualCitizenshipCountry" class="form-control"
+                                               id="dualCitizenshipInput" style="display: none;"
+                                               placeholder="Enter country of dual citizenship" />
+                                        <span asp-validation-for="DualCitizenshipCountry" class="text-danger small"></span>
                                     </div>
                                 </div>
                             </div>
@@ -201,44 +235,36 @@
                                         <span asp-validation-for="HouseNumber" class="text-danger small"></span>
                                     </div>
                                     <div class="col-md-4 mb-3">
-                                        <label class="form-label">Street (Zone)</label>
+                                        <label asp-for="Zone" class="form-label required">Zone</label>
                                         <div class="input-group">
                                             <span class="input-group-text">Zone</span>
-                                            <select asp-for="Zone" class="form-select" required onchange="updateAddressPreview()">
+                                            <select asp-for="Zone" class="form-select" required onchange="updateAddressPreview()" id="zoneSelect">
                                                 <option value="">Select Zone</option>
-                                                <option value="1">Zone 1</option>
-                                                <option value="2">Zone 2</option>
-                                                <option value="3">Zone 3</option>
-                                                <option value="4">Zone 4</option>
-                                                <option value="5">Zone 5</option>
-                                                <option value="6">Zone 6</option>
-                                                <option value="7">Zone 7</option>
+                                                @for (int i = 1; i <= 99; i++)
+                                                {
+                                                    <option value="@i">Zone @i</option>
+                                                }
                                             </select>
                                         </div>
                                         <span asp-validation-for="Zone" class="text-danger small"></span>
+                                        <small class="text-muted" id="zoneStatus">Auto-updates when new zones are added</small>
                                     </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Barangay</label>
-                                        <input type="text" class="form-control" value="Sampaguita" readonly />
-                                        <small class="text-muted">Default barangay</small>
-                                    </div>
-                                </div>
 
                                 <div class="row">
                                     <div class="col-md-4 mb-3">
                                         <label asp-for="CityMunicipality" class="form-label">City/Municipality</label>
-                                        <input asp-for="CityMunicipality" class="form-control" value="Naujan" />
-                                        <span asp-validation-for="CityMunicipality" class="text-danger small"></span>
+                                        <input asp-for="CityMunicipality" class="form-control" value="Naujan" readonly />
+                                        <small class="text-muted">Default: Naujan</small>
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label asp-for="Province" class="form-label">Province</label>
-                                        <input asp-for="Province" class="form-control" value="Oriental Mindoro" />
-                                        <span asp-validation-for="Province" class="text-danger small"></span>
+                                        <input asp-for="Province" class="form-control" value="Oriental Mindoro" readonly />
+                                        <small class="text-muted">Default: Oriental Mindoro</small>
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label asp-for="ZipCode" class="form-label">Zip Code</label>
-                                        <input asp-for="ZipCode" class="form-control" value="5204" />
-                                        <span asp-validation-for="ZipCode" class="text-danger small"></span>
+                                        <input asp-for="ZipCode" class="form-control" value="5204" readonly />
+                                        <small class="text-muted">Default: 5204</small>
                                     </div>
                                 </div>
 
@@ -264,7 +290,8 @@
                                 <h5><i class="fas fa-users me-2"></i>Family Information</h5>
                             </div>
                             <div class="section-body">
-                                <div class="row">
+                                <!-- Spouse Information -->
+                                <div class="row mb-4">
                                     <div class="col-md-12 mb-3">
                                         <h6 class="border-bottom pb-2"><i class="fas fa-ring me-2"></i>Spouse Information</h6>
                                     </div>
@@ -290,41 +317,156 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label asp-for="SpouseCitizenship" class="form-label">Citizenship</label>
-                                        <select asp-for="SpouseCitizenship" class="form-select">
+                                        <select asp-for="SpouseCitizenship" class="form-select" id="spouseCitizenshipSelect">
                                             <option value="">Select Citizenship</option>
                                             <option value="Filipino">Filipino</option>
                                             <option value="DualCitizen">Dual Citizen</option>
                                         </select>
                                         <span asp-validation-for="SpouseCitizenship" class="text-danger small"></span>
                                     </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="SpouseDualCitizenshipCountry" class="form-label" id="spouseDualCitizenshipLabel" style="display: none;">Dual Citizenship Country</label>
+                                        <input asp-for="SpouseDualCitizenshipCountry" class="form-control"
+                                               id="spouseDualCitizenshipInput" style="display: none;"
+                                               placeholder="Enter spouse's dual citizenship country" />
+                                        <span asp-validation-for="SpouseDualCitizenshipCountry" class="text-danger small"></span>
+                                    </div>
                                 </div>
 
-                                <div class="row mt-4">
+                                <!-- Children Information - UPDATED WITH MULTIPLE CHILDREN -->
+                                <div class="row mb-4">
                                     <div class="col-md-12 mb-3">
-                                        <h6 class="border-bottom pb-2"><i class="fas fa-child me-2"></i>Children Information</h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="border-bottom pb-2 mb-0"><i class="fas fa-child me-2"></i>Children Information</h6>
+                                            <button type="button" class="btn btn-sm btn-success" id="addChildBtn">
+                                                <i class="fas fa-plus me-1"></i> Add Child
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="col-md-12 mb-3">
-                                        <label asp-for="ChildrenInfo" class="form-label">Children's Names</label>
-                                        <textarea asp-for="ChildrenInfo" class="form-control" rows="4"
-                                                  placeholder="Format: LastName, GivenName, MiddleName, Extension (if applicable)&#10;Example: Cruz, Juan, Santos, Jr.&#10;Example: Cruz, Maria, Santos, (leave empty if no extension)"></textarea>
+
+                                    <!-- Children Container -->
+                                    <div class="col-md-12" id="childrenContainer">
+                                        <!-- Child Template (Hidden) -->
+                                        <div class="child-template d-none" id="childTemplate">
+                                            <div class="child-entry card mb-3">
+                                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                                    <span>Child <span class="child-index">1</span></span>
+                                                    <button type="button" class="btn btn-sm btn-danger remove-child-btn">
+                                                        <i class="fas fa-times"></i> Remove
+                                                    </button>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label">First Name</label>
+                                                            <input type="text" class="form-control child-first-name"
+                                                                   placeholder="First Name" />
+                                                        </div>
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label">Last Name</label>
+                                                            <input type="text" class="form-control child-last-name"
+                                                                   placeholder="Last Name" />
+                                                        </div>
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label">Middle Name</label>
+                                                            <input type="text" class="form-control child-middle-name"
+                                                                   placeholder="Middle Name" />
+                                                        </div>
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label">Extension</label>
+                                                            <input type="text" class="form-control child-extension"
+                                                                   placeholder="Jr, Sr, III" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- First Child (Default) -->
+                                        <div class="child-entry card mb-3">
+                                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                                <span>Child 1</span>
+                                                <button type="button" class="btn btn-sm btn-danger remove-child-btn" disabled>
+                                                    <i class="fas fa-times"></i> Remove
+                                                </button>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3 mb-3">
+                                                        <label asp-for="ChildFirstName" class="form-label">First Name</label>
+                                                        <input asp-for="ChildFirstName" class="form-control child-first-name"
+                                                               placeholder="First Name" />
+                                                        <span asp-validation-for="ChildFirstName" class="text-danger small"></span>
+                                                    </div>
+                                                    <div class="col-md-3 mb-3">
+                                                        <label asp-for="ChildLastName" class="form-label">Last Name</label>
+                                                        <input asp-for="ChildLastName" class="form-control child-last-name"
+                                                               placeholder="Last Name" />
+                                                        <span asp-validation-for="ChildLastName" class="text-danger small"></span>
+                                                    </div>
+                                                    <div class="col-md-3 mb-3">
+                                                        <label asp-for="ChildMiddleName" class="form-label">Middle Name</label>
+                                                        <input asp-for="ChildMiddleName" class="form-control child-middle-name"
+                                                               placeholder="Middle Name" />
+                                                        <span asp-validation-for="ChildMiddleName" class="text-danger small"></span>
+                                                    </div>
+                                                    <div class="col-md-3 mb-3">
+                                                        <label asp-for="ChildExtension" class="form-label">Extension</label>
+                                                        <input asp-for="ChildExtension" class="form-control child-extension"
+                                                               placeholder="Jr, Sr, III" />
+                                                        <span asp-validation-for="ChildExtension" class="text-danger small"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Additional Children Info -->
+                                    <div class="col-md-12 mb-3 mt-3">
+                                        <label asp-for="ChildrenInfo" class="form-label">Additional Children Info</label>
+                                        <textarea asp-for="ChildrenInfo" class="form-control" rows="3"
+                                                  placeholder="Enter any additional information about children not listed above"></textarea>
                                         <div class="form-text">
-                                            <small><i class="fas fa-info-circle text-primary"></i> Enter each child on a new line. Use commas to separate fields.</small>
+                                            <small><i class="fas fa-info-circle text-primary"></i> Use this field for any additional children information or notes.</small>
                                         </div>
                                         <span asp-validation-for="ChildrenInfo" class="text-danger small"></span>
                                     </div>
                                 </div>
 
-                                <div class="row mt-4">
+                                <!-- Authorized Representative - SEPARATED FIELDS -->
+                                <div class="row mb-4">
                                     <div class="col-md-12 mb-3">
                                         <h6 class="border-bottom pb-2"><i class="fas fa-user-tie me-2"></i>Authorized Representative</h6>
                                     </div>
-                                    <div class="col-md-12 mb-3">
-                                        <label asp-for="AuthorizedRepInfo" class="form-label">Authorized Representative(s)</label>
-                                        <textarea asp-for="AuthorizedRepInfo" class="form-control" rows="3"
-                                                  placeholder="Format: LastName, GivenName, MiddleName, Extension, Relationship&#10;Example: Cruz, Maria, Santos, , Daughter&#10;Example: Reyes, Juan, , Jr., Son"></textarea>
-                                        <div class="form-text">
-                                            <small><i class="fas fa-info-circle text-primary"></i> Enter each representative on a new line. Use commas to separate fields.</small>
-                                        </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="AuthorizedRepFirstName" class="form-label">First Name</label>
+                                        <input asp-for="AuthorizedRepFirstName" class="form-control" placeholder="First Name" />
+                                        <span asp-validation-for="AuthorizedRepFirstName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="AuthorizedRepLastName" class="form-label">Last Name</label>
+                                        <input asp-for="AuthorizedRepLastName" class="form-control" placeholder="Last Name" />
+                                        <span asp-validation-for="AuthorizedRepLastName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="AuthorizedRepMiddleName" class="form-label">Middle Name</label>
+                                        <input asp-for="AuthorizedRepMiddleName" class="form-control" placeholder="Middle Name" />
+                                        <span asp-validation-for="AuthorizedRepMiddleName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label asp-for="AuthorizedRepExtension" class="form-label">Extension</label>
+                                        <input asp-for="AuthorizedRepExtension" class="form-control" placeholder="Jr, Sr, III" />
+                                        <span asp-validation-for="AuthorizedRepExtension" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="AuthorizedRepRelationship" class="form-label">Relationship</label>
+                                        <input asp-for="AuthorizedRepRelationship" class="form-control" placeholder="e.g., Son, Daughter, Relative" />
+                                        <span asp-validation-for="AuthorizedRepRelationship" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="AuthorizedRepInfo" class="form-label">Additional Representative Info</label>
+                                        <textarea asp-for="AuthorizedRepInfo" class="form-control" rows="2"
+                                                  placeholder="Additional information about the representative"></textarea>
                                         <span asp-validation-for="AuthorizedRepInfo" class="text-danger small"></span>
                                     </div>
                                 </div>
@@ -337,7 +479,8 @@
                                 <h5><i class="fas fa-user-check me-2"></i>Designated Beneficiary</h5>
                             </div>
                             <div class="section-body">
-                                <div class="row">
+                                <!-- Primary Beneficiary -->
+                                <div class="row mb-4">
                                     <div class="col-md-12 mb-3">
                                         <h6 class="border-bottom pb-2"><i class="fas fa-star me-2"></i>Primary Beneficiary</h6>
                                     </div>
@@ -368,7 +511,8 @@
                                     </div>
                                 </div>
 
-                                <div class="row mt-4">
+                                <!-- Contingent Beneficiary -->
+                                <div class="row">
                                     <div class="col-md-12 mb-3">
                                         <h6 class="border-bottom pb-2"><i class="fas fa-star-half-alt me-2"></i>Contingent Beneficiary</h6>
                                     </div>
@@ -422,13 +566,13 @@
                                             <span class="input-group-text"><i class="fas fa-envelope"></i></span>
                                             <input asp-for="Email" type="email" class="form-control" placeholder="senior@example.com" />
                                         </div>
-                                        <span asp-validation-for("Email", class="text-danger small"></span>
+                                        <span asp-validation-for="Email" class="text-danger small"></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Pension Information Section -->
+                        <!-- Pension Information Section - UPDATED -->
                         <div class="section-card mb-4">
                             <div class="section-header">
                                 <h5><i class="fas fa-money-check-alt me-2"></i>Pension Information</h5>
@@ -436,29 +580,46 @@
                             <div class="section-body">
                                 <div class="row">
                                     <div class="col-md-12 mb-3">
-                                        <label asp-for="PensionType" class="form-label">Pension Type</label>
-                                        <input asp-for="PensionType" class="form-control"
-                                               placeholder="e.g., SSS, GSIS, Private Pension, None (leave empty if none)"
-                                               maxlength="50" />
-                                        <div class="form-text">
-                                            <small><i class="fas fa-info-circle text-primary"></i> Enter the type of pension (SSS, GSIS, Private, etc.). Leave empty if none.</small>
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="hasPensionToggle"
+                                                   asp-for="HasPension" onchange="togglePensionFields()" />
+                                            <label class="form-check-label" for="hasPensionToggle">
+                                                <strong>Does the senior have a pension?</strong>
+                                            </label>
                                         </div>
-                                        <span asp-validation-for="PensionType" class="text-danger small"></span>
                                     </div>
                                 </div>
-                                <div class="alert alert-light mt-2">
-                                    <div class="d-flex align-items-start">
-                                        <i class="fas fa-lightbulb me-2 mt-1 text-warning"></i>
-                                        <div>
-                                            <h6 class="alert-heading mb-1">Common Pension Types</h6>
-                                            <p class="mb-1">
-                                                Examples: <code class="bg-light px-2 py-1 rounded">SSS</code>,
-                                                <code class="bg-light px-2 py-1 rounded">GSIS</code>,
-                                                <code class="bg-light px-2 py-1 rounded">Private Pension</code>,
-                                                <code class="bg-light px-2 py-1 rounded">Veteran Pension</code>,
-                                                <code class="bg-light px-2 py-1 rounded">None</code>
-                                            </p>
+
+                                <div id="pensionFields" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label asp-for="PensionType" class="form-label">Pension Type *</label>
+                                            <select asp-for="PensionType" class="form-select" id="pensionTypeSelect" onchange="toggleOtherPension()">
+                                                <option value="">Select Pension Type</option>
+                                                <option value="SSS">SSS (Social Security System)</option>
+                                                <option value="GSIS">GSIS (Government Service Insurance System)</option>
+                                                <option value="Private">Private Pension</option>
+                                                <option value="Veteran">Veteran Pension</option>
+                                                <option value="Other">Other (Please specify)</option>
+                                            </select>
+                                            <span asp-validation-for="PensionType" class="text-danger small"></span>
                                         </div>
+                                        <div class="col-md-6 mb-3" id="otherPensionContainer" style="display: none;">
+                                            <label asp-for="PensionOther" class="form-label">Specify Other Pension Type *</label>
+                                            <input asp-for="PensionOther" class="form-control" placeholder="Enter other pension type" />
+                                            <span asp-validation-for="PensionOther" class="text-danger small"></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Common Pension Types:</strong>
+                                        <ul class="mb-0 mt-2">
+                                            <li><strong>SSS</strong> - Social Security System</li>
+                                            <li><strong>GSIS</strong> - Government Service Insurance System</li>
+                                            <li><strong>Private</strong> - Private company/employer pension</li>
+                                            <li><strong>Veteran</strong> - Veterans pension benefits</li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
@@ -584,12 +745,6 @@
             color: #1565c0;
         }
 
-        .alert-light {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border: 1px solid #dee2e6;
-            color: #495057;
-        }
-
         .alert-success {
             background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
             border: 1px solid #a5d6a7;
@@ -602,65 +757,70 @@
             color: #f57c00;
         }
 
-        .alert-heading {
-            color: #0d47a1;
-            font-size: 0.9rem;
+        /* Form Switch Styles */
+        .form-switch .form-check-input {
+            width: 3em;
+            height: 1.5em;
         }
 
-        code {
-            font-family: 'Courier New', monospace;
-            font-weight: 600;
-        }
-
-        /* Address Preview */
-        .bg-light {
-            background-color: #f8fbff !important;
-        }
-
-        /* Custom birth date picker */
-        .birth-date-picker {
-            position: relative;
-        }
-
-            .birth-date-picker::-webkit-calendar-picker-indicator {
-                cursor: pointer;
+            .form-switch .form-check-input:checked {
+                background-color: #28a745;
+                border-color: #28a745;
             }
 
-        .birth-date-dropdown {
-            position: absolute;
-            background: white;
+        /* Readonly input styles */
+        .form-control[readonly] {
+            background-color: #f8f9fa;
+            border-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        /* Child Entry Styles */
+        .child-entry {
             border: 1px solid #dee2e6;
-            border-radius: 0.375rem;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-            z-index: 1000;
-            display: none;
+            border-radius: 0.5rem;
         }
 
-        .year-selector {
-            max-height: 300px;
-            overflow-y: auto;
-            padding: 0.5rem;
-        }
-
-        .year-option {
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            border-radius: 0.25rem;
-        }
-
-            .year-option:hover {
+            .child-entry .card-header {
                 background-color: #f8f9fa;
+                border-bottom: 1px solid #dee2e6;
             }
 
-            .year-option.selected {
-                background-color: #007bff;
-                color: white;
+            .child-entry .remove-child-btn {
+                font-size: 0.75rem;
+                padding: 0.25rem 0.5rem;
             }
+
+        #addChildBtn {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+        }
     </style>
 }
 
 @section Scripts {
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize form
+            initializeForm();
+
+            // Check pension toggle on load
+            togglePensionFields();
+
+            // Check citizenship toggles on load
+            toggleDualCitizenship();
+            toggleSpouseDualCitizenship();
+
+            // Initialize OSCA number validation
+            setupSCCNValidation();
+
+            // Update address preview
+            updateAddressPreview();
+
+            // Initialize children functionality
+            initializeChildren();
+        });
+
         // Format SCCN with dashes
         function formatSCCN() {
             const sccnInput = document.querySelector('input[name="SeniorId"]');
@@ -707,6 +867,81 @@
                 preview.innerHTML = '<i class="fas fa-user fa-4x text-muted"></i><div class="mt-2">No picture</div>';
             }
         }
+
+            // Function to check and update zones
+        function updateZoneList() {
+            fetch('@Url.Action("GetZones", "Zone")')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const zoneSelect = document.getElementById('zoneSelect');
+                        const currentValue = zoneSelect.value;
+
+                        // Get existing zone numbers
+                        const existingZones = new Set();
+                        for (let option of zoneSelect.options) {
+                            if (option.value) {
+                                existingZones.add(parseInt(option.value));
+                            }
+                        }
+
+                        // Add any new zones
+                        let addedZones = 0;
+                        data.zones.forEach(zone => {
+                            if (!existingZones.has(zone.number)) {
+                                const newOption = new Option(zone.name, zone.number);
+                                zoneSelect.appendChild(newOption);
+                                addedZones++;
+
+                                // Sort options
+                                const options = Array.from(zoneSelect.options);
+                                options.sort((a, b) => {
+                                    return parseInt(a.value || 999) - parseInt(b.value || 999);
+                                });
+                                zoneSelect.innerHTML = '';
+                                options.forEach(opt => zoneSelect.appendChild(opt));
+                            }
+                        });
+
+                        // Restore selected value
+                        if (currentValue) {
+                            zoneSelect.value = currentValue;
+                        }
+
+                        // Update status message
+                        if (addedZones > 0) {
+                            document.getElementById('zoneStatus').textContent =
+                                `✓ Added ${addedZones} new zone(s)`;
+                            setTimeout(() => {
+                                document.getElementById('zoneStatus').textContent =
+                                    'Auto-updates when new zones are added';
+                            }, 3000);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.log('Error updating zones:', error);
+                });
+        }
+
+        // Update zones when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            updateZoneList();
+
+            // Check for new zones every 30 seconds
+            setInterval(updateZoneList, 30000);
+
+            // Add refresh button (optional)
+            const refreshBtn = document.createElement('button');
+            refreshBtn.type = 'button';
+            refreshBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            refreshBtn.title = 'Refresh zones';
+            refreshBtn.onclick = updateZoneList;
+
+            const zoneStatus = document.getElementById('zoneStatus');
+            zoneStatus.parentNode.insertBefore(refreshBtn, zoneStatus.nextSibling);
+        });
 
         // Calculate age from birth date
         function calculateAgeFromDate() {
@@ -788,81 +1023,82 @@
             }
         }
 
-        // Custom birth date picker with descending years
-        function setupBirthDatePicker() {
-            const birthDateInput = document.querySelector('.birth-date-picker');
-            const today = new Date();
-            const currentYear = today.getFullYear();
-            const startYear = 1965;
-            const endYear = currentYear;
+        // Toggle pension fields based on checkbox
+        function togglePensionFields() {
+            const hasPensionToggle = document.getElementById('hasPensionToggle');
+            const pensionFields = document.getElementById('pensionFields');
+            const pensionTypeSelect = document.getElementById('pensionTypeSelect');
 
-            // Create custom dropdown for years
-            const dropdown = document.createElement('div');
-            dropdown.className = 'birth-date-dropdown';
-
-            const yearSelector = document.createElement('div');
-            yearSelector.className = 'year-selector';
-
-            // Add years in descending order
-            for (let year = endYear; year >= startYear; year--) {
-                const yearOption = document.createElement('div');
-                yearOption.className = 'year-option';
-                yearOption.textContent = year;
-                yearOption.addEventListener('click', function() {
-                    const selectedDate = new Date(year, 0, 1);
-                    birthDateInput.value = selectedDate.toISOString().split('T')[0];
-                    dropdown.style.display = 'none';
-                    calculateAgeFromDate();
-                });
-                yearSelector.appendChild(yearOption);
+            if (hasPensionToggle.checked) {
+                pensionFields.style.display = 'block';
+                pensionTypeSelect.required = true;
+            } else {
+                pensionFields.style.display = 'none';
+                pensionTypeSelect.required = false;
+                pensionTypeSelect.value = '';
+                toggleOtherPension();
             }
-
-            dropdown.appendChild(yearSelector);
-            birthDateInput.parentNode.appendChild(dropdown);
-
-            // Show dropdown on click
-            birthDateInput.addEventListener('click', function(e) {
-                e.preventDefault();
-                dropdown.style.display = 'block';
-
-                // Position dropdown
-                const rect = birthDateInput.getBoundingClientRect();
-                dropdown.style.position = 'fixed';
-                dropdown.style.left = rect.left + 'px';
-                dropdown.style.top = (rect.bottom + 5) + 'px';
-                dropdown.style.width = rect.width + 'px';
-            });
-
-            // Hide dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!birthDateInput.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.style.display = 'none';
-                }
-            });
-
-            // Set max date to today for birth date
-            birthDateInput.max = today.toISOString().split('T')[0];
-            birthDateInput.min = startYear + '-01-01';
         }
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        // Toggle "Other" pension type field
+        function toggleOtherPension() {
+            const pensionTypeSelect = document.getElementById('pensionTypeSelect');
+            const otherPensionContainer = document.getElementById('otherPensionContainer');
+            const otherPensionInput = document.querySelector('input[name="PensionOther"]');
+
+            if (pensionTypeSelect.value === 'Other') {
+                otherPensionContainer.style.display = 'block';
+                otherPensionInput.required = true;
+            } else {
+                otherPensionContainer.style.display = 'none';
+                otherPensionInput.required = false;
+                otherPensionInput.value = '';
+            }
+        }
+
+        // Toggle dual citizenship field
+        function toggleDualCitizenship() {
+            const citizenshipSelect = document.getElementById('citizenshipSelect');
+            const dualCitizenshipLabel = document.getElementById('dualCitizenshipLabel');
+            const dualCitizenshipInput = document.getElementById('dualCitizenshipInput');
+
+            if (citizenshipSelect.value === 'DualCitizen') {
+                dualCitizenshipLabel.style.display = 'block';
+                dualCitizenshipInput.style.display = 'block';
+                dualCitizenshipInput.required = true;
+            } else {
+                dualCitizenshipLabel.style.display = 'none';
+                dualCitizenshipInput.style.display = 'none';
+                dualCitizenshipInput.required = false;
+                dualCitizenshipInput.value = '';
+            }
+        }
+
+        // Toggle spouse dual citizenship field
+        function toggleSpouseDualCitizenship() {
+            const spouseCitizenshipSelect = document.getElementById('spouseCitizenshipSelect');
+            const spouseDualCitizenshipLabel = document.getElementById('spouseDualCitizenshipLabel');
+            const spouseDualCitizenshipInput = document.getElementById('spouseDualCitizenshipInput');
+
+            if (spouseCitizenshipSelect) {
+                spouseCitizenshipSelect.addEventListener('change', function() {
+                    if (this.value === 'DualCitizen') {
+                        spouseDualCitizenshipLabel.style.display = 'block';
+                        spouseDualCitizenshipInput.style.display = 'block';
+                        spouseDualCitizenshipInput.required = true;
+                    } else {
+                        spouseDualCitizenshipLabel.style.display = 'none';
+                        spouseDualCitizenshipInput.style.display = 'none';
+                        spouseDualCitizenshipInput.required = false;
+                        spouseDualCitizenshipInput.value = '';
+                    }
+                });
+            }
+        }
+
+        // Setup SCCN validation
+        function setupSCCNValidation() {
             const sccnInput = document.querySelector('input[name="SeniorId"]');
-            const birthDateInput = document.querySelector('input[name="BirthDate"]');
-            const ageInput = document.querySelector('input[name="Age"]');
-
-            // Format SCCN on blur
-            sccnInput.addEventListener('blur', function() {
-                let value = this.value.replace(/[^0-9]/g, '');
-                if (value.length === 12) {
-                    this.value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{3})/, '$1-$2-$3-$4');
-                }
-            });
-
-            // Remove dashes on focus for easy editing
-            sccnInput.addEventListener('focus', function() {
-                this.value = this.value.replace(/-/g, '');
-            });
 
             // Real-time digit counter
             const digitCounter = document.createElement('div');
@@ -884,43 +1120,143 @@
                     counterSpan.className = '';
                 }
             });
+        }
 
-            // Setup custom birth date picker
-            setupBirthDatePicker();
+        // Initialize children functionality
+        function initializeChildren() {
+            const addChildBtn = document.getElementById('addChildBtn');
+            const childrenContainer = document.getElementById('childrenContainer');
+            const childTemplate = document.getElementById('childTemplate');
 
-            // Calculate age when birth date changes
-            birthDateInput.addEventListener('change', calculateAgeFromDate);
+            let childCount = 1; // Start with 1 since we have the default child
 
-            // Check benefits when age changes
-            ageInput.addEventListener('change', checkSpecialBenefits);
+            // Add child button click handler
+            addChildBtn.addEventListener('click', function() {
+                childCount++;
+                const newChild = childTemplate.cloneNode(true);
+                newChild.classList.remove('d-none');
+                newChild.querySelector('.child-index').textContent = childCount;
 
-            // Update address preview when address fields change
-            const addressFields = ['HouseNumber', 'Zone', 'CityMunicipality', 'Province', 'ZipCode'];
-            addressFields.forEach(field => {
-                const element = document.querySelector(`[name="${field}"]`);
-                if (element) {
-                    element.addEventListener('input', updateAddressPreview);
-                    element.addEventListener('change', updateAddressPreview);
-                }
+                // Update input names to prevent conflict
+                const inputs = newChild.querySelectorAll('input');
+                inputs.forEach(input => {
+                    const name = input.getAttribute('class').split(' ')[1]; // Get class name like 'child-first-name'
+                    input.name = `Child${childCount}_${name}`;
+                    input.id = `Child${childCount}_${name}`;
+                    input.value = '';
+                });
+
+                // Add remove button functionality
+                const removeBtn = newChild.querySelector('.remove-child-btn');
+                removeBtn.disabled = false;
+                removeBtn.addEventListener('click', function() {
+                    newChild.remove();
+                    childCount--;
+                    updateChildIndices();
+                });
+
+                // Insert before the additional children info
+                const additionalInfo = childrenContainer.querySelector('.col-md-12.mb-3.mt-3');
+                childrenContainer.insertBefore(newChild, additionalInfo);
+
+                updateChildIndices();
             });
 
-            // Initial checks
-            if (ageInput.value) checkSpecialBenefits();
-            updateAddressPreview();
+            // Remove button functionality for existing children
+            document.querySelectorAll('.remove-child-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const childEntry = this.closest('.child-entry');
+                    if (childEntry) {
+                        childEntry.remove();
+                        childCount--;
+                        updateChildIndices();
+                    }
+                });
+            });
 
-            // Form validation
+            function updateChildIndices() {
+                const childEntries = childrenContainer.querySelectorAll('.child-entry');
+                childEntries.forEach((entry, index) => {
+                    const indexSpan = entry.querySelector('.child-index');
+                    if (indexSpan) {
+                        indexSpan.textContent = index + 1;
+                        entry.querySelector('.card-header span').textContent = `Child ${index + 1}`;
+                    }
+                });
+            }
+
+            // Add event listener to collect children data before form submission
             const form = document.getElementById('createSeniorForm');
             form.addEventListener('submit', function(e) {
+                // Collect children data
+                const children = [];
+                const childEntries = childrenContainer.querySelectorAll('.child-entry');
+
+                childEntries.forEach((entry, index) => {
+                    const firstName = entry.querySelector('.child-first-name').value.trim();
+                    const lastName = entry.querySelector('.child-last-name').value.trim();
+                    const middleName = entry.querySelector('.child-middle-name').value.trim();
+                    const extension = entry.querySelector('.child-extension').value.trim();
+
+                    if (firstName || lastName) {
+                        children.push({
+                            firstName,
+                            lastName,
+                            middleName,
+                            extension
+                        });
+                    }
+                });
+
+                // Store children data in hidden field for server-side processing
+                // This is a simplified approach - you might want to use JSON
+                const childrenInfoField = document.querySelector('textarea[name="ChildrenInfo"]');
+                if (children.length > 0) {
+                    // Format children data for storage
+                    const childrenText = children.map((child, index) => {
+                        return `Child ${index + 1}: ${child.firstName} ${child.middleName} ${child.lastName} ${child.extension}`.trim();
+                    }).join('\n');
+
+                    // Combine with existing additional info
+                    const existingInfo = childrenInfoField.value.trim();
+                    if (existingInfo) {
+                        childrenInfoField.value = childrenText + '\n\nAdditional Info:\n' + existingInfo;
+                    } else {
+                        childrenInfoField.value = childrenText;
+                    }
+                }
+            });
+        }
+
+        // Initialize form
+        function initializeForm() {
+            const form = document.getElementById('createSeniorForm');
+            const citizenshipSelect = document.getElementById('citizenshipSelect');
+            const spouseCitizenshipSelect = document.getElementById('spouseCitizenshipSelect');
+
+            // Add event listeners
+            if (citizenshipSelect) {
+                citizenshipSelect.addEventListener('change', toggleDualCitizenship);
+            }
+
+            if (spouseCitizenshipSelect) {
+                spouseCitizenshipSelect.addEventListener('change', toggleSpouseDualCitizenship);
+            }
+
+            // Form validation
+            form.addEventListener('submit', function(e) {
                 // Validate SCCN
+                const sccnInput = document.querySelector('input[name="SeniorId"]');
                 const sccnValue = sccnInput.value.replace(/[^0-9]/g, '');
                 if (sccnValue.length !== 12) {
                     e.preventDefault();
-                    alert('SCCN number must be exactly 12 digits.');
+                    alert('OSCA number must be exactly 12 digits.');
                     sccnInput.focus();
                     return false;
                 }
 
                 // Validate age
+                const ageInput = document.querySelector('input[name="Age"]');
                 const age = parseInt(ageInput.value);
                 if (age < 60 || age > 120) {
                     e.preventDefault();
@@ -929,11 +1265,83 @@
                     return false;
                 }
 
-                // Submit raw SCCN digits
+                // Validate pension fields if pension is checked
+                const hasPensionToggle = document.getElementById('hasPensionToggle');
+                if (hasPensionToggle.checked) {
+                    const pensionTypeSelect = document.getElementById('pensionTypeSelect');
+                    if (!pensionTypeSelect.value) {
+                        e.preventDefault();
+                        alert('Please select a pension type.');
+                        pensionTypeSelect.focus();
+                        return false;
+                    }
+
+                    if (pensionTypeSelect.value === 'Other') {
+                        const otherPensionInput = document.querySelector('input[name="PensionOther"]');
+                        if (!otherPensionInput.value.trim()) {
+                            e.preventDefault();
+                            alert('Please specify the other pension type.');
+                            otherPensionInput.focus();
+                            return false;
+                        }
+                    }
+                }
+
+                // Validate dual citizenship if selected
+                if (citizenshipSelect.value === 'DualCitizen') {
+                    const dualCitizenshipInput = document.getElementById('dualCitizenshipInput');
+                    if (!dualCitizenshipInput.value.trim()) {
+                        e.preventDefault();
+                        alert('Please specify the dual citizenship country.');
+                        dualCitizenshipInput.focus();
+                        return false;
+                    }
+                }
+
+                // Validate spouse dual citizenship if selected
+                if (spouseCitizenshipSelect && spouseCitizenshipSelect.value === 'DualCitizen') {
+                    const spouseDualCitizenshipInput = document.getElementById('spouseDualCitizenshipInput');
+                    if (!spouseDualCitizenshipInput.value.trim()) {
+                        e.preventDefault();
+                        alert('Please specify the spouse\'s dual citizenship country.');
+                        spouseDualCitizenshipInput.focus();
+                        return false;
+                    }
+                }
+
+                // Submit raw SCCN digits (remove dashes)
                 sccnInput.value = sccnValue;
 
                 return true;
             });
-        });
+
+            // Add event listeners for address fields
+            const addressFields = ['HouseNumber', 'Zone'];
+            addressFields.forEach(field => {
+                const element = document.querySelector(`[name="${field}"]`);
+                if (element) {
+                    element.addEventListener('input', updateAddressPreview);
+                    element.addEventListener('change', updateAddressPreview);
+                }
+            });
+
+            // Add event listener for age field
+            const ageInput = document.querySelector('input[name="Age"]');
+            if (ageInput) {
+                ageInput.addEventListener('change', checkSpecialBenefits);
+            }
+
+            // Add event listener for birth date field
+            const birthDateInput = document.querySelector('input[name="BirthDate"]');
+            if (birthDateInput) {
+                birthDateInput.addEventListener('change', calculateAgeFromDate);
+            }
+
+            // Add event listener for pension type select
+            const pensionTypeSelect = document.getElementById('pensionTypeSelect');
+            if (pensionTypeSelect) {
+                pensionTypeSelect.addEventListener('change', toggleOtherPension);
+            }
+        }
     </script>
 }

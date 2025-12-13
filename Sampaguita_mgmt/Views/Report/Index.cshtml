@@ -8,7 +8,7 @@
                            !string.IsNullOrEmpty(Model.SelectedGender) || 
                            !string.IsNullOrEmpty(Model.SelectedCivilStatus) ||
                            !string.IsNullOrEmpty(Model.SelectedAgeRange) || 
-                           !string.IsNullOrEmpty(Model.SelectedMonthYear) ||
+                           !string.IsNullOrEmpty(Model.SelectedBirthDate) ||
                            !string.IsNullOrEmpty(Model.SelectedPensionType) || 
                            !string.IsNullOrEmpty(Model.SeniorSearchTerm);
     
@@ -18,6 +18,24 @@
                           !string.IsNullOrEmpty(Model.EventSearchTerm) ||
                           !string.IsNullOrEmpty(Model.SelectedFromDate) || 
                           !string.IsNullOrEmpty(Model.SelectedToDate);
+    
+    // Parse age range for display
+    string minAgeDisplay = "";
+    string maxAgeDisplay = "";
+    if (!string.IsNullOrEmpty(Model.SelectedAgeRange))
+    {
+        var ageParts = Model.SelectedAgeRange.Split('-');
+        if (ageParts.Length == 2)
+        {
+            minAgeDisplay = ageParts[0];
+            maxAgeDisplay = ageParts[1];
+        }
+        else if (Model.SelectedAgeRange.Contains("+"))
+        {
+            minAgeDisplay = Model.SelectedAgeRange.Replace("+", "");
+            maxAgeDisplay = "120";
+        }
+    }
 }
 <div class="container-fluid">
     <!-- Page Header -->
@@ -44,7 +62,7 @@
         <div class="card-body">
             <!-- Senior Filter Section -->
             <div class="mb-4">
-                <form method="get" class="row g-3">
+                <form method="get" class="row g-3" id="seniorFilterForm">
                     <input type="hidden" name="eventStatus" value="@Model.SelectedEventStatus" />
                     <input type="hidden" name="eventType" value="@Model.SelectedEventType" />
                     <input type="hidden" name="eventDateFilter" value="@Model.SelectedEventDateFilter" />
@@ -96,20 +114,36 @@
                         </select>
                     </div>
 
-                    <!-- Age Range Filter -->
-                    <div class="col-md-2">
+                    <!-- Age Range Filter - Custom Input -->
+                    <div class="col-md-3">
                         <label class="small font-weight-bold">Age Range</label>
-                        <select class="form-control form-control-sm" name="ageRange">
-                            <option value="">All Ages</option>
-                            <option value="60-69" selected="@(Model.SelectedAgeRange == "60-69")">60-69</option>
-                            <option value="70-79" selected="@(Model.SelectedAgeRange == "70-79")">70-79</option>
-                            <option value="80-89" selected="@(Model.SelectedAgeRange == "80-89")">80-89</option>
-                            <option value="90+" selected="@(Model.SelectedAgeRange == "90+")">90+</option>
-                        </select>
+                        <div class="input-group input-group-sm">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="minAge" 
+                                   min="60" 
+                                   max="120" 
+                                   placeholder="Min" 
+                                   value="@minAgeDisplay"
+                                   onchange="updateAgeRange()">
+                            <div class="input-group-prepend input-group-append">
+                                <span class="input-group-text">to</span>
+                            </div>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="maxAge" 
+                                   min="60" 
+                                   max="120" 
+                                   placeholder="Max" 
+                                   value="@maxAgeDisplay"
+                                   onchange="updateAgeRange()">
+                            <input type="hidden" id="ageRange" name="ageRange" value="@Model.SelectedAgeRange" />
+                        </div>
+                        <small class="form-text text-muted">Enter age range (60-120)</small>
                     </div>
 
                     <!-- Pension Type Filter -->
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="small font-weight-bold">Pension Type</label>
                         <select class="form-control form-control-sm" name="pensionType">
                             <option value="">All Pension Types</option>
@@ -121,18 +155,24 @@
                         </select>
                     </div>
 
-                    <!-- Month/Year Registered Filter -->
+                    <!-- Birth Date Filter - Date Picker -->
                     <div class="col-md-3">
-                        <label class="small font-weight-bold">Month/Year Registered</label>
-                        <select class="form-control form-control-sm" name="monthYear">
-                            <option value="">All Months</option>
-                            @foreach (var monthYear in Model.AvailableMonthsYears)
-                            {
-                                var displayText = DateTime.ParseExact($"{monthYear}-01", "yyyy-MM-dd", null).ToString("MMMM yyyy");
-                                bool isSelected = Model.SelectedMonthYear == monthYear;
-                                <option value="@monthYear" selected="@isSelected">@displayText</option>
-                            }
-                        </select>
+                        <label class="small font-weight-bold">Birth Date</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" 
+                                   class="form-control datepicker" 
+                                   id="birthDatePicker"
+                                   name="birthDate"
+                                   value="@Model.SelectedBirthDate"
+                                   placeholder="Select birth date"
+                                   autocomplete="off">
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" onclick="clearBirthDate()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Select specific birth date</small>
                     </div>
 
                     <!-- Search by Name or SCCN -->
@@ -173,7 +213,7 @@
                 <!-- Results Summary -->
                 @if (!string.IsNullOrEmpty(Model.SelectedStatus) || !string.IsNullOrEmpty(Model.SelectedZoneFilter) || 
                    !string.IsNullOrEmpty(Model.SelectedGender) || !string.IsNullOrEmpty(Model.SelectedCivilStatus) ||
-                   !string.IsNullOrEmpty(Model.SelectedAgeRange) || !string.IsNullOrEmpty(Model.SelectedMonthYear) ||
+                   !string.IsNullOrEmpty(Model.SelectedAgeRange) || !string.IsNullOrEmpty(Model.SelectedBirthDate) ||
                    !string.IsNullOrEmpty(Model.SelectedPensionType))
                 {
                     <div class="mt-3">
@@ -194,6 +234,14 @@
                         {
                             <span class="badge badge-secondary ml-2">Pension: @Model.SelectedPensionType</span>
                         }
+                        @if (!string.IsNullOrEmpty(Model.SelectedAgeRange))
+                        {
+                            <span class="badge badge-secondary ml-2">Age: @Model.SelectedAgeRange</span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.SelectedBirthDate))
+                        {
+                            <span class="badge badge-secondary ml-2">Birth Date: @DateTime.Parse(Model.SelectedBirthDate).ToString("MMM dd, yyyy")</span>
+                        }
                     </div>
                 }
             </div>
@@ -203,16 +251,16 @@
                 <table class="table table-bordered table-hover" width="100%" cellspacing="0">
                     <thead class="thead-dark">
                         <tr>
-                            <th>SCCN Number</th>
+                            <th>OSCA Number</th>
                             <th>Full Name</th>
-                            <th>Gender</th>
+                            <th>Sex</th>
                             <th>Age</th>
+                            <th>Birth Date</th>
                             <th>Zone</th>
                             <th>Civil Status</th>
                             <th>Pension Type</th>
                             <th>Contact Number</th>
                             <th>Status</th>
-                            <th>Registered On</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -227,6 +275,7 @@
                                     <td>@senior.CompleteName</td>
                                     <td>@senior.Gender</td>
                                     <td>@senior.Age</td>
+                                    <td>@(senior.BirthDate?.ToString("MMM dd, yyyy") ?? "N/A")</td>
                                     <td>Zone @senior.Zone</td>
                                     <td>
                                         @if (string.IsNullOrEmpty(senior.CivilStatus))
@@ -241,7 +290,7 @@
                                     <td>
                                         @if (string.IsNullOrEmpty(senior.PensionType))
                                         {
-                                            <span class="text-muted">None</span>
+                                            <span class="badge bg-warning">NoPension</span>
                                         }
                                         else
                                         {
@@ -263,7 +312,6 @@
                                             @senior.Status
                                         </span>
                                     </td>
-                                    <td>@senior.CreatedAt.ToString("MMM dd, yyyy")</td>
                                 </tr>
                             }
                         }
@@ -307,7 +355,7 @@
                             gender = Model.SelectedGender,
                             civilStatus = Model.SelectedCivilStatus,
                             ageRange = Model.SelectedAgeRange,
-                            monthYear = Model.SelectedMonthYear,
+                            birthDate = Model.SelectedBirthDate,
                             seniorSearch = Model.SeniorSearchTerm,
                             pensionType = Model.SelectedPensionType
                         })" class="btn btn-sm btn-outline-primary">
@@ -319,7 +367,7 @@
                             gender = Model.SelectedGender,
                             civilStatus = Model.SelectedCivilStatus,
                             ageRange = Model.SelectedAgeRange,
-                            monthYear = Model.SelectedMonthYear,
+                            birthDate = Model.SelectedBirthDate,
                             seniorSearch = Model.SeniorSearchTerm,
                             pensionType = Model.SelectedPensionType
                         })" class="btn btn-sm btn-outline-success">
@@ -348,7 +396,7 @@
                     <input type="hidden" name="gender" value="@Model.SelectedGender" />
                     <input type="hidden" name="civilStatus" value="@Model.SelectedCivilStatus" />
                     <input type="hidden" name="ageRange" value="@Model.SelectedAgeRange" />
-                    <input type="hidden" name="monthYear" value="@Model.SelectedMonthYear" />
+                    <input type="hidden" name="birthDate" value="@Model.SelectedBirthDate" />
                     <input type="hidden" name="seniorSearch" value="@Model.SeniorSearchTerm" />
                     <input type="hidden" name="pensionType" value="@Model.SelectedPensionType" />
 
@@ -431,7 +479,7 @@
                                 gender = Model.SelectedGender,
                                 civilStatus = Model.SelectedCivilStatus,
                                 ageRange = Model.SelectedAgeRange,
-                                monthYear = Model.SelectedMonthYear,
+                                birthDate = Model.SelectedBirthDate,
                                 seniorSearch = Model.SeniorSearchTerm,
                                 pensionType = Model.SelectedPensionType
                             })" class="btn btn-sm btn-secondary">
@@ -554,7 +602,7 @@
                                             gender = Model.SelectedGender,
                                             civilStatus = Model.SelectedCivilStatus,
                                             ageRange = Model.SelectedAgeRange,
-                                            monthYear = Model.SelectedMonthYear,
+                                            birthDate = Model.SelectedBirthDate,
                                             seniorSearch = Model.SeniorSearchTerm,
                                             pensionType = Model.SelectedPensionType
                                         })" class="btn btn-sm btn-outline-primary mt-2">
@@ -656,11 +704,92 @@
         .btn-group .btn {
             margin-right: 5px;
         }
+        
+        /* Datepicker styles */
+        .datepicker-dropdown {
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .datepicker table tr td.active.active {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        
+        .datepicker table tr td.today {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #212529;
+        }
+        
+        .input-group-text {
+            padding: 0.375rem 0.75rem;
+        }
     </style>
 }
 
 @section Scripts {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+    
     <script>
+        // Initialize datepicker for birth date
+        $(document).ready(function() {
+            $('#birthDatePicker').datepicker({
+                format: 'yyyy-mm-dd',
+                autoclose: true,
+                todayHighlight: true,
+                endDate: '1965-12-31', // Only dates up to 1965
+                startDate: '1900-01-01', // Start from 1900
+                clearBtn: true
+            });
+        });
+
+        // Function to update age range hidden field
+        function updateAgeRange() {
+            var minAge = $('#minAge').val();
+            var maxAge = $('#maxAge').val();
+            var ageRange = '';
+            
+            // Validate min and max
+            if (minAge && maxAge) {
+                var min = parseInt(minAge);
+                var max = parseInt(maxAge);
+                
+                if (min > max) {
+                    // Swap values if min is greater than max
+                    $('#minAge').val(max);
+                    $('#maxAge').val(min);
+                    minAge = max.toString();
+                    maxAge = min.toString();
+                    min = parseInt(minAge);
+                    max = parseInt(maxAge);
+                }
+                
+                // Validate range
+                if (min >= 60 && max <= 120) {
+                    ageRange = minAge + '-' + maxAge;
+                } else if (min >= 60 && max > 120) {
+                    ageRange = minAge + '-120';
+                    $('#maxAge').val('120');
+                }
+            } else if (minAge && !maxAge) {
+                // If only min age is provided, set to 90+ format
+                if (parseInt(minAge) >= 90) {
+                    ageRange = minAge + '+';
+                }
+            }
+            
+            $('#ageRange').val(ageRange);
+        }
+
+        // Function to clear birth date
+        function clearBirthDate() {
+            $('#birthDatePicker').val('');
+            $('#birthDatePicker').datepicker('update', '');
+        }
+
         // Auto-submit form when filter changes (except search fields)
         document.querySelectorAll('select').forEach(select => {
             select.addEventListener('change', function() {
@@ -680,12 +809,33 @@
             });
         });
 
+        // Auto-submit when birth date is selected
+        $('#birthDatePicker').on('changeDate', function(e) {
+            if (e.date) {
+                $('#seniorFilterForm').submit();
+            }
+        });
+
         // Keyboard shortcut for search focus
         document.addEventListener('keydown', function(e) {
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
                 const searchInput = document.querySelector('input[name="seniorSearch"]');
                 if (searchInput) searchInput.focus();
+            }
+        });
+
+        // Validate age inputs on blur
+        $('#minAge, #maxAge').on('blur', function() {
+            var value = $(this).val();
+            if (value) {
+                var numValue = parseInt(value);
+                if (numValue < 60) {
+                    $(this).val('60');
+                } else if (numValue > 120) {
+                    $(this).val('120');
+                }
+                updateAgeRange();
             }
         });
     </script>

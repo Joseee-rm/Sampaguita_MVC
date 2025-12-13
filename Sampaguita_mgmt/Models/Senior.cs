@@ -5,13 +5,17 @@ namespace SeniorManagement.Models
 {
     public class Senior
     {
-        public int Id { get; set; }  // Auto-increment primary key
+        public int Id { get; set; }
 
         [Required(ErrorMessage = "SCCN number is required")]
-        [Display(Name = "SCCN Number")]
-        [StringLength(12, MinimumLength = 12, ErrorMessage = "SCCN number must be exactly 12 digits")]
-        [RegularExpression(@"^\d{12}$", ErrorMessage = "SCCN number must contain only numbers (0-9)")]
+        [Display(Name = "OSCA Number")]
+        [StringLength(12, MinimumLength = 12, ErrorMessage = "OSCA number must be exactly 12 digits")]
+        [RegularExpression(@"^\d{12}$", ErrorMessage = "OSCA number must contain only numbers (0-9)")]
         public string SeniorId { get; set; }
+
+        [Display(Name = "NCSC Registration Number (Optional)")]
+        [StringLength(50, ErrorMessage = "NCSC Registration Number cannot exceed 50 characters")]
+        public string NCSRegistrationNumber { get; set; }
 
         [Required(ErrorMessage = "First Name is required")]
         [Display(Name = "First Name")]
@@ -23,8 +27,8 @@ namespace SeniorManagement.Models
         [StringLength(100, ErrorMessage = "Last Name cannot exceed 100 characters")]
         public string LastName { get; set; }
 
-        [Display(Name = "Middle Initial")]
-        [StringLength(1, ErrorMessage = "Middle Initial must be 1 character")]
+        [Display(Name = "Middle Name")]
+        [StringLength(100, ErrorMessage = "Middle Name cannot exceed 100 characters")]
         public string MiddleInitial { get; set; }
 
         [Display(Name = "Extension")]
@@ -47,6 +51,10 @@ namespace SeniorManagement.Models
         [StringLength(50, ErrorMessage = "Citizenship cannot exceed 50 characters")]
         public string Citizenship { get; set; } = "Filipino";
 
+        [Display(Name = "Dual Citizenship Country")]
+        [StringLength(100, ErrorMessage = "Country cannot exceed 100 characters")]
+        public string DualCitizenshipCountry { get; set; }
+
         [Display(Name = "Contact Number")]
         [Phone(ErrorMessage = "Please enter a valid phone number")]
         [StringLength(20, ErrorMessage = "Contact Number cannot exceed 20 characters")]
@@ -64,29 +72,35 @@ namespace SeniorManagement.Models
         [Display(Name = "Civil Status")]
         public string CivilStatus { get; set; }
 
+        [Display(Name = "Has Pension?")]
+        public bool HasPension { get; set; }
+
         [Display(Name = "Pension Type")]
         [StringLength(50, ErrorMessage = "Pension Type cannot exceed 50 characters")]
         public string PensionType { get; set; }
+
+        [Display(Name = "Other Pension Type")]
+        [StringLength(100, ErrorMessage = "Other Pension Type cannot exceed 100 characters")]
+        public string PensionOther { get; set; }
 
         // Address Information
         [Display(Name = "House Number")]
         [StringLength(50, ErrorMessage = "House Number cannot exceed 50 characters")]
         public string HouseNumber { get; set; }
 
-        // Fixed value as per requirement
         public string Barangay { get; set; } = "Sampaguita";
 
         [Display(Name = "City/Municipality")]
         [StringLength(100, ErrorMessage = "City/Municipality cannot exceed 100 characters")]
-        public string CityMunicipality { get; set; } = "General Trias";
+        public string CityMunicipality { get; set; } = "Naujan";
 
         [Display(Name = "Province")]
         [StringLength(100, ErrorMessage = "Province cannot exceed 100 characters")]
-        public string Province { get; set; } = "Cavite";
+        public string Province { get; set; } = "Oriental Mindoro";
 
         [Display(Name = "Zip Code")]
         [StringLength(10, ErrorMessage = "Zip Code cannot exceed 10 characters")]
-        public string ZipCode { get; set; } = "4107";
+        public string ZipCode { get; set; } = "5204";
 
         // Family Information
         [Display(Name = "Spouse First Name")]
@@ -109,10 +123,52 @@ namespace SeniorManagement.Models
         [StringLength(50, ErrorMessage = "Spouse Citizenship cannot exceed 50 characters")]
         public string SpouseCitizenship { get; set; }
 
-        [Display(Name = "Children Information")]
+        [Display(Name = "Spouse Dual Citizenship Country")]
+        [StringLength(100, ErrorMessage = "Country cannot exceed 100 characters")]
+        public string SpouseDualCitizenshipCountry { get; set; }
+
+        // Children Information (separate fields for first child)
+        [Display(Name = "Child First Name")]
+        [StringLength(100, ErrorMessage = "Child First Name cannot exceed 100 characters")]
+        public string ChildFirstName { get; set; }
+
+        [Display(Name = "Child Last Name")]
+        [StringLength(100, ErrorMessage = "Child Last Name cannot exceed 100 characters")]
+        public string ChildLastName { get; set; }
+
+        [Display(Name = "Child Middle Name")]
+        [StringLength(100, ErrorMessage = "Child Middle Name cannot exceed 100 characters")]
+        public string ChildMiddleName { get; set; }
+
+        [Display(Name = "Child Extension")]
+        [StringLength(10, ErrorMessage = "Child Extension cannot exceed 10 characters")]
+        public string ChildExtension { get; set; }
+
+        [Display(Name = "Additional Children Info")]
         public string ChildrenInfo { get; set; }
 
-        [Display(Name = "Authorized Representative")]
+        // Authorized Representative (separate fields)
+        [Display(Name = "Authorized Rep First Name")]
+        [StringLength(100, ErrorMessage = "First Name cannot exceed 100 characters")]
+        public string AuthorizedRepFirstName { get; set; }
+
+        [Display(Name = "Authorized Rep Last Name")]
+        [StringLength(100, ErrorMessage = "Last Name cannot exceed 100 characters")]
+        public string AuthorizedRepLastName { get; set; }
+
+        [Display(Name = "Authorized Rep Middle Name")]
+        [StringLength(100, ErrorMessage = "Middle Name cannot exceed 100 characters")]
+        public string AuthorizedRepMiddleName { get; set; }
+
+        [Display(Name = "Authorized Rep Extension")]
+        [StringLength(10, ErrorMessage = "Extension cannot exceed 10 characters")]
+        public string AuthorizedRepExtension { get; set; }
+
+        [Display(Name = "Authorized Rep Relationship")]
+        [StringLength(50, ErrorMessage = "Relationship cannot exceed 50 characters")]
+        public string AuthorizedRepRelationship { get; set; }
+
+        [Display(Name = "Additional Authorized Rep Info")]
         public string AuthorizedRepInfo { get; set; }
 
         // Designated Beneficiary Information
@@ -155,22 +211,16 @@ namespace SeniorManagement.Models
         [Display(Name = "Contingent Beneficiary Relationship")]
         [StringLength(50, ErrorMessage = "Contingent Beneficiary Relationship cannot exceed 50 characters")]
         public string ContingentBeneficiaryRelationship { get; set; }
-        // In Senior model class
+
         public byte[] ProfilePicture { get; set; }
         public string ProfilePictureContentType { get; set; }
-
-        // Status for archive/active
         public string Status { get; set; } = "Active";
-
-        // System fields
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
         // Computed properties
-        [Display(Name = "Full Name")]
         public string FullName => $"{FirstName} {LastName}";
 
-        [Display(Name = "Complete Name")]
         public string CompleteName
         {
             get
@@ -178,7 +228,7 @@ namespace SeniorManagement.Models
                 var name = $"{FirstName} {LastName}".Trim();
                 if (!string.IsNullOrEmpty(MiddleInitial))
                 {
-                    name = $"{FirstName} {MiddleInitial}. {LastName}".Trim();
+                    name = $"{FirstName} {MiddleInitial} {LastName}".Trim();
                 }
                 if (!string.IsNullOrEmpty(Extension))
                 {
@@ -188,8 +238,6 @@ namespace SeniorManagement.Models
             }
         }
 
-        // Display SCCN with formatting
-        [Display(Name = "Formatted SCCN")]
         public string FormattedSCCN
         {
             get
@@ -197,17 +245,12 @@ namespace SeniorManagement.Models
                 if (string.IsNullOrEmpty(SeniorId) || SeniorId.Length != 12)
                     return SeniorId;
 
-                // Format as: XXX-XXX-XXX-XXX
                 return $"{SeniorId.Substring(0, 3)}-{SeniorId.Substring(3, 3)}-{SeniorId.Substring(6, 3)}-{SeniorId.Substring(9, 3)}";
             }
         }
 
-        // Add this to the Senior model class
-        [Display(Name = "Profile Picture")]
         public string ProfilePicturePath { get; set; }
 
-        // Add this computed property
-        [Display(Name = "Profile Picture URL")]
         public string ProfilePictureUrl
         {
             get
@@ -219,10 +262,19 @@ namespace SeniorManagement.Models
                 return "/images/default-profile.png";
             }
         }
-        // Display pension type or "None" if empty
-        public string DisplayPensionType => !string.IsNullOrEmpty(PensionType) ? PensionType : "None";
 
-        // Display address as comma-separated string
+        // Updated DisplayPensionType to include "HasPension" logic
+        public string DisplayPensionType
+        {
+            get
+            {
+                if (!HasPension) return "None";
+                if (!string.IsNullOrEmpty(PensionOther)) return PensionOther;
+                if (!string.IsNullOrEmpty(PensionType)) return PensionType;
+                return "None";
+            }
+        }
+
         public string PermanentAddress
         {
             get
@@ -244,7 +296,6 @@ namespace SeniorManagement.Models
             }
         }
 
-        // Check if eligible for special benefits
         public bool IsEligibleForOctogenarian => Age >= 80 && Age < 90;
         public bool IsEligibleForNonagenarian => Age >= 90 && Age < 100;
         public bool IsEligibleForCentenarian => Age >= 100;
@@ -260,7 +311,6 @@ namespace SeniorManagement.Models
             }
         }
 
-        // Spouse full name
         public string SpouseFullName
         {
             get
@@ -281,7 +331,46 @@ namespace SeniorManagement.Models
             }
         }
 
-        // Primary beneficiary full name
+        public string ChildFullName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(ChildFirstName) && string.IsNullOrEmpty(ChildLastName))
+                    return string.Empty;
+
+                var name = $"{ChildFirstName} {ChildLastName}".Trim();
+                if (!string.IsNullOrEmpty(ChildMiddleName))
+                {
+                    name = $"{ChildFirstName} {ChildMiddleName} {ChildLastName}".Trim();
+                }
+                if (!string.IsNullOrEmpty(ChildExtension))
+                {
+                    name = $"{name} {ChildExtension}";
+                }
+                return name;
+            }
+        }
+
+        public string AuthorizedRepFullName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(AuthorizedRepFirstName) && string.IsNullOrEmpty(AuthorizedRepLastName))
+                    return string.Empty;
+
+                var name = $"{AuthorizedRepFirstName} {AuthorizedRepLastName}".Trim();
+                if (!string.IsNullOrEmpty(AuthorizedRepMiddleName))
+                {
+                    name = $"{AuthorizedRepFirstName} {AuthorizedRepMiddleName} {AuthorizedRepLastName}".Trim();
+                }
+                if (!string.IsNullOrEmpty(AuthorizedRepExtension))
+                {
+                    name = $"{name} {AuthorizedRepExtension}";
+                }
+                return name;
+            }
+        }
+
         public string PrimaryBeneficiaryFullName
         {
             get
@@ -302,7 +391,6 @@ namespace SeniorManagement.Models
             }
         }
 
-        // Contingent beneficiary full name
         public string ContingentBeneficiaryFullName
         {
             get

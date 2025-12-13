@@ -1,6 +1,6 @@
 ﻿@model SeniorManagement.Models.Senior
 @{
-    ViewData["Title"] = "";
+    ViewData["Title"] = "Senior Details";
 
     // Calculate age with more detail
     string ageDetail = "";
@@ -16,6 +16,39 @@
             age--;
         }
         ageDetail = $"{age} years, {months} months";
+    }
+
+    // Static Special Benefits Program Information
+    string beneficiaryProgram = "";
+    string programBadgeClass = "";
+    string programIcon = "";
+    string programBenefits = "";
+
+    // Static program rules (these can be configured in app settings)
+    int centenarianAge = 100;  // Centenarian program starts at 100
+    int nonagenarianAge = 90;  // Nonagenarian program starts at 90
+    int octogenarianAge = 80;  // Octogenarian program starts at 80
+
+    if (Model.Age >= centenarianAge)
+    {
+        beneficiaryProgram = "CENTENARIAN BENEFICIARY PROGRAM";
+        programBadgeClass = "bg-danger";
+        programIcon = "fa-crown";
+        programBenefits = "₱100,000.00 Cash Gift + Enhanced Monthly Pension + Full Medical Coverage";
+    }
+    else if (Model.Age >= nonagenarianAge)
+    {
+        beneficiaryProgram = "NONAGENARIAN BENEFICIARY PROGRAM";
+        programBadgeClass = "bg-warning";
+        programIcon = "fa-star";
+        programBenefits = "₱25,000.00 Annual Grant + Special Monthly Allowance + Medical Benefits";
+    }
+    else if (Model.Age >= octogenarianAge)
+    {
+        beneficiaryProgram = "OCTOGENARIAN BENEFICIARY PROGRAM";
+        programBadgeClass = "bg-success";
+        programIcon = "fa-award";
+        programBenefits = "₱10,000.00 Annual Grant + Additional Monthly Pension + Health Care Benefits";
     }
 }
 
@@ -42,14 +75,17 @@
                             <a href="@Url.Action("EditSenior", "Senior", new { id = Model.Id })" class="btn btn-warning me-2">
                                 <i class="fas fa-edit me-1"></i> Edit Record
                             </a>
-                            <form asp-action="ArchiveSenior" method="post" class="d-inline">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@Model.Id" />
-                                <button type="submit" class="btn btn-danger"
-                                        onclick="return confirm('Are you sure you want to archive this senior record?')">
-                                    <i class="fas fa-archive me-1"></i> Archive Record
-                                </button>
-                            </form>
+                            @if (Model.Status == "Active")
+                            {
+                                <form asp-action="ArchiveSenior" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@Model.Id" />
+                                    <button type="submit" class="btn btn-danger"
+                                            onclick="return confirm('Are you sure you want to archive this senior record?')">
+                                        <i class="fas fa-archive me-1"></i> Archive Record
+                                    </button>
+                                </form>
+                            }
                         </div>
                     </div>
                 </div>
@@ -61,6 +97,7 @@
                     <div class="col-12 text-center mb-4">
                         <h1 class="print-title">SENIOR CITIZEN OFFICIAL RECORD</h1>
                         <p class="print-subtitle">Office of the Senior Citizens Affairs (OSCA)</p>
+                        <p class="print-subtitle">Barangay Sampaguita, Naujan, Oriental Mindoro</p>
                         <hr class="print-divider" />
                     </div>
                 </div>
@@ -95,6 +132,15 @@
                             <div class="senior-info">
                                 <h4 class="mb-2">@Model.CompleteName</h4>
                                 <div class="badge bg-success mb-2">Senior Citizen</div>
+
+                                <!-- Beneficiary Program Badge -->
+                                @if (!string.IsNullOrEmpty(beneficiaryProgram))
+                                {
+                                    <div class="badge @programBadgeClass mb-2">
+                                        <i class="fas @programIcon me-1"></i> @beneficiaryProgram
+                                    </div>
+                                }
+
                                 <div class="row text-start">
                                     <div class="col-12 mb-1">
                                         <i class="fas fa-venus-mars me-2 text-primary"></i>
@@ -106,7 +152,6 @@
                                         @if (!string.IsNullOrEmpty(ageDetail))
                                         {
                                             <br />
-                                        
                                             <small class="text-muted">(@ageDetail)</small>
                                         }
                                     </div>
@@ -122,6 +167,16 @@
                                             <span class="text-muted">Not specified</span>
                                         }
                                     </div>
+                                    <!-- Program Benefits -->
+                                    @if (!string.IsNullOrEmpty(programBenefits))
+                                    {
+                                        <div class="col-12 mb-1 mt-2">
+                                            <i class="fas fa-gift me-2 text-primary"></i>
+                                            <strong>Benefits:</strong>
+                                            <br />
+                                            <small class="text-muted">@programBenefits</small>
+                                        </div>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -140,9 +195,68 @@
                                 </div>
                                 <p class="text-muted mb-0">OSCA Identification Number</p>
                                 <p class="text-muted small">Issued: @DateTime.Now.ToString("MMMM dd, yyyy")</p>
+
+                                <!-- NCSC Registration Number -->
+                                @if (!string.IsNullOrEmpty(Model.NCSRegistrationNumber))
+                                {
+                                    <div class="mt-3 pt-3 border-top">
+                                        <p class="mb-1"><strong>NCSC Registration:</strong></p>
+                                        <p class="text-success mb-0">@Model.NCSRegistrationNumber</p>
+                                        <small class="text-muted">National Commission of Senior Citizens</small>
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
+
+                    <!-- Citizenship Information Card -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-passport me-2"></i>Citizenship Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="citizenship-info">
+                                <p class="mb-2">
+                                    <strong>Citizenship:</strong>
+                                    <span class="badge bg-info">@Model.Citizenship</span>
+                                </p>
+                                @if (!string.IsNullOrEmpty(Model.DualCitizenshipCountry))
+                                {
+                                    <p class="mb-0">
+                                        <strong>Dual Citizenship Country:</strong>
+                                        <br />
+                                        <span class="text-primary">@Model.DualCitizenshipCountry</span>
+                                    </p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Eligibility Status Card -->
+                    @if (!string.IsNullOrEmpty(beneficiaryProgram))
+                    {
+                        <div class="card mb-4">
+                            <div class="card-header @programBadgeClass text-white">
+                                <h5 class="mb-0"><i class="fas @programIcon me-2"></i>Program Eligibility Status</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="eligibility-status text-center">
+                                    <h4 class="mb-3">@beneficiaryProgram</h4>
+                                    <div class="eligibility-details">
+                                        <p class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Eligible for Special Benefits</p>
+                                        <p class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>@programBenefits</p>
+                                        <p class="mb-0"><i class="fas fa-check-circle text-success me-2"></i>Automatic Enrollment</p>
+                                    </div>
+                                    <div class="mt-3">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            This status is automatically determined by age based on static program rules
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
 
                 <!-- Right Column - Detailed Information -->
@@ -168,7 +282,6 @@
                                             @if (!string.IsNullOrEmpty(ageDetail))
                                             {
                                                 <br />
-                                            
                                                 <small class="text-muted">(@ageDetail)</small>
                                             }
                                         </div>
@@ -198,7 +311,6 @@
                                             {
                                                 @Model.BirthDate.Value.ToString("MMMM dd, yyyy")
                                                 <br />
-                                            
                                                 <small class="text-muted">(@Model.BirthDate.Value.ToString("MM/dd/yyyy"))</small>
                                             }
                                             else
@@ -213,9 +325,54 @@
                                         <label class="info-label">Citizenship</label>
                                         <div class="info-value">
                                             <i class="fas fa-flag me-2 text-primary"></i>@(string.IsNullOrEmpty(Model.Citizenship) ? "Filipino" : Model.Citizenship)
+                                            @if (!string.IsNullOrEmpty(Model.DualCitizenshipCountry))
+                                            {
+                                                <br />
+                                                <small class="text-muted">(Dual: @Model.DualCitizenshipCountry)</small>
+                                            }
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- NCSC Registration -->
+                                @if (!string.IsNullOrEmpty(Model.NCSRegistrationNumber))
+                                {
+                                    <div class="col-md-12 mb-3">
+                                        <div class="info-item">
+                                            <label class="info-label">NCSC Registration Number</label>
+                                            <div class="info-value">
+                                                <i class="fas fa-file-alt me-2 text-success"></i>
+                                                <strong>@Model.NCSRegistrationNumber</strong>
+                                                <br />
+                                                <small class="text-muted">National Commission of Senior Citizens Reference</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                                <!-- Beneficiary Program Eligibility Section -->
+                                @if (!string.IsNullOrEmpty(beneficiaryProgram))
+                                {
+                                    <div class="col-md-12 mb-3">
+                                        <div class="info-item">
+                                            <label class="info-label">Special Program Eligibility</label>
+                                            <div class="info-value">
+                                                <div class="d-flex align-items-start">
+                                                    <i class="fas @programIcon me-3 text-success fa-2x mt-1"></i>
+                                                    <div>
+                                                        <h5 class="mb-1">@beneficiaryProgram</h5>
+                                                        <div class="program-details">
+                                                            <p class="mb-1"><strong>Benefits Package:</strong> @programBenefits</p>
+                                                            <p class="mb-1"><strong>Eligibility Age:</strong> @Model.Age years old</p>
+                                                            <p class="mb-1"><strong>Program Rules:</strong> Static age-based eligibility (80+/90+/100+)</p>
+                                                            <p class="mb-0"><strong>Status:</strong> <span class="badge @programBadgeClass">ACTIVE</span></p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -300,8 +457,12 @@
                                                         @if (!string.IsNullOrEmpty(Model.SpouseCitizenship))
                                                         {
                                                             <br />
-                                                    
                                                             <small class="text-muted">Citizenship: @Model.SpouseCitizenship</small>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(Model.SpouseDualCitizenshipCountry))
+                                                        {
+                                                            <br />
+                                                            <small class="text-muted">Dual Citizenship: @Model.SpouseDualCitizenshipCountry</small>
                                                         }
                                                     </div>
                                                 </div>
@@ -313,6 +474,78 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Child Information -->
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Child Information</label>
+                                        <div class="info-value">
+                                            @if (!string.IsNullOrEmpty(Model.ChildFullName))
+                                            {
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-child me-2 text-success"></i>
+                                                    <div>
+                                                        @Model.ChildFullName
+                                                    </div>
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(Model.ChildrenInfo))
+                                                {
+                                                    <div class="mt-2">
+                                                        <small class="text-muted">Additional Children:</small><br />
+                                                        <small>@Model.ChildrenInfo</small>
+                                                    </div>
+                                                }
+                                            }
+                                            else if (!string.IsNullOrEmpty(Model.ChildrenInfo))
+                                            {
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-child me-2 text-success"></i>
+                                                    <div>
+                                                        <small>@Model.ChildrenInfo</small>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Authorized Representative -->
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-item">
+                                        <label class="info-label">Authorized Representative</label>
+                                        <div class="info-value">
+                                            @if (!string.IsNullOrEmpty(Model.AuthorizedRepFullName))
+                                            {
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-user-tie me-2 text-success"></i>
+                                                    <div>
+                                                        @Model.AuthorizedRepFullName
+                                                        @if (!string.IsNullOrEmpty(Model.AuthorizedRepRelationship))
+                                                        {
+                                                            <br />
+                                                            <small class="text-muted">Relationship: @Model.AuthorizedRepRelationship</small>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(Model.AuthorizedRepInfo))
+                                                        {
+                                                            <br />
+                                                            <small class="text-muted">@Model.AuthorizedRepInfo</small>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Designated Beneficiary -->
                                 <div class="col-md-6 mb-3">
                                     <div class="info-item">
                                         <label class="info-label">Designated Beneficiary</label>
@@ -326,7 +559,6 @@
                                                         @if (!string.IsNullOrEmpty(Model.PrimaryBeneficiaryRelationship))
                                                         {
                                                             <br />
-                                                    
                                                             <small class="text-muted">Relationship: @Model.PrimaryBeneficiaryRelationship</small>
                                                         }
                                                     </div>
@@ -352,15 +584,20 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <div class="info-item">
-                                        <label class="info-label">Pension Type</label>
+                                        <label class="info-label">Pension Status</label>
                                         <div class="info-value">
-                                            @if (!string.IsNullOrEmpty(Model.PensionType))
+                                            @if (Model.HasPension)
                                             {
                                                 <div class="d-flex align-items-center">
                                                     <i class="fas fa-university me-3 text-success fa-lg"></i>
                                                     <div>
                                                         <h5 class="mb-1">@Model.DisplayPensionType</h5>
                                                         <small class="text-muted">Registered Pension Type</small>
+                                                        @if (Model.PensionType == "Other" && !string.IsNullOrEmpty(Model.PensionOther))
+                                                        {
+                                                            <br />
+                                                            <small class="text-muted">(Specified: @Model.PensionOther)</small>
+                                                        }
                                                     </div>
                                                 </div>
                                             }
@@ -380,6 +617,97 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Special Benefits Program Card -->
+                    @if (!string.IsNullOrEmpty(beneficiaryProgram))
+                    {
+                        <div class="card mb-4">
+                            <div class="card-header @programBadgeClass text-white">
+                                <h5 class="mb-0"><i class="fas fa-gift me-2"></i>Special Benefits Program</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="program-highlight p-3 rounded" style="background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,249,250,0.9) 100%); border: 2px dashed #ddd;">
+                                            <div class="text-center">
+                                                <h4 class="mb-3"><i class="fas @programIcon me-2"></i>@beneficiaryProgram</h4>
+                                                <p class="text-muted mb-4">Static Age-Based Eligibility Program</p>
+
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-2">
+                                                        <div class="benefit-item p-2">
+                                                            <i class="fas fa-money-bill-wave text-success fa-2x mb-2"></i>
+                                                            <h6>Cash Benefit</h6>
+                                                            @if (Model.Age >= 100)
+                                                            {
+                                                                <p class="mb-0"><strong>₱100,000.00</strong> Cash Gift</p>
+                                                                <p class="mb-0"><strong>₱5,000.00</strong> Monthly Pension</p>
+                                                            }
+                                                            else if (Model.Age >= 90)
+                                                            {
+                                                                <p class="mb-0"><strong>₱25,000.00</strong> Annual Grant</p>
+                                                                <p class="mb-0"><strong>₱3,000.00</strong> Monthly Pension</p>
+                                                            }
+                                                            else if (Model.Age >= 80)
+                                                            {
+                                                                <p class="mb-0"><strong>₱10,000.00</strong> Annual Grant</p>
+                                                                <p class="mb-0"><strong>₱2,000.00</strong> Monthly Pension</p>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6 mb-2">
+                                                        <div class="benefit-item p-2">
+                                                            <i class="fas fa-heartbeat text-danger fa-2x mb-2"></i>
+                                                            <h6>Health Benefits</h6>
+                                                            <p class="mb-0">Full Medical Coverage</p>
+                                                            <p class="mb-0">Free Medicines</p>
+                                                            <p class="mb-0">Annual Check-up</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6 mb-2">
+                                                        <div class="benefit-item p-2">
+                                                            <i class="fas fa-utensils text-warning fa-2x mb-2"></i>
+                                                            <h6>Allowances</h6>
+                                                            <p class="mb-0">₱1,000.00 Monthly Food Allowance</p>
+                                                            <p class="mb-0">₱500.00 Transportation Allowance</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6 mb-2">
+                                                        <div class="benefit-item p-2">
+                                                            <i class="fas fa-percentage text-info fa-2x mb-2"></i>
+                                                            <h6>Discounts & Exemptions</h6>
+                                                            <p class="mb-0">20% Discount on Goods/Services</p>
+                                                            <p class="mb-0">VAT Exemption</p>
+                                                            <p class="mb-0">5% Utility Discount</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-4">
+                                                    <div class="alert alert-info">
+                                                        <h6><i class="fas fa-info-circle me-2"></i>Program Rules</h6>
+                                                        <ul class="mb-0">
+                                                            <li>Centenarian (100+): ₱100,000 + Enhanced Benefits</li>
+                                                            <li>Nonagenarian (90-99): ₱25,000 + Special Benefits</li>
+                                                            <li>Octogenarian (80-89): ₱10,000 + Basic Benefits</li>
+                                                            <li>Benefits are automatically calculated based on age</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-3">
+                                                    <p class="text-muted small mb-0">
+                                                        <i class="fas fa-info-circle me-1"></i>
+                                                        Benefits are automatically credited to the registered account. For inquiries, contact OSCA Benefits Division.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -407,6 +735,12 @@
                             <strong>Note:</strong> This is an official document issued by the Office of the Senior Citizens Affairs.
                             For verification, please contact OSCA Office at +63 123 456 7890.
                         </p>
+                        @if (!string.IsNullOrEmpty(beneficiaryProgram))
+                        {
+                            <p class="benefit-note mb-0 small text-success">
+                                <strong>Program Eligibility:</strong> @beneficiaryProgram - @programBenefits
+                            </p>
+                        }
                         <p class="document-id mb-0 small text-muted">
                             Document ID: OSCA-@Model.Id-@DateTime.Now.ToString("yyyyMMdd") | Printed on: @DateTime.Now.ToString("MMMM dd, yyyy hh:mm tt")
                         </p>
@@ -448,110 +782,9 @@
             border: 5px solid #e3f2fd;
         }
 
-        .senior-info h4 {
-            color: #1976d2;
-            font-weight: 600;
-            font-size: 1.5rem;
-        }
-
-        .sccn-number-display h2 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            letter-spacing: 2px;
-            color: #1565c0;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-        }
-
-        .print-barcode {
-            margin: 15px auto;
-            padding: 10px;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            max-width: 300px;
-        }
-
-        .info-item {
-            margin-bottom: 1.25rem;
-        }
-
-        .info-label {
-            font-size: 0.8rem;
-            color: #6c757d;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .info-value {
-            font-size: 1rem;
-            font-weight: 500;
-            color: #2c3e50;
-            padding: 0.5rem 0;
-            min-height: 2.5rem;
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .address-box {
-            background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
-            border: 1px solid #bbdefb;
-            color: #1565c0;
-            font-size: 0.95rem;
-            line-height: 1.5;
-        }
-
-        .badge {
-            font-size: 0.85rem;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-        }
-
-        .card-header {
-            border-bottom: none;
-        }
-
-        .bg-info {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
-        }
-
-        .bg-primary {
-            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%) !important;
-        }
-
-        .btn-light {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border: 1px solid #dee2e6;
-            color: #495057;
-            font-weight: 500;
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-            border: none;
-            color: #212529;
-            font-weight: 500;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            border: none;
-            color: white;
-            font-weight: 500;
-        }
-
-        .btn-info {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-            border: none;
-            color: white;
-            font-weight: 500;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        .citizenship-info .badge {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.8rem;
         }
 
         /* Print-specific styles */
@@ -564,197 +797,7 @@
             .printable-only {
                 display: block !important;
             }
-            /* General print styles */
-            body {
-                font-family: 'Times New Roman', Times, serif !important;
-                line-height: 1.4;
-                color: #000 !important;
-                background: white !important;
-            }
-
-            .container-fluid {
-                max-width: 100% !important;
-                padding: 0 !important;
-                margin: 0 !important;
-            }
-            /* Print header */
-            .print-header {
-                margin-bottom: 30px;
-            }
-
-            .print-title {
-                font-size: 28px !important;
-                font-weight: bold !important;
-                text-transform: uppercase;
-                letter-spacing: 1.5px;
-                margin-bottom: 5px !important;
-                color: #2c3e50 !important;
-            }
-
-            .print-subtitle {
-                font-size: 14px !important;
-                color: #6c757d !important;
-                font-style: italic;
-                margin-bottom: 15px !important;
-            }
-
-            .print-divider {
-                border: none;
-                border-top: 3px double #2c3e50;
-                margin: 20px 0;
-            }
-            /* Profile picture for print */
-            .profile-picture-view {
-                width: 180px !important;
-                height: 180px !important;
-                border: 2px solid #000 !important;
-                border-radius: 0 !important;
-                box-shadow: none !important;
-            }
-
-            .profile-picture-placeholder-view {
-                width: 180px !important;
-                height: 180px !important;
-                border: 2px dashed #ccc !important;
-                border-radius: 0 !important;
-            }
-            /* Cards for print */
-            .card {
-                border: 1px solid #000 !important;
-                box-shadow: none !important;
-                page-break-inside: avoid;
-                margin-bottom: 15px !important;
-            }
-
-            .card-header {
-                background: #f8f9fa !important;
-                color: #000 !important;
-                border-bottom: 2px solid #000 !important;
-                padding: 8px 15px !important;
-            }
-
-                .card-header h5 {
-                    font-size: 16px !important;
-                    font-weight: bold !important;
-                    margin: 0 !important;
-                }
-
-            .card-body {
-                padding: 15px !important;
-            }
-            /* Information layout */
-            .info-label {
-                font-size: 11px !important;
-                font-weight: bold !important;
-                color: #000 !important;
-                margin-bottom: 2px !important;
-            }
-
-            .info-value {
-                font-size: 13px !important;
-                border-bottom: 1px solid #ddd !important;
-                padding: 3px 0 !important;
-                min-height: auto !important;
-            }
-            /* OSCA number styling */
-            .sccn-number-display h2 {
-                font-size: 24px !important;
-                color: #000 !important;
-                text-shadow: none !important;
-                letter-spacing: 3px !important;
-            }
-            /* Address box */
-            .address-box {
-                background: none !important;
-                border: 1px solid #ddd !important;
-                padding: 10px !important;
-            }
-            /* Badges for print */
-            .badge {
-                background: #f8f9fa !important;
-                color: #000 !important;
-                border: 1px solid #000 !important;
-                padding: 2px 8px !important;
-                font-size: 10px !important;
-            }
-            /* Icons for print */
-            .fas, .fa {
-                color: #000 !important;
-                font-size: 12px !important;
-            }
-            /* Print footer */
-            .print-footer {
-                margin-top: 40px;
-                padding-top: 20px;
-                border-top: 2px solid #000;
-            }
-
-            .signature-box {
-                margin-top: 30px;
-            }
-
-                .signature-box p {
-                    font-size: 12px !important;
-                    line-height: 1.2;
-                }
-
-            .footer-note {
-                font-size: 10px !important;
-                color: #666 !important;
-                font-style: italic;
-            }
-
-            .document-id {
-                font-size: 9px !important;
-                color: #999 !important;
-                margin-top: 5px;
-            }
-            /* Layout adjustments for print */
-            .row {
-                display: flex !important;
-                flex-wrap: wrap !important;
-                margin: 0 !important;
-            }
-
-            .col-md-4, .col-md-6, .col-md-8, .col-md-12 {
-                padding: 5px !important;
-            }
-            /* Remove gradients and fancy effects */
-            .bg-info, .bg-primary, .bg-success, .bg-warning, .bg-danger {
-                background: #f8f9fa !important;
-                color: #000 !important;
-            }
-            /* Ensure proper page breaks */
-            .page-break {
-                page-break-before: always;
-            }
-            /* Hide decorative elements */
-            .btn, .btn-*, .shadow, .rounded, .rounded-* {
-                display: none !important;
-            }
-            /* QR/Barcode styling */
-            .print-barcode {
-                border: 1px solid #000 !important;
-                padding: 5px !important;
-                background: white !important;
-            }
-            /* Text colors for print */
-            .text-primary, .text-success, .text-warning, .text-danger, .text-info {
-                color: #000 !important;
-            }
-
-            .text-muted {
-                color: #666 !important;
-            }
-        }
-
-        /* Barcode styling */
-        @@media screen {
-            .print-barcode {
-                display: block;
-                max-width: 250px;
-                margin: 20px auto;
-            }
+            /* Add other print styles as needed */
         }
     </style>
 }
@@ -762,7 +805,7 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Generate barcode for OSCA number
             const oscaNumber = '@Model.SeniorId';
             if (oscaNumber && oscaNumber.length === 12) {
@@ -788,7 +831,7 @@
             const archiveForm = document.querySelector('form[action*="ArchiveSenior"]');
             if (archiveForm) {
                 const archiveBtn = archiveForm.querySelector('button[type="submit"]');
-                archiveBtn.addEventListener('click', function(e) {
+                archiveBtn.addEventListener('click', function (e) {
                     if (!confirm('Are you sure you want to archive this senior record?')) {
                         e.preventDefault();
                     }
@@ -798,7 +841,7 @@
             // Print button functionality
             const printBtn = document.querySelector('button[onclick="window.print()"]');
             if (printBtn) {
-                printBtn.addEventListener('click', function() {
+                printBtn.addEventListener('click', function () {
                     // Show printable elements before printing
                     const printableElements = document.querySelectorAll('.printable-only');
                     printableElements.forEach(el => el.style.display = 'block');
@@ -818,18 +861,41 @@
             if (oscaDisplay) {
                 oscaDisplay.style.cursor = 'pointer';
                 oscaDisplay.title = 'Click to copy OSCA ID';
-                oscaDisplay.addEventListener('click', function() {
-                    navigator.clipboard.writeText('@Model.FormattedSCCN').then(function() {
+                oscaDisplay.addEventListener('click', function () {
+                    navigator.clipboard.writeText('@Model.FormattedSCCN').then(function () {
                         const originalText = oscaDisplay.textContent;
                         oscaDisplay.textContent = 'Copied!';
                         oscaDisplay.style.color = '#28a745';
-                        setTimeout(function() {
+                        setTimeout(function () {
                             oscaDisplay.textContent = originalText;
                             oscaDisplay.style.color = '#1565c0';
                         }, 1500);
                     });
                 });
             }
+
+            // Program eligibility highlight animation
+            const programBadge = document.querySelector('.eligibility-status');
+            if (programBadge) {
+                // Add subtle pulse animation
+                setInterval(() => {
+                    programBadge.style.transform = 'scale(1.02)';
+                    setTimeout(() => {
+                        programBadge.style.transform = 'scale(1)';
+                    }, 500);
+                }, 3000);
+            }
+
+            // Benefit items hover effect
+            const benefitItems = document.querySelectorAll('.benefit-item');
+            benefitItems.forEach(item => {
+                item.addEventListener('mouseenter', function () {
+                    this.style.transform = 'translateY(-5px)';
+                });
+                item.addEventListener('mouseleave', function () {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
         });
     </script>
 }

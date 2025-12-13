@@ -1,17 +1,17 @@
-﻿
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
-using SeniorManagement.Models;
-using SeniorManagement.Helpers;
-using MySql.Data.MySqlClient;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System;
 using System.ComponentModel.DataAnnotations;
+using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.IO;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using MySql.Data.MySqlClient;
+using Sampaguita_mgmt.Helpers;
+using SeniorManagement.Helpers;
+using SeniorManagement.Models;
 
 namespace SeniorManagement.Controllers
 {
@@ -20,6 +20,7 @@ namespace SeniorManagement.Controllers
     {
         private readonly DatabaseHelper _dbHelper;
         private readonly ActivityHelper _activityHelper;
+        private readonly ZoneHelper _zoneHelper;
 
         public SeniorController(DatabaseHelper dbHelper, ActivityHelper activityHelper)
         {
@@ -31,6 +32,7 @@ namespace SeniorManagement.Controllers
         public IActionResult Index()
         {
             var seniors = GetAllActiveSeniors();
+            ViewBag.ZoneStatistics = GetZoneStatisticsData();
             return View(seniors);
         }
 
@@ -103,10 +105,10 @@ namespace SeniorManagement.Controllers
                     ModelState.AddModelError("Zone", "Zone must be between 1 and 7.");
                 }
 
-                // Validate Middle Initial (if provided)
-                if (!string.IsNullOrEmpty(senior.MiddleInitial) && senior.MiddleInitial.Length > 1)
+                // Validate Middle Name (if provided)
+                if (!string.IsNullOrEmpty(senior.MiddleInitial) && senior.MiddleInitial.Length > 100)
                 {
-                    ModelState.AddModelError("MiddleInitial", "Middle Initial must be 1 character.");
+                    ModelState.AddModelError("MiddleInitial", "Middle Name cannot exceed 100 characters.");
                 }
 
                 // Validate Contact Number format (if provided)
@@ -119,6 +121,12 @@ namespace SeniorManagement.Controllers
                 if (!string.IsNullOrEmpty(senior.PensionType) && senior.PensionType.Length > 50)
                 {
                     ModelState.AddModelError("PensionType", "Pension Type cannot exceed 50 characters.");
+                }
+
+                // Validate Pension Other length (if provided)
+                if (!string.IsNullOrEmpty(senior.PensionOther) && senior.PensionOther.Length > 100)
+                {
+                    ModelState.AddModelError("PensionOther", "Other Pension Type cannot exceed 100 characters.");
                 }
 
                 // If there are validation errors, return to view
@@ -146,6 +154,9 @@ namespace SeniorManagement.Controllers
                 // Set default values
                 senior.Status = "Active";
                 senior.Barangay = "Sampaguita"; // Fixed barangay
+                senior.CityMunicipality = "Naujan";
+                senior.Province = "Oriental Mindoro";
+                senior.ZipCode = "5204";
                 senior.CreatedAt = DateTime.Now;
                 senior.UpdatedAt = DateTime.Now;
 
@@ -239,6 +250,9 @@ namespace SeniorManagement.Controllers
 
                 senior.UpdatedAt = DateTime.Now;
                 senior.Barangay = "Sampaguita"; // Fixed barangay
+                senior.CityMunicipality = "Naujan";
+                senior.Province = "Oriental Mindoro";
+                senior.ZipCode = "5204";
 
                 // Validate First Name
                 if (string.IsNullOrEmpty(senior.FirstName))
@@ -274,6 +288,12 @@ namespace SeniorManagement.Controllers
                 if (!string.IsNullOrEmpty(senior.PensionType) && senior.PensionType.Length > 50)
                 {
                     ModelState.AddModelError("PensionType", "Pension Type cannot exceed 50 characters.");
+                }
+
+                // Validate Pension Other length (if provided)
+                if (!string.IsNullOrEmpty(senior.PensionOther) && senior.PensionOther.Length > 100)
+                {
+                    ModelState.AddModelError("PensionOther", "Other Pension Type cannot exceed 100 characters.");
                 }
 
                 if (!ModelState.IsValid)
@@ -520,6 +540,21 @@ namespace SeniorManagement.Controllers
             return View(senior);
         }
 
+        // Get Zone Statistics (AJAX endpoint)
+        [HttpGet]
+        public JsonResult GetZoneStatistics()
+        {
+            try
+            {
+                var statistics = GetZoneStatisticsData();
+                return Json(new { success = true, data = statistics });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
         // ============ HELPER METHODS ============
 
         // Validate 12-digit SCCN number
@@ -617,7 +652,7 @@ namespace SeniorManagement.Controllers
             return File(imageBytes, "image/png");
         }
 
-        // Insert new senior into database (UPDATED WITH ALL NEW FIELDS)
+        // Insert new senior into database
         private int InsertSeniorIntoDatabase(Senior senior)
         {
             try
@@ -627,22 +662,26 @@ namespace SeniorManagement.Controllers
                     connection.Open();
 
                     string query = @"INSERT INTO seniors 
-                    (SeniorId, FirstName, LastName, MiddleInitial, Extension, Gender, Age, 
-                     BirthDate, Citizenship, ContactNumber, Email, Zone, Barangay, CivilStatus, PensionType,
-                     HouseNumber, CityMunicipality, Province, ZipCode,
-                     SpouseFirstName, SpouseLastName, SpouseMiddleName, SpouseExtension, SpouseCitizenship,
-                     ChildrenInfo, AuthorizedRepInfo,
+                    (SeniorId, NCSRegistrationNumber, FirstName, LastName, MiddleInitial, Extension, Gender, Age, 
+                     BirthDate, Citizenship, DualCitizenshipCountry, ContactNumber, Email, Zone, Barangay, CivilStatus, 
+                     HasPension, PensionType, PensionOther, HouseNumber, CityMunicipality, Province, ZipCode,
+                     SpouseFirstName, SpouseLastName, SpouseMiddleName, SpouseExtension, SpouseCitizenship, SpouseDualCitizenshipCountry,
+                     ChildFirstName, ChildLastName, ChildMiddleName, ChildExtension, ChildrenInfo,
+                     AuthorizedRepFirstName, AuthorizedRepLastName, AuthorizedRepMiddleName, AuthorizedRepExtension, 
+                     AuthorizedRepRelationship, AuthorizedRepInfo,
                      PrimaryBeneficiaryFirstName, PrimaryBeneficiaryLastName, PrimaryBeneficiaryMiddleName, 
                      PrimaryBeneficiaryExtension, PrimaryBeneficiaryRelationship,
                      ContingentBeneficiaryFirstName, ContingentBeneficiaryLastName, ContingentBeneficiaryMiddleName, 
                      ContingentBeneficiaryExtension, ContingentBeneficiaryRelationship,
                      Status, CreatedAt, UpdatedAt)
                     VALUES 
-                    (@SeniorId, @FirstName, @LastName, @MiddleInitial, @Extension, @Gender, @Age,
-                     @BirthDate, @Citizenship, @ContactNumber, @Email, @Zone, @Barangay, @CivilStatus, @PensionType,
-                     @HouseNumber, @CityMunicipality, @Province, @ZipCode,
-                     @SpouseFirstName, @SpouseLastName, @SpouseMiddleName, @SpouseExtension, @SpouseCitizenship,
-                     @ChildrenInfo, @AuthorizedRepInfo,
+                    (@SeniorId, @NCSRegistrationNumber, @FirstName, @LastName, @MiddleInitial, @Extension, @Gender, @Age,
+                     @BirthDate, @Citizenship, @DualCitizenshipCountry, @ContactNumber, @Email, @Zone, @Barangay, @CivilStatus, 
+                     @HasPension, @PensionType, @PensionOther, @HouseNumber, @CityMunicipality, @Province, @ZipCode,
+                     @SpouseFirstName, @SpouseLastName, @SpouseMiddleName, @SpouseExtension, @SpouseCitizenship, @SpouseDualCitizenshipCountry,
+                     @ChildFirstName, @ChildLastName, @ChildMiddleName, @ChildExtension, @ChildrenInfo,
+                     @AuthorizedRepFirstName, @AuthorizedRepLastName, @AuthorizedRepMiddleName, @AuthorizedRepExtension, 
+                     @AuthorizedRepRelationship, @AuthorizedRepInfo,
                      @PrimaryBeneficiaryFirstName, @PrimaryBeneficiaryLastName, @PrimaryBeneficiaryMiddleName,
                      @PrimaryBeneficiaryExtension, @PrimaryBeneficiaryRelationship,
                      @ContingentBeneficiaryFirstName, @ContingentBeneficiaryLastName, @ContingentBeneficiaryMiddleName,
@@ -654,6 +693,7 @@ namespace SeniorManagement.Controllers
                     {
                         // Personal Information
                         cmd.Parameters.AddWithValue("@SeniorId", senior.SeniorId ?? "");
+                        cmd.Parameters.AddWithValue("@NCSRegistrationNumber", string.IsNullOrEmpty(senior.NCSRegistrationNumber) ? DBNull.Value : senior.NCSRegistrationNumber.Trim());
                         cmd.Parameters.AddWithValue("@FirstName", senior.FirstName ?? "");
                         cmd.Parameters.AddWithValue("@LastName", senior.LastName ?? "");
                         cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrEmpty(senior.MiddleInitial) ? DBNull.Value : senior.MiddleInitial.Trim());
@@ -662,18 +702,21 @@ namespace SeniorManagement.Controllers
                         cmd.Parameters.AddWithValue("@Age", senior.Age);
                         cmd.Parameters.AddWithValue("@BirthDate", senior.BirthDate.HasValue ? (object)senior.BirthDate.Value : DBNull.Value);
                         cmd.Parameters.AddWithValue("@Citizenship", string.IsNullOrEmpty(senior.Citizenship) ? "Filipino" : senior.Citizenship);
+                        cmd.Parameters.AddWithValue("@DualCitizenshipCountry", string.IsNullOrEmpty(senior.DualCitizenshipCountry) ? DBNull.Value : senior.DualCitizenshipCountry.Trim());
                         cmd.Parameters.AddWithValue("@ContactNumber", string.IsNullOrEmpty(senior.ContactNumber) ? DBNull.Value : senior.ContactNumber.Trim());
                         cmd.Parameters.AddWithValue("@Email", string.IsNullOrEmpty(senior.Email) ? DBNull.Value : senior.Email.Trim());
                         cmd.Parameters.AddWithValue("@Zone", senior.Zone);
                         cmd.Parameters.AddWithValue("@Barangay", senior.Barangay ?? "Sampaguita");
                         cmd.Parameters.AddWithValue("@CivilStatus", string.IsNullOrEmpty(senior.CivilStatus) ? DBNull.Value : senior.CivilStatus);
+                        cmd.Parameters.AddWithValue("@HasPension", senior.HasPension);
                         cmd.Parameters.AddWithValue("@PensionType", string.IsNullOrEmpty(senior.PensionType) ? DBNull.Value : senior.PensionType.Trim());
+                        cmd.Parameters.AddWithValue("@PensionOther", string.IsNullOrEmpty(senior.PensionOther) ? DBNull.Value : senior.PensionOther.Trim());
 
                         // Address Information
                         cmd.Parameters.AddWithValue("@HouseNumber", string.IsNullOrEmpty(senior.HouseNumber) ? DBNull.Value : senior.HouseNumber.Trim());
-                        cmd.Parameters.AddWithValue("@CityMunicipality", senior.CityMunicipality ?? "General Trias");
-                        cmd.Parameters.AddWithValue("@Province", senior.Province ?? "Cavite");
-                        cmd.Parameters.AddWithValue("@ZipCode", senior.ZipCode ?? "4107");
+                        cmd.Parameters.AddWithValue("@CityMunicipality", senior.CityMunicipality ?? "Naujan");
+                        cmd.Parameters.AddWithValue("@Province", senior.Province ?? "Oriental Mindoro");
+                        cmd.Parameters.AddWithValue("@ZipCode", senior.ZipCode ?? "5204");
 
                         // Family Information
                         cmd.Parameters.AddWithValue("@SpouseFirstName", string.IsNullOrEmpty(senior.SpouseFirstName) ? DBNull.Value : senior.SpouseFirstName.Trim());
@@ -681,7 +724,19 @@ namespace SeniorManagement.Controllers
                         cmd.Parameters.AddWithValue("@SpouseMiddleName", string.IsNullOrEmpty(senior.SpouseMiddleName) ? DBNull.Value : senior.SpouseMiddleName.Trim());
                         cmd.Parameters.AddWithValue("@SpouseExtension", string.IsNullOrEmpty(senior.SpouseExtension) ? DBNull.Value : senior.SpouseExtension.Trim());
                         cmd.Parameters.AddWithValue("@SpouseCitizenship", string.IsNullOrEmpty(senior.SpouseCitizenship) ? DBNull.Value : senior.SpouseCitizenship.Trim());
+                        cmd.Parameters.AddWithValue("@SpouseDualCitizenshipCountry", string.IsNullOrEmpty(senior.SpouseDualCitizenshipCountry) ? DBNull.Value : senior.SpouseDualCitizenshipCountry.Trim());
+
+                        cmd.Parameters.AddWithValue("@ChildFirstName", string.IsNullOrEmpty(senior.ChildFirstName) ? DBNull.Value : senior.ChildFirstName.Trim());
+                        cmd.Parameters.AddWithValue("@ChildLastName", string.IsNullOrEmpty(senior.ChildLastName) ? DBNull.Value : senior.ChildLastName.Trim());
+                        cmd.Parameters.AddWithValue("@ChildMiddleName", string.IsNullOrEmpty(senior.ChildMiddleName) ? DBNull.Value : senior.ChildMiddleName.Trim());
+                        cmd.Parameters.AddWithValue("@ChildExtension", string.IsNullOrEmpty(senior.ChildExtension) ? DBNull.Value : senior.ChildExtension.Trim());
                         cmd.Parameters.AddWithValue("@ChildrenInfo", string.IsNullOrEmpty(senior.ChildrenInfo) ? DBNull.Value : senior.ChildrenInfo.Trim());
+
+                        cmd.Parameters.AddWithValue("@AuthorizedRepFirstName", string.IsNullOrEmpty(senior.AuthorizedRepFirstName) ? DBNull.Value : senior.AuthorizedRepFirstName.Trim());
+                        cmd.Parameters.AddWithValue("@AuthorizedRepLastName", string.IsNullOrEmpty(senior.AuthorizedRepLastName) ? DBNull.Value : senior.AuthorizedRepLastName.Trim());
+                        cmd.Parameters.AddWithValue("@AuthorizedRepMiddleName", string.IsNullOrEmpty(senior.AuthorizedRepMiddleName) ? DBNull.Value : senior.AuthorizedRepMiddleName.Trim());
+                        cmd.Parameters.AddWithValue("@AuthorizedRepExtension", string.IsNullOrEmpty(senior.AuthorizedRepExtension) ? DBNull.Value : senior.AuthorizedRepExtension.Trim());
+                        cmd.Parameters.AddWithValue("@AuthorizedRepRelationship", string.IsNullOrEmpty(senior.AuthorizedRepRelationship) ? DBNull.Value : senior.AuthorizedRepRelationship.Trim());
                         cmd.Parameters.AddWithValue("@AuthorizedRepInfo", string.IsNullOrEmpty(senior.AuthorizedRepInfo) ? DBNull.Value : senior.AuthorizedRepInfo.Trim());
 
                         // Designated Beneficiary Information
@@ -822,6 +877,51 @@ namespace SeniorManagement.Controllers
             return null;
         }
 
+
+
+        // Get Zone Statistics Data
+        private Dictionary<int, int> GetZoneStatisticsData()
+        {
+            var statistics = new Dictionary<int, int>();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+                    string query = @"SELECT Zone, COUNT(*) as Count 
+                                   FROM seniors 
+                                   WHERE Status = 'Active' 
+                                   GROUP BY Zone 
+                                   ORDER BY Zone";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            statistics[reader.GetInt32("Zone")] = reader.GetInt32("Count");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting zone statistics: {ex.Message}");
+            }
+
+            // Ensure all zones 1-7 are included
+            for (int i = 1; i <= 7; i++)
+            {
+                if (!statistics.ContainsKey(i))
+                {
+                    statistics[i] = 0;
+                }
+            }
+
+            return statistics;
+        }
+
         // Helper method to map reader to Senior object
         private Senior MapSeniorFromReader(MySqlDataReader reader)
         {
@@ -829,6 +929,7 @@ namespace SeniorManagement.Controllers
             {
                 Id = reader.GetInt32("Id"),
                 SeniorId = reader.GetString("SeniorId"),
+                NCSRegistrationNumber = reader.IsDBNull(reader.GetOrdinal("NCSRegistrationNumber")) ? "" : reader.GetString("NCSRegistrationNumber"),
                 FirstName = reader.GetString("FirstName"),
                 LastName = reader.GetString("LastName"),
                 MiddleInitial = reader.IsDBNull(reader.GetOrdinal("MiddleInitial")) ? "" : reader.GetString("MiddleInitial"),
@@ -837,22 +938,35 @@ namespace SeniorManagement.Controllers
                 Age = reader.GetInt32("Age"),
                 BirthDate = reader.IsDBNull(reader.GetOrdinal("BirthDate")) ? (DateTime?)null : reader.GetDateTime("BirthDate"),
                 Citizenship = reader.IsDBNull(reader.GetOrdinal("Citizenship")) ? "Filipino" : reader.GetString("Citizenship"),
+                DualCitizenshipCountry = reader.IsDBNull(reader.GetOrdinal("DualCitizenshipCountry")) ? "" : reader.GetString("DualCitizenshipCountry"),
                 ContactNumber = reader.IsDBNull(reader.GetOrdinal("ContactNumber")) ? "" : reader.GetString("ContactNumber"),
                 Email = reader.IsDBNull(reader.GetOrdinal("Email")) ? "" : reader.GetString("Email"),
                 Zone = reader.GetInt32("Zone"),
                 Barangay = reader.GetString("Barangay"),
                 CivilStatus = reader.IsDBNull(reader.GetOrdinal("CivilStatus")) ? "" : reader.GetString("CivilStatus"),
+                HasPension = reader.IsDBNull(reader.GetOrdinal("HasPension")) ? false : reader.GetBoolean("HasPension"),
                 PensionType = reader.IsDBNull(reader.GetOrdinal("PensionType")) ? "" : reader.GetString("PensionType"),
+                PensionOther = reader.IsDBNull(reader.GetOrdinal("PensionOther")) ? "" : reader.GetString("PensionOther"),
                 HouseNumber = reader.IsDBNull(reader.GetOrdinal("HouseNumber")) ? "" : reader.GetString("HouseNumber"),
-                CityMunicipality = reader.IsDBNull(reader.GetOrdinal("CityMunicipality")) ? "General Trias" : reader.GetString("CityMunicipality"),
-                Province = reader.IsDBNull(reader.GetOrdinal("Province")) ? "Cavite" : reader.GetString("Province"),
-                ZipCode = reader.IsDBNull(reader.GetOrdinal("ZipCode")) ? "4107" : reader.GetString("ZipCode"),
+                CityMunicipality = reader.IsDBNull(reader.GetOrdinal("CityMunicipality")) ? "Naujan" : reader.GetString("CityMunicipality"),
+                Province = reader.IsDBNull(reader.GetOrdinal("Province")) ? "Oriental Mindoro" : reader.GetString("Province"),
+                ZipCode = reader.IsDBNull(reader.GetOrdinal("ZipCode")) ? "5204" : reader.GetString("ZipCode"),
                 SpouseFirstName = reader.IsDBNull(reader.GetOrdinal("SpouseFirstName")) ? "" : reader.GetString("SpouseFirstName"),
                 SpouseLastName = reader.IsDBNull(reader.GetOrdinal("SpouseLastName")) ? "" : reader.GetString("SpouseLastName"),
                 SpouseMiddleName = reader.IsDBNull(reader.GetOrdinal("SpouseMiddleName")) ? "" : reader.GetString("SpouseMiddleName"),
                 SpouseExtension = reader.IsDBNull(reader.GetOrdinal("SpouseExtension")) ? "" : reader.GetString("SpouseExtension"),
                 SpouseCitizenship = reader.IsDBNull(reader.GetOrdinal("SpouseCitizenship")) ? "" : reader.GetString("SpouseCitizenship"),
+                SpouseDualCitizenshipCountry = reader.IsDBNull(reader.GetOrdinal("SpouseDualCitizenshipCountry")) ? "" : reader.GetString("SpouseDualCitizenshipCountry"),
+                ChildFirstName = reader.IsDBNull(reader.GetOrdinal("ChildFirstName")) ? "" : reader.GetString("ChildFirstName"),
+                ChildLastName = reader.IsDBNull(reader.GetOrdinal("ChildLastName")) ? "" : reader.GetString("ChildLastName"),
+                ChildMiddleName = reader.IsDBNull(reader.GetOrdinal("ChildMiddleName")) ? "" : reader.GetString("ChildMiddleName"),
+                ChildExtension = reader.IsDBNull(reader.GetOrdinal("ChildExtension")) ? "" : reader.GetString("ChildExtension"),
                 ChildrenInfo = reader.IsDBNull(reader.GetOrdinal("ChildrenInfo")) ? "" : reader.GetString("ChildrenInfo"),
+                AuthorizedRepFirstName = reader.IsDBNull(reader.GetOrdinal("AuthorizedRepFirstName")) ? "" : reader.GetString("AuthorizedRepFirstName"),
+                AuthorizedRepLastName = reader.IsDBNull(reader.GetOrdinal("AuthorizedRepLastName")) ? "" : reader.GetString("AuthorizedRepLastName"),
+                AuthorizedRepMiddleName = reader.IsDBNull(reader.GetOrdinal("AuthorizedRepMiddleName")) ? "" : reader.GetString("AuthorizedRepMiddleName"),
+                AuthorizedRepExtension = reader.IsDBNull(reader.GetOrdinal("AuthorizedRepExtension")) ? "" : reader.GetString("AuthorizedRepExtension"),
+                AuthorizedRepRelationship = reader.IsDBNull(reader.GetOrdinal("AuthorizedRepRelationship")) ? "" : reader.GetString("AuthorizedRepRelationship"),
                 AuthorizedRepInfo = reader.IsDBNull(reader.GetOrdinal("AuthorizedRepInfo")) ? "" : reader.GetString("AuthorizedRepInfo"),
                 PrimaryBeneficiaryFirstName = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryFirstName")) ? "" : reader.GetString("PrimaryBeneficiaryFirstName"),
                 PrimaryBeneficiaryLastName = reader.IsDBNull(reader.GetOrdinal("PrimaryBeneficiaryLastName")) ? "" : reader.GetString("PrimaryBeneficiaryLastName"),
@@ -881,6 +995,7 @@ namespace SeniorManagement.Controllers
 
                     string query = @"UPDATE seniors 
                            SET SeniorId = @SeniorId,
+                               NCSRegistrationNumber = @NCSRegistrationNumber,
                                FirstName = @FirstName,
                                LastName = @LastName,
                                MiddleInitial = @MiddleInitial,
@@ -889,11 +1004,14 @@ namespace SeniorManagement.Controllers
                                Age = @Age,
                                BirthDate = @BirthDate,
                                Citizenship = @Citizenship,
+                               DualCitizenshipCountry = @DualCitizenshipCountry,
                                ContactNumber = @ContactNumber,
                                Email = @Email,
                                Zone = @Zone,
                                CivilStatus = @CivilStatus,
+                               HasPension = @HasPension,
                                PensionType = @PensionType,
+                               PensionOther = @PensionOther,
                                HouseNumber = @HouseNumber,
                                CityMunicipality = @CityMunicipality,
                                Province = @Province,
@@ -903,7 +1021,17 @@ namespace SeniorManagement.Controllers
                                SpouseMiddleName = @SpouseMiddleName,
                                SpouseExtension = @SpouseExtension,
                                SpouseCitizenship = @SpouseCitizenship,
+                               SpouseDualCitizenshipCountry = @SpouseDualCitizenshipCountry,
+                               ChildFirstName = @ChildFirstName,
+                               ChildLastName = @ChildLastName,
+                               ChildMiddleName = @ChildMiddleName,
+                               ChildExtension = @ChildExtension,
                                ChildrenInfo = @ChildrenInfo,
+                               AuthorizedRepFirstName = @AuthorizedRepFirstName,
+                               AuthorizedRepLastName = @AuthorizedRepLastName,
+                               AuthorizedRepMiddleName = @AuthorizedRepMiddleName,
+                               AuthorizedRepExtension = @AuthorizedRepExtension,
+                               AuthorizedRepRelationship = @AuthorizedRepRelationship,
                                AuthorizedRepInfo = @AuthorizedRepInfo,
                                PrimaryBeneficiaryFirstName = @PrimaryBeneficiaryFirstName,
                                PrimaryBeneficiaryLastName = @PrimaryBeneficiaryLastName,
@@ -923,6 +1051,7 @@ namespace SeniorManagement.Controllers
                         // Personal Information
                         cmd.Parameters.AddWithValue("@Id", senior.Id);
                         cmd.Parameters.AddWithValue("@SeniorId", senior.SeniorId ?? "");
+                        cmd.Parameters.AddWithValue("@NCSRegistrationNumber", string.IsNullOrEmpty(senior.NCSRegistrationNumber) ? DBNull.Value : senior.NCSRegistrationNumber);
                         cmd.Parameters.AddWithValue("@FirstName", senior.FirstName ?? "");
                         cmd.Parameters.AddWithValue("@LastName", senior.LastName ?? "");
                         cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrEmpty(senior.MiddleInitial) ? DBNull.Value : senior.MiddleInitial);
@@ -931,17 +1060,20 @@ namespace SeniorManagement.Controllers
                         cmd.Parameters.AddWithValue("@Age", senior.Age);
                         cmd.Parameters.AddWithValue("@BirthDate", senior.BirthDate.HasValue ? (object)senior.BirthDate.Value : DBNull.Value);
                         cmd.Parameters.AddWithValue("@Citizenship", string.IsNullOrEmpty(senior.Citizenship) ? "Filipino" : senior.Citizenship);
+                        cmd.Parameters.AddWithValue("@DualCitizenshipCountry", string.IsNullOrEmpty(senior.DualCitizenshipCountry) ? DBNull.Value : senior.DualCitizenshipCountry);
                         cmd.Parameters.AddWithValue("@ContactNumber", string.IsNullOrEmpty(senior.ContactNumber) ? DBNull.Value : senior.ContactNumber);
                         cmd.Parameters.AddWithValue("@Email", string.IsNullOrEmpty(senior.Email) ? DBNull.Value : senior.Email);
                         cmd.Parameters.AddWithValue("@Zone", senior.Zone);
                         cmd.Parameters.AddWithValue("@CivilStatus", string.IsNullOrEmpty(senior.CivilStatus) ? DBNull.Value : senior.CivilStatus);
+                        cmd.Parameters.AddWithValue("@HasPension", senior.HasPension);
                         cmd.Parameters.AddWithValue("@PensionType", string.IsNullOrEmpty(senior.PensionType) ? DBNull.Value : senior.PensionType);
+                        cmd.Parameters.AddWithValue("@PensionOther", string.IsNullOrEmpty(senior.PensionOther) ? DBNull.Value : senior.PensionOther);
 
                         // Address Information
                         cmd.Parameters.AddWithValue("@HouseNumber", string.IsNullOrEmpty(senior.HouseNumber) ? DBNull.Value : senior.HouseNumber);
-                        cmd.Parameters.AddWithValue("@CityMunicipality", senior.CityMunicipality ?? "General Trias");
-                        cmd.Parameters.AddWithValue("@Province", senior.Province ?? "Cavite");
-                        cmd.Parameters.AddWithValue("@ZipCode", senior.ZipCode ?? "4107");
+                        cmd.Parameters.AddWithValue("@CityMunicipality", senior.CityMunicipality ?? "Naujan");
+                        cmd.Parameters.AddWithValue("@Province", senior.Province ?? "Oriental Mindoro");
+                        cmd.Parameters.AddWithValue("@ZipCode", senior.ZipCode ?? "5204");
 
                         // Family Information
                         cmd.Parameters.AddWithValue("@SpouseFirstName", string.IsNullOrEmpty(senior.SpouseFirstName) ? DBNull.Value : senior.SpouseFirstName);
@@ -949,7 +1081,18 @@ namespace SeniorManagement.Controllers
                         cmd.Parameters.AddWithValue("@SpouseMiddleName", string.IsNullOrEmpty(senior.SpouseMiddleName) ? DBNull.Value : senior.SpouseMiddleName);
                         cmd.Parameters.AddWithValue("@SpouseExtension", string.IsNullOrEmpty(senior.SpouseExtension) ? DBNull.Value : senior.SpouseExtension);
                         cmd.Parameters.AddWithValue("@SpouseCitizenship", string.IsNullOrEmpty(senior.SpouseCitizenship) ? DBNull.Value : senior.SpouseCitizenship);
+                        cmd.Parameters.AddWithValue("@SpouseDualCitizenshipCountry", string.IsNullOrEmpty(senior.SpouseDualCitizenshipCountry) ? DBNull.Value : senior.SpouseDualCitizenshipCountry);
+                        cmd.Parameters.AddWithValue("@ChildFirstName", string.IsNullOrEmpty(senior.ChildFirstName) ? DBNull.Value : senior.ChildFirstName);
+                        cmd.Parameters.AddWithValue("@ChildLastName", string.IsNullOrEmpty(senior.ChildLastName) ? DBNull.Value : senior.ChildLastName);
+                        cmd.Parameters.AddWithValue("@ChildMiddleName", string.IsNullOrEmpty(senior.ChildMiddleName) ? DBNull.Value : senior.ChildMiddleName);
+                        cmd.Parameters.AddWithValue("@ChildExtension", string.IsNullOrEmpty(senior.ChildExtension) ? DBNull.Value : senior.ChildExtension);
                         cmd.Parameters.AddWithValue("@ChildrenInfo", string.IsNullOrEmpty(senior.ChildrenInfo) ? DBNull.Value : senior.ChildrenInfo);
+
+                        cmd.Parameters.AddWithValue("@AuthorizedRepFirstName", string.IsNullOrEmpty(senior.AuthorizedRepFirstName) ? DBNull.Value : senior.AuthorizedRepFirstName);
+                        cmd.Parameters.AddWithValue("@AuthorizedRepLastName", string.IsNullOrEmpty(senior.AuthorizedRepLastName) ? DBNull.Value : senior.AuthorizedRepLastName);
+                        cmd.Parameters.AddWithValue("@AuthorizedRepMiddleName", string.IsNullOrEmpty(senior.AuthorizedRepMiddleName) ? DBNull.Value : senior.AuthorizedRepMiddleName);
+                        cmd.Parameters.AddWithValue("@AuthorizedRepExtension", string.IsNullOrEmpty(senior.AuthorizedRepExtension) ? DBNull.Value : senior.AuthorizedRepExtension);
+                        cmd.Parameters.AddWithValue("@AuthorizedRepRelationship", string.IsNullOrEmpty(senior.AuthorizedRepRelationship) ? DBNull.Value : senior.AuthorizedRepRelationship);
                         cmd.Parameters.AddWithValue("@AuthorizedRepInfo", string.IsNullOrEmpty(senior.AuthorizedRepInfo) ? DBNull.Value : senior.AuthorizedRepInfo);
 
                         // Designated Beneficiary Information
@@ -1138,8 +1281,8 @@ namespace SeniorManagement.Controllers
                     connection.Open();
                     string query = @"SELECT 
                                     COUNT(*) as TotalSeniors,
-                                    SUM(CASE WHEN PensionType IS NOT NULL AND PensionType != '' THEN 1 ELSE 0 END) as WithPension,
-                                    SUM(CASE WHEN PensionType IS NULL OR PensionType = '' THEN 1 ELSE 0 END) as WithoutPension,
+                                    SUM(CASE WHEN HasPension = 1 THEN 1 ELSE 0 END) as WithPension,
+                                    SUM(CASE WHEN HasPension = 0 OR HasPension IS NULL THEN 1 ELSE 0 END) as WithoutPension,
                                     COALESCE(PensionType, 'None') as PensionCategory,
                                     COUNT(*) as Count
                                     FROM seniors 

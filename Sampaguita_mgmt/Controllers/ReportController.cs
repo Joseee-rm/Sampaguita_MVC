@@ -33,7 +33,7 @@ namespace SeniorManagement.Controllers
             // Senior filters
             string status = null, string zone = null, string gender = null,
             string civilStatus = null, string ageRange = null,
-            string monthYear = null, string seniorSearch = null,
+            string birthDate = null, string seniorSearch = null,
             string pensionType = null,
 
             // Event filters
@@ -44,25 +44,23 @@ namespace SeniorManagement.Controllers
             try
             {
                 // Get filtered seniors
-                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, monthYear, seniorSearch, pensionType);
+                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, birthDate, seniorSearch, pensionType);
 
                 // Get filtered events
                 var events = await GetFilteredEvents(eventStatus, eventType, eventDateFilter, eventSearch, fromDate, toDate);
 
-                // Get distinct months/years for senior filter dropdown
+                // Get distinct birth dates for filter dropdown
                 var allSeniors = GetAllSeniors();
-                var availableMonthsYears = allSeniors
-                    .Select(s => new { Year = s.CreatedAt.Year, Month = s.CreatedAt.Month })
+                var availableBirthDates = allSeniors
+                    .Where(s => s.BirthDate.HasValue)
+                    .Select(s => s.BirthDate.Value.ToString("yyyy-MM-dd"))
                     .Distinct()
-                    .OrderByDescending(x => x.Year)
-                    .ThenByDescending(x => x.Month)
-                    .Select(x => $"{x.Year}-{x.Month:D2}")
+                    .OrderByDescending(x => x)
                     .ToList();
 
-                // Get distinct pension types for filter
+                // Get distinct pension types for filter including "NoPension"
                 var pensionTypes = allSeniors
-                    .Where(s => !string.IsNullOrEmpty(s.PensionType))
-                    .Select(s => s.PensionType)
+                    .Select(s => string.IsNullOrEmpty(s.PensionType) ? "NoPension" : s.PensionType)
                     .Distinct()
                     .OrderBy(p => p)
                     .ToList();
@@ -80,10 +78,10 @@ namespace SeniorManagement.Controllers
                     SelectedGender = gender,
                     SelectedCivilStatus = civilStatus,
                     SelectedAgeRange = ageRange,
-                    SelectedMonthYear = monthYear,
+                    SelectedBirthDate = birthDate,
                     SelectedPensionType = pensionType,
                     SeniorSearchTerm = seniorSearch,
-                    AvailableMonthsYears = availableMonthsYears,
+                    AvailableBirthDates = availableBirthDates,
                     AvailablePensionTypes = pensionTypes,
 
                     // Event Data
@@ -111,12 +109,12 @@ namespace SeniorManagement.Controllers
         // GET: /Report/ExportSeniorTable
         public IActionResult ExportSeniorTable(string status = null, string zone = null, string gender = null,
                                               string civilStatus = null, string ageRange = null,
-                                              string monthYear = null, string seniorSearch = null,
+                                              string birthDate = null, string seniorSearch = null,
                                               string pensionType = null)
         {
             try
             {
-                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, monthYear, seniorSearch, pensionType);
+                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, birthDate, seniorSearch, pensionType);
 
                 if (!seniors.Any())
                 {
@@ -144,12 +142,12 @@ namespace SeniorManagement.Controllers
         // GET: /Report/ExportSeniorDetailed
         public IActionResult ExportSeniorDetailed(string status = null, string zone = null, string gender = null,
                                                  string civilStatus = null, string ageRange = null,
-                                                 string monthYear = null, string seniorSearch = null,
+                                                 string birthDate = null, string seniorSearch = null,
                                                  string pensionType = null)
         {
             try
             {
-                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, monthYear, seniorSearch, pensionType);
+                var seniors = GetFilteredSeniors(status, zone, gender, civilStatus, ageRange, birthDate, seniorSearch, pensionType);
 
                 if (!seniors.Any())
                 {
@@ -209,7 +207,7 @@ namespace SeniorManagement.Controllers
         #region Private Helper Methods
 
         private List<Senior> GetFilteredSeniors(string status, string zone, string gender, string civilStatus,
-                                                string ageRange, string monthYear, string searchTerm, string pensionType)
+                                                string ageRange, string birthDate, string searchTerm, string pensionType)
         {
             var seniors = GetAllSeniors();
 
@@ -236,45 +234,40 @@ namespace SeniorManagement.Controllers
 
             if (!string.IsNullOrEmpty(ageRange))
             {
-                switch (ageRange)
+                // Parse custom age range (e.g., "80-83")
+                var ageParts = ageRange.Split('-');
+                if (ageParts.Length == 2 && int.TryParse(ageParts[0], out int minAge) && int.TryParse(ageParts[1], out int maxAge))
                 {
-                    case "60-69":
-                        seniors = seniors.Where(s => s.Age >= 60 && s.Age <= 69).ToList();
-                        break;
-                    case "70-79":
-                        seniors = seniors.Where(s => s.Age >= 70 && s.Age <= 79).ToList();
-                        break;
-                    case "80-89":
-                        seniors = seniors.Where(s => s.Age >= 80 && s.Age <= 89).ToList();
-                        break;
-                    case "90+":
-                        seniors = seniors.Where(s => s.Age >= 90).ToList();
-                        break;
+                    seniors = seniors.Where(s => s.Age >= minAge && s.Age <= maxAge).ToList();
                 }
-            }
-
-            // Filter by pension type
-            if (!string.IsNullOrEmpty(pensionType))
-            {
-                seniors = seniors.Where(s => s.PensionType == pensionType).ToList();
-            }
-
-            // Filter by registration month/year
-            if (!string.IsNullOrEmpty(monthYear))
-            {
-                try
+                else if (ageRange.Contains("+"))
                 {
-                    var dateParts = monthYear.Split('-');
-                    if (dateParts.Length == 2 &&
-                        int.TryParse(dateParts[0], out int year) &&
-                        int.TryParse(dateParts[1], out int month))
+                    // Handle "90+" case
+                    if (int.TryParse(ageRange.Replace("+", ""), out int minAgeOnly))
                     {
-                        seniors = seniors.Where(s =>
-                            s.CreatedAt.Year == year &&
-                            s.CreatedAt.Month == month).ToList();
+                        seniors = seniors.Where(s => s.Age >= minAgeOnly).ToList();
                     }
                 }
-                catch { /* Ignore parsing errors */ }
+            }
+
+            // Filter by pension type (including "NoPension")
+            if (!string.IsNullOrEmpty(pensionType))
+            {
+                if (pensionType == "NoPension")
+                {
+                    seniors = seniors.Where(s => string.IsNullOrEmpty(s.PensionType)).ToList();
+                }
+                else
+                {
+                    seniors = seniors.Where(s => s.PensionType == pensionType).ToList();
+                }
+            }
+
+            // Filter by birth date
+            if (!string.IsNullOrEmpty(birthDate) && DateTime.TryParse(birthDate, out DateTime birthDateValue))
+            {
+                seniors = seniors.Where(s => s.BirthDate.HasValue &&
+                    s.BirthDate.Value.Date == birthDateValue.Date).ToList();
             }
 
             // Search by name, SCCN, or other fields
@@ -552,13 +545,13 @@ namespace SeniorManagement.Controllers
         {
             var sb = new StringBuilder();
 
-            // Headers - Basic information
-            sb.AppendLine("SCCN Number,Formatted SCCN,Full Name,Gender,Age,Birth Date,Zone,Barangay,Civil Status,Contact Number,Email,Citizenship,Pension Type,House Number,City/Municipality,Province,Zip Code,Status,Registered On,Last Updated");
+            // Headers - Basic information (with BirthDate instead of Registered On)
+            sb.AppendLine("SCCN Number,Formatted SCCN,Full Name,Gender,Age,Birth Date,Zone,Barangay,Civil Status,Contact Number,Email,Citizenship,Pension Type,House Number,City/Municipality,Province,Zip Code,Status,Last Updated");
 
             // Data
             foreach (var senior in seniors)
             {
-                sb.AppendLine($"\"{senior.SeniorId}\",\"{senior.FormattedSCCN}\",\"{senior.CompleteName}\",\"{senior.Gender}\",\"{senior.Age}\",\"{senior.BirthDate?.ToString("yyyy-MM-dd")}\",\"Zone {senior.Zone}\",\"{senior.Barangay}\",\"{senior.CivilStatus}\",\"{senior.ContactNumber}\",\"{senior.Email}\",\"{senior.Citizenship}\",\"{senior.PensionType}\",\"{senior.HouseNumber}\",\"{senior.CityMunicipality}\",\"{senior.Province}\",\"{senior.ZipCode}\",\"{senior.Status}\",\"{senior.CreatedAt:yyyy-MM-dd}\",\"{senior.UpdatedAt:yyyy-MM-dd}\"");
+                sb.AppendLine($"\"{senior.SeniorId}\",\"{senior.FormattedSCCN}\",\"{senior.CompleteName}\",\"{senior.Gender}\",\"{senior.Age}\",\"{senior.BirthDate?.ToString("yyyy-MM-dd")}\",\"Zone {senior.Zone}\",\"{senior.Barangay}\",\"{senior.CivilStatus}\",\"{senior.ContactNumber}\",\"{senior.Email}\",\"{senior.Citizenship}\",\"{senior.PensionType}\",\"{senior.HouseNumber}\",\"{senior.CityMunicipality}\",\"{senior.Province}\",\"{senior.ZipCode}\",\"{senior.Status}\",\"{senior.UpdatedAt:yyyy-MM-dd}\"");
             }
 
             return sb.ToString();

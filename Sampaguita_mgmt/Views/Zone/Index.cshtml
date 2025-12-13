@@ -1,0 +1,115 @@
+﻿@model List<SeniorManagement.Models.Zone>
+
+@{
+    ViewData["Title"] = "Manage Zones";
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">Manage Zones</h3>
+        <a href="@Url.Action("Create", "Zone")" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add New Zone
+        </a>
+    </div>
+    <div class="card-body">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @Html.Raw(TempData["SuccessMessage"])
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        @if (Model == null || !Model.Any())
+        {
+            <div class="alert alert-info">
+                No zones found. Click "Add New Zone" to create one.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Zone #</th>
+                            <th>Zone Name</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var zone in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold">@zone.ZoneNumber</td>
+                                <td>@zone.ZoneName</td>
+                                <td>@zone.Description</td>
+                                <td>
+                                    @if (zone.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactive</span>
+                                    }
+                                </td>
+                                <td>@zone.CreatedAt.ToString("MM/dd/yyyy")</td>
+                                <td>@zone.UpdatedAt.ToString("MM/dd/yyyy")</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="@Url.Action("Edit", "Zone", new { id = zone.Id })"
+                                           class="btn btn-outline-primary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+
+                                        <form asp-action="ToggleStatus" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@zone.Id" />
+                                            <button type="submit" class="btn @(zone.IsActive ? "btn-outline-warning" : "btn-outline-success")"
+                                                    title="@(zone.IsActive ? "Deactivate" : "Activate")">
+                                                <i class="fas @(zone.IsActive ? "fa-toggle-off" : "fa-toggle-on")"></i>
+                                            </button>
+                                        </form>
+
+                                        <form asp-action="Delete" method="post" class="d-inline"
+                                              onsubmit="return confirm('Are you sure you want to delete zone @zone.ZoneName? This action cannot be undone.');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@zone.Id" />
+                                            <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Auto-hide alerts after 5 seconds
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 5000);
+        });
+    </script>
+}

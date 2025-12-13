@@ -1,0 +1,83 @@
+﻿@model SeniorManagement.Models.Zone
+
+@{
+    ViewData["Title"] = "Add New Zone";
+}
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="mb-0">Add New Zone</h3>
+    </div>
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @TempData["ErrorMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ZoneNumber" class="form-label">Zone Number *</label>
+                    <input asp-for="ZoneNumber" type="number" min="1" class="form-control" required />
+                    <small class="text-muted">Enter a unique zone number (e.g., 8, 9, 10)</small>
+                    <span asp-validation-for="ZoneNumber" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ZoneName" class="form-label">Zone Name *</label>
+                    <input asp-for="ZoneName" class="form-control" required />
+                    <small class="text-muted">e.g., "Zone 8", "Downtown Area"</small>
+                    <span asp-validation-for="ZoneName" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">Description</label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <small class="text-muted">Optional description of the zone area</small>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <a href="@Url.Action("Index", "Zone")" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to List
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Create Zone
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Auto-hide alerts after 5 seconds
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 5000);
+
+            // Form validation
+            $('form').on('submit', function() {
+                var isValid = true;
+
+                if (!$('#ZoneNumber').val() || $('#ZoneNumber').val() < 1) {
+                    alert('Please enter a valid zone number.');
+                    isValid = false;
+                }
+
+                if (!$('#ZoneName').val()) {
+                    alert('Please enter a zone name.');
+                    isValid = false;
+                }
+
+                return isValid;
+            });
+        });
+    </script>
+}

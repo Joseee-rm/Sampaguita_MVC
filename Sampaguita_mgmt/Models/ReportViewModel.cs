@@ -17,10 +17,10 @@ namespace SeniorManagement.Models
         public string SelectedGender { get; set; }
         public string SelectedCivilStatus { get; set; }
         public string SelectedAgeRange { get; set; }
-        public string SelectedMonthYear { get; set; }
+        public string SelectedBirthDate { get; set; } // Changed from SelectedMonthYear
         public string SelectedPensionType { get; set; }
         public string SeniorSearchTerm { get; set; }
-        public List<string> AvailableMonthsYears { get; set; }
+        public List<string> AvailableBirthDates { get; set; } // Changed from AvailableMonthsYears
         public List<string> AvailablePensionTypes { get; set; }
 
         // Event Report Data
@@ -40,7 +40,7 @@ namespace SeniorManagement.Models
         {
             SeniorList = new List<Senior>();
             EventList = new List<EventReportItem>();
-            AvailableMonthsYears = new List<string>();
+            AvailableBirthDates = new List<string>();
             AvailablePensionTypes = new List<string>();
         }
     }

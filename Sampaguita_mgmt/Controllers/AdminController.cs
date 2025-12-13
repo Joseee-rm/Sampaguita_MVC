@@ -1,4 +1,4 @@
-﻿// Complete updated AdminController with RecentRegistrations fix
+﻿
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using SeniorManagement.Models;

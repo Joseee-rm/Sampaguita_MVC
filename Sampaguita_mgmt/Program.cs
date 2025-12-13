@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.FileProviders;
+using Sampaguita_mgmt.Helpers;
 using SeniorManagement.Helpers;
 using SeniorManagement.Hubs;
 using SeniorManagement.Repositories;
@@ -65,6 +66,9 @@ builder.Services.AddScoped<AuthHelper>();
 
 // Register Activity Helper  
 builder.Services.AddScoped<ActivityHelper>();
+
+// Add to your services
+builder.Services.AddScoped<ZoneHelper>();
 
 // Register Monthly Contributions Repository
 builder.Services.AddScoped<IMonthlyContributionRepository, MonthlyContributionRepository>();
