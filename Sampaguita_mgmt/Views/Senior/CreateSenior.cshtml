@@ -240,7 +240,7 @@
                                             <span class="input-group-text">Zone</span>
                                             <select asp-for="Zone" class="form-select" required onchange="updateAddressPreview()" id="zoneSelect">
                                                 <option value="">Select Zone</option>
-                                                @for (int i = 1; i <= 99; i++)
+                                                @for (int i = 1; i <= 8; i++)
                                                 {
                                                     <option value="@i">Zone @i</option>
                                                 }

@@ -155,89 +155,121 @@ namespace SeniorManagement.Controllers
         }
 
         // POST: Zone/Edit
+        // In your existing ZoneController, add these two methods:
+
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Zone model)
+        public async Task<IActionResult> CreateAjax([FromBody] Zone model)
         {
-            if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
-            {
-                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
-                return RedirectToAction("Index", "Home");
-            }
-
-            if (string.IsNullOrWhiteSpace(model.ZoneName))
-            {
-                TempData["ErrorMessage"] = "Zone name is required.";
-                return View(model);
-            }
-
             try
             {
+                if (string.IsNullOrWhiteSpace(model.ZoneName))
+                {
+                    return Json(new { success = false, message = "Zone name is required." });
+                }
+
+                if (model.ZoneNumber <= 0)
+                {
+                    return Json(new { success = false, message = "Zone number must be greater than 0." });
+                }
+
                 using (var connection = _dbHelper.GetConnection())
                 {
                     connection.Open();
 
-                    // Check if zone number already exists (excluding current zone)
-                    string checkQuery = "SELECT COUNT(*) FROM zones WHERE ZoneNumber = @ZoneNumber AND Id != @Id";
+                    // Check if zone number already exists
+                    string checkQuery = "SELECT COUNT(*) FROM zones WHERE ZoneNumber = @ZoneNumber";
                     using (var checkCmd = new MySqlCommand(checkQuery, connection))
                     {
                         checkCmd.Parameters.AddWithValue("@ZoneNumber", model.ZoneNumber);
-                        checkCmd.Parameters.AddWithValue("@Id", model.Id);
                         int existingCount = Convert.ToInt32(checkCmd.ExecuteScalar());
 
                         if (existingCount > 0)
                         {
-                            TempData["ErrorMessage"] = $"Zone number {model.ZoneNumber} already exists.";
-                            return View(model);
+                            return Json(new
+                            {
+                                success = false,
+                                message = $"Zone number {model.ZoneNumber} already exists."
+                            });
                         }
                     }
 
-                    // Update zone
-                    string updateQuery = @"
-                        UPDATE zones 
-                        SET ZoneNumber = @ZoneNumber, 
-                            ZoneName = @ZoneName, 
-                            Description = @Description,
-                            UpdatedAt = @UpdatedAt,
-                            IsActive = @IsActive
-                        WHERE Id = @Id";
+                    // Insert new zone
+                    string insertQuery = @"
+                INSERT INTO zones (ZoneNumber, ZoneName, Description, CreatedAt, UpdatedAt, IsActive) 
+                VALUES (@ZoneNumber, @ZoneName, @Description, @CreatedAt, @UpdatedAt, @IsActive)";
 
-                    using (var cmd = new MySqlCommand(updateQuery, connection))
+                    using (var cmd = new MySqlCommand(insertQuery, connection))
                     {
                         cmd.Parameters.AddWithValue("@ZoneNumber", model.ZoneNumber);
                         cmd.Parameters.AddWithValue("@ZoneName", model.ZoneName);
                         cmd.Parameters.AddWithValue("@Description", model.Description ?? string.Empty);
+                        cmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
                         cmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
-                        cmd.Parameters.AddWithValue("@IsActive", model.IsActive);
-                        cmd.Parameters.AddWithValue("@Id", model.Id);
+                        cmd.Parameters.AddWithValue("@IsActive", true);
 
                         int rowsAffected = cmd.ExecuteNonQuery();
 
                         if (rowsAffected > 0)
                         {
                             await _activityHelper.LogActivityAsync(
-                                "Edit Zone",
-                                $"Updated zone: {model.ZoneName} (Zone {model.ZoneNumber})"
+                                "Create Zone",
+                                $"Created new zone: {model.ZoneName} (Zone {model.ZoneNumber})"
                             );
 
-                            TempData["SuccessMessage"] = "Zone updated successfully!";
-                            return RedirectToAction("Index");
+                            return Json(new
+                            {
+                                success = true,
+                                message = $"Zone {model.ZoneName} created successfully!",
+                                zoneNumber = model.ZoneNumber,
+                                zoneName = model.ZoneName
+                            });
                         }
                         else
                         {
-                            TempData["ErrorMessage"] = "Zone not found.";
+                            return Json(new { success = false, message = "Error creating zone." });
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                await _activityHelper.LogActivityAsync("Error", $"Edit Zone: {ex.Message}");
-                Debug.WriteLine($"Error updating zone: {ex.Message}");
-                TempData["ErrorMessage"] = $"Error updating zone: {ex.Message}";
+                await _activityHelper.LogActivityAsync("Error", $"Create Zone: {ex.Message}");
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
+        }
 
-            return View(model);
+        [HttpGet]
+        public JsonResult GetActiveZonesForDropdown()
+        {
+            try
+            {
+                var zones = new List<object>();
+
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+                    string query = "SELECT ZoneNumber, ZoneName FROM zones WHERE IsActive = 1 ORDER BY ZoneNumber";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            zones.Add(new
+                            {
+                                value = reader.GetInt32("ZoneNumber").ToString(),
+                                text = $"Zone {reader.GetInt32("ZoneNumber")} - {reader.GetString("ZoneName")}"
+                            });
+                        }
+                    }
+                }
+
+                return Json(new { success = true, zones = zones });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message, zones = new List<object>() });
+            }
         }
 
         // POST: Zone/ToggleStatus
