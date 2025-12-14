@@ -1,7 +1,7 @@
 ﻿@model SeniorManagement.Models.Senior
 
 @{
-    ViewData["Title"] = "Create New Senior";
+    ViewData["Title"] = "";
 }
 
 <div class="container-fluid">
@@ -222,7 +222,7 @@
                             </div>
                         </div>
 
-                        <!-- Permanent Address Section -->
+                        <!-- Permanent Address Section - FIXED ZONE LABEL -->
                         <div class="section-card mb-4">
                             <div class="section-header">
                                 <h5><i class="fas fa-home me-2"></i>Permanent Address</h5>
@@ -231,24 +231,27 @@
                                 <div class="row">
                                     <div class="col-md-4 mb-3">
                                         <label asp-for="HouseNumber" class="form-label">House Number</label>
-                                        <input asp-for="HouseNumber" class="form-control" placeholder="House/Lot/Blk No." />
+                                        <input asp-for="HouseNumber" class="form-control" placeholder="House/Lot/Blk No." oninput="updateAddressPreview()" />
                                         <span asp-validation-for="HouseNumber" class="text-danger small"></span>
                                     </div>
                                     <div class="col-md-4 mb-3">
-                                        <label asp-for="Zone" class="form-label required">Zone</label>
+                                        <label asp-for="Zone" class="form-label required">Zone *</label>
                                         <div class="input-group">
-                                            <span class="input-group-text">Zone</span>
                                             <select asp-for="Zone" class="form-select" required onchange="updateAddressPreview()" id="zoneSelect">
                                                 <option value="">Select Zone</option>
-                                                @for (int i = 1; i <= 8; i++)
-                                                {
-                                                    <option value="@i">Zone @i</option>
-                                                }
+                                                <!-- Zones will be loaded dynamically -->
                                             </select>
+                                            <button type="button" class="btn btn-outline-primary" onclick="refreshZones()" title="Refresh zones">
+                                                <i class="fas fa-sync-alt"></i>
+                                            </button>
                                         </div>
                                         <span asp-validation-for="Zone" class="text-danger small"></span>
-                                        <small class="text-muted" id="zoneStatus">Auto-updates when new zones are added</small>
+                                        <div class="mt-1">
+                                            <small class="text-muted" id="zoneStatus">Loading zones...</small>
+                                            <div id="zoneLastUpdated" class="text-muted small"></div>
+                                        </div>
                                     </div>
+                                </div>
 
                                 <div class="row">
                                     <div class="col-md-4 mb-3">
@@ -333,7 +336,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Children Information - UPDATED WITH MULTIPLE CHILDREN -->
+                                <!-- Children Information - FIXED WITH PROPER NUMBERING -->
                                 <div class="row mb-4">
                                     <div class="col-md-12 mb-3">
                                         <div class="d-flex justify-content-between align-items-center">
@@ -350,7 +353,7 @@
                                         <div class="child-template d-none" id="childTemplate">
                                             <div class="child-entry card mb-3">
                                                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                                    <span>Child <span class="child-index">1</span></span>
+                                                    <span class="child-header-text">Child <span class="child-index">1</span></span>
                                                     <button type="button" class="btn btn-sm btn-danger remove-child-btn">
                                                         <i class="fas fa-times"></i> Remove
                                                     </button>
@@ -360,21 +363,25 @@
                                                         <div class="col-md-3 mb-3">
                                                             <label class="form-label">First Name</label>
                                                             <input type="text" class="form-control child-first-name"
+                                                                   name="Children[__INDEX__].FirstName"
                                                                    placeholder="First Name" />
                                                         </div>
                                                         <div class="col-md-3 mb-3">
                                                             <label class="form-label">Last Name</label>
                                                             <input type="text" class="form-control child-last-name"
+                                                                   name="Children[__INDEX__].LastName"
                                                                    placeholder="Last Name" />
                                                         </div>
                                                         <div class="col-md-3 mb-3">
                                                             <label class="form-label">Middle Name</label>
                                                             <input type="text" class="form-control child-middle-name"
+                                                                   name="Children[__INDEX__].MiddleName"
                                                                    placeholder="Middle Name" />
                                                         </div>
                                                         <div class="col-md-3 mb-3">
                                                             <label class="form-label">Extension</label>
                                                             <input type="text" class="form-control child-extension"
+                                                                   name="Children[__INDEX__].Extension"
                                                                    placeholder="Jr, Sr, III" />
                                                         </div>
                                                     </div>
@@ -385,7 +392,7 @@
                                         <!-- First Child (Default) -->
                                         <div class="child-entry card mb-3">
                                             <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                                <span>Child 1</span>
+                                                <span class="child-header-text">Child 1</span>
                                                 <button type="button" class="btn btn-sm btn-danger remove-child-btn" disabled>
                                                     <i class="fas fa-times"></i> Remove
                                                 </button>
@@ -421,53 +428,112 @@
                                         </div>
                                     </div>
 
-                                    <!-- Additional Children Info -->
-                                    <div class="col-md-12 mb-3 mt-3">
-                                        <label asp-for="ChildrenInfo" class="form-label">Additional Children Info</label>
-                                        <textarea asp-for="ChildrenInfo" class="form-control" rows="3"
-                                                  placeholder="Enter any additional information about children not listed above"></textarea>
-                                        <div class="form-text">
-                                            <small><i class="fas fa-info-circle text-primary"></i> Use this field for any additional children information or notes.</small>
-                                        </div>
-                                        <span asp-validation-for="ChildrenInfo" class="text-danger small"></span>
-                                    </div>
+                                    <!-- Hidden field for additional children info -->
+                                    <input type="hidden" asp-for="ChildrenInfo" id="childrenInfo" />
                                 </div>
 
-                                <!-- Authorized Representative - SEPARATED FIELDS -->
+                                <!-- Authorized Representatives - FIXED WITH PROPER NUMBERING -->
                                 <div class="row mb-4">
                                     <div class="col-md-12 mb-3">
-                                        <h6 class="border-bottom pb-2"><i class="fas fa-user-tie me-2"></i>Authorized Representative</h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="border-bottom pb-2 mb-0"><i class="fas fa-user-tie me-2"></i>Authorized Representatives</h6>
+                                            <button type="button" class="btn btn-sm btn-success" id="addRepBtn">
+                                                <i class="fas fa-plus me-1"></i> Add Representative
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label asp-for="AuthorizedRepFirstName" class="form-label">First Name</label>
-                                        <input asp-for="AuthorizedRepFirstName" class="form-control" placeholder="First Name" />
-                                        <span asp-validation-for="AuthorizedRepFirstName" class="text-danger small"></span>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label asp-for="AuthorizedRepLastName" class="form-label">Last Name</label>
-                                        <input asp-for="AuthorizedRepLastName" class="form-control" placeholder="Last Name" />
-                                        <span asp-validation-for="AuthorizedRepLastName" class="text-danger small"></span>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label asp-for="AuthorizedRepMiddleName" class="form-label">Middle Name</label>
-                                        <input asp-for="AuthorizedRepMiddleName" class="form-control" placeholder="Middle Name" />
-                                        <span asp-validation-for="AuthorizedRepMiddleName" class="text-danger small"></span>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label asp-for="AuthorizedRepExtension" class="form-label">Extension</label>
-                                        <input asp-for="AuthorizedRepExtension" class="form-control" placeholder="Jr, Sr, III" />
-                                        <span asp-validation-for="AuthorizedRepExtension" class="text-danger small"></span>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label asp-for="AuthorizedRepRelationship" class="form-label">Relationship</label>
-                                        <input asp-for="AuthorizedRepRelationship" class="form-control" placeholder="e.g., Son, Daughter, Relative" />
-                                        <span asp-validation-for="AuthorizedRepRelationship" class="text-danger small"></span>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label asp-for="AuthorizedRepInfo" class="form-label">Additional Representative Info</label>
-                                        <textarea asp-for="AuthorizedRepInfo" class="form-control" rows="2"
-                                                  placeholder="Additional information about the representative"></textarea>
-                                        <span asp-validation-for="AuthorizedRepInfo" class="text-danger small"></span>
+
+                                    <!-- Representatives Container -->
+                                    <div class="col-md-12" id="representativesContainer">
+                                        <!-- Representative Template (Hidden) -->
+                                        <div class="rep-template d-none" id="repTemplate">
+                                            <div class="rep-entry card mb-3">
+                                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                                    <span class="rep-header-text">Representative <span class="rep-index">1</span></span>
+                                                    <button type="button" class="btn btn-sm btn-danger remove-rep-btn">
+                                                        <i class="fas fa-times"></i> Remove
+                                                    </button>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label">First Name</label>
+                                                            <input type="text" class="form-control rep-first-name"
+                                                                   name="Representatives[__INDEX__].FirstName"
+                                                                   placeholder="First Name" />
+                                                        </div>
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label">Last Name</label>
+                                                            <input type="text" class="form-control rep-last-name"
+                                                                   name="Representatives[__INDEX__].LastName"
+                                                                   placeholder="Last Name" />
+                                                        </div>
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label">Middle Name</label>
+                                                            <input type="text" class="form-control rep-middle-name"
+                                                                   name="Representatives[__INDEX__].MiddleName"
+                                                                   placeholder="Middle Name" />
+                                                        </div>
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label">Extension</label>
+                                                            <input type="text" class="form-control rep-extension"
+                                                                   name="Representatives[__INDEX__].Extension"
+                                                                   placeholder="Jr, Sr, III" />
+                                                        </div>
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label">Relationship</label>
+                                                            <input type="text" class="form-control rep-relationship"
+                                                                   name="Representatives[__INDEX__].Relationship"
+                                                                   placeholder="e.g., Son, Daughter, Relative" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- First Representative (Default) -->
+                                        <div class="rep-entry card mb-3">
+                                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                                <span class="rep-header-text">Representative 1</span>
+                                                <button type="button" class="btn btn-sm btn-danger remove-rep-btn" disabled>
+                                                    <i class="fas fa-times"></i> Remove
+                                                </button>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3 mb-3">
+                                                        <label asp-for="AuthorizedRepFirstName" class="form-label">First Name</label>
+                                                        <input asp-for="AuthorizedRepFirstName" class="form-control rep-first-name"
+                                                               placeholder="First Name" />
+                                                        <span asp-validation-for="AuthorizedRepFirstName" class="text-danger small"></span>
+                                                    </div>
+                                                    <div class="col-md-3 mb-3">
+                                                        <label asp-for="AuthorizedRepLastName" class="form-label">Last Name</label>
+                                                        <input asp-for="AuthorizedRepLastName" class="form-control rep-last-name"
+                                                               placeholder="Last Name" />
+                                                        <span asp-validation-for="AuthorizedRepLastName" class="text-danger small"></span>
+                                                    </div>
+                                                    <div class="col-md-3 mb-3">
+                                                        <label asp-for="AuthorizedRepMiddleName" class="form-label">Middle Name</label>
+                                                        <input asp-for="AuthorizedRepMiddleName" class="form-control rep-middle-name"
+                                                               placeholder="Middle Name" />
+                                                        <span asp-validation-for="AuthorizedRepMiddleName" class="text-danger small"></span>
+                                                    </div>
+                                                    <div class="col-md-3 mb-3">
+                                                        <label asp-for="AuthorizedRepExtension" class="form-label">Extension</label>
+                                                        <input asp-for="AuthorizedRepExtension" class="form-control rep-extension"
+                                                               placeholder="Jr, Sr, III" />
+                                                        <span asp-validation-for="AuthorizedRepExtension" class="text-danger small"></span>
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label asp-for="AuthorizedRepRelationship" class="form-label">Relationship</label>
+                                                        <input asp-for="AuthorizedRepRelationship" class="form-control rep-relationship"
+                                                               placeholder="e.g., Son, Daughter, Relative" />
+                                                        <span asp-validation-for="AuthorizedRepRelationship" class="text-danger small"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -775,23 +841,23 @@
             cursor: not-allowed;
         }
 
-        /* Child Entry Styles */
-        .child-entry {
+        /* Child and Representative Entry Styles */
+        .child-entry, .rep-entry {
             border: 1px solid #dee2e6;
             border-radius: 0.5rem;
         }
 
-            .child-entry .card-header {
+            .child-entry .card-header, .rep-entry .card-header {
                 background-color: #f8f9fa;
                 border-bottom: 1px solid #dee2e6;
             }
 
-            .child-entry .remove-child-btn {
+            .child-entry .remove-child-btn, .rep-entry .remove-rep-btn {
                 font-size: 0.75rem;
                 padding: 0.25rem 0.5rem;
             }
 
-        #addChildBtn {
+        #addChildBtn, #addRepBtn {
             padding: 0.25rem 0.75rem;
             font-size: 0.875rem;
         }
@@ -819,7 +885,87 @@
 
             // Initialize children functionality
             initializeChildren();
+
+            // Initialize representatives functionality
+            initializeRepresentatives();
+
+            // Load zones initially
+            loadZones();
+
+            // Refresh zones every 60 seconds
+            setInterval(() => {
+                loadZones();
+            }, 60000);
         });
+
+        // Function to load zones from server
+        function loadZones(selectElementId = 'zoneSelect') {
+            const zoneSelect = document.getElementById(selectElementId);
+            const zoneStatus = document.getElementById('zoneStatus');
+
+            fetch('@Url.Action("GetActiveZones", "Zone")')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Store current value
+                        const currentValue = zoneSelect.value;
+
+                        // Clear existing options except the first one
+                        while (zoneSelect.options.length > 1) {
+                            zoneSelect.remove(1);
+                        }
+
+                        // Add new zones
+                        data.zones.forEach(zone => {
+                            const option = document.createElement('option');
+                            option.value = zone.number;
+                            option.textContent = `Zone ${zone.number}`; // Fixed: Just show "Zone X"
+                            zoneSelect.appendChild(option);
+                        });
+
+                        // Restore selected value if it exists
+                        if (currentValue) {
+                            zoneSelect.value = currentValue;
+                            if (!zoneSelect.value && data.zones.length > 0) {
+                                // If current value doesn't exist in new list, select first available
+                                zoneSelect.value = data.zones[0].number;
+                            }
+                        } else if (data.zones.length > 0) {
+                            // If no current value, select first zone
+                            zoneSelect.value = data.zones[0].number;
+                        }
+
+                        // Update status
+                        zoneStatus.textContent = `${data.zones.length} zone(s) available`;
+                        zoneStatus.className = 'text-success small';
+
+                        // Update timestamp
+                        const now = new Date();
+                        document.getElementById('zoneLastUpdated').textContent =
+                            `Last updated: ${now.toLocaleTimeString()}`;
+
+                        // Trigger address preview update
+                        updateAddressPreview();
+
+                    } else {
+                        zoneStatus.textContent = 'Error loading zones';
+                        zoneStatus.className = 'text-danger small';
+                    }
+                })
+                .catch(error => {
+                    console.log('Error loading zones:', error);
+                    zoneStatus.textContent = 'Error loading zones';
+                    zoneStatus.className = 'text-danger small';
+                });
+        }
+
+        // Refresh zones manually
+        function refreshZones() {
+            const zoneStatus = document.getElementById('zoneStatus');
+            zoneStatus.textContent = 'Refreshing zones...';
+            zoneStatus.className = 'text-info small';
+            loadZones();
+        }
 
         // Format SCCN with dashes
         function formatSCCN() {
@@ -867,81 +1013,6 @@
                 preview.innerHTML = '<i class="fas fa-user fa-4x text-muted"></i><div class="mt-2">No picture</div>';
             }
         }
-
-            // Function to check and update zones
-        function updateZoneList() {
-            fetch('@Url.Action("GetZones", "Zone")')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const zoneSelect = document.getElementById('zoneSelect');
-                        const currentValue = zoneSelect.value;
-
-                        // Get existing zone numbers
-                        const existingZones = new Set();
-                        for (let option of zoneSelect.options) {
-                            if (option.value) {
-                                existingZones.add(parseInt(option.value));
-                            }
-                        }
-
-                        // Add any new zones
-                        let addedZones = 0;
-                        data.zones.forEach(zone => {
-                            if (!existingZones.has(zone.number)) {
-                                const newOption = new Option(zone.name, zone.number);
-                                zoneSelect.appendChild(newOption);
-                                addedZones++;
-
-                                // Sort options
-                                const options = Array.from(zoneSelect.options);
-                                options.sort((a, b) => {
-                                    return parseInt(a.value || 999) - parseInt(b.value || 999);
-                                });
-                                zoneSelect.innerHTML = '';
-                                options.forEach(opt => zoneSelect.appendChild(opt));
-                            }
-                        });
-
-                        // Restore selected value
-                        if (currentValue) {
-                            zoneSelect.value = currentValue;
-                        }
-
-                        // Update status message
-                        if (addedZones > 0) {
-                            document.getElementById('zoneStatus').textContent =
-                                `✓ Added ${addedZones} new zone(s)`;
-                            setTimeout(() => {
-                                document.getElementById('zoneStatus').textContent =
-                                    'Auto-updates when new zones are added';
-                            }, 3000);
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.log('Error updating zones:', error);
-                });
-        }
-
-        // Update zones when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            updateZoneList();
-
-            // Check for new zones every 30 seconds
-            setInterval(updateZoneList, 30000);
-
-            // Add refresh button (optional)
-            const refreshBtn = document.createElement('button');
-            refreshBtn.type = 'button';
-            refreshBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
-            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-            refreshBtn.title = 'Refresh zones';
-            refreshBtn.onclick = updateZoneList;
-
-            const zoneStatus = document.getElementById('zoneStatus');
-            zoneStatus.parentNode.insertBefore(refreshBtn, zoneStatus.nextSibling);
-        });
 
         // Calculate age from birth date
         function calculateAgeFromDate() {
@@ -1122,7 +1193,7 @@
             });
         }
 
-        // Initialize children functionality
+        // Initialize children functionality - FIXED WITH PROPER NUMBERING
         function initializeChildren() {
             const addChildBtn = document.getElementById('addChildBtn');
             const childrenContainer = document.getElementById('childrenContainer');
@@ -1132,18 +1203,25 @@
 
             // Add child button click handler
             addChildBtn.addEventListener('click', function() {
-                childCount++;
                 const newChild = childTemplate.cloneNode(true);
                 newChild.classList.remove('d-none');
-                newChild.querySelector('.child-index').textContent = childCount;
+                newChild.classList.remove('child-template');
 
-                // Update input names to prevent conflict
+                // Update index before adding
+                const currentIndex = childCount;
+                newChild.querySelector('.child-index').textContent = currentIndex;
+
+                // Update header text
+                const headerSpan = newChild.querySelector('.child-header-text');
+                headerSpan.innerHTML = `Child <span class="child-index">${currentIndex}</span>`;
+
+                // Update input names with proper indices
                 const inputs = newChild.querySelectorAll('input');
                 inputs.forEach(input => {
-                    const name = input.getAttribute('class').split(' ')[1]; // Get class name like 'child-first-name'
-                    input.name = `Child${childCount}_${name}`;
-                    input.id = `Child${childCount}_${name}`;
-                    input.value = '';
+                    const originalName = input.name;
+                    const newName = originalName.replace('__INDEX__', (currentIndex - 1).toString());
+                    input.name = newName;
+                    input.id = newName.replace(/[\[\].]/g, '_');
                 });
 
                 // Add remove button functionality
@@ -1155,77 +1233,144 @@
                     updateChildIndices();
                 });
 
-                // Insert before the additional children info
-                const additionalInfo = childrenContainer.querySelector('.col-md-12.mb-3.mt-3');
-                childrenContainer.insertBefore(newChild, additionalInfo);
+                // Add to container
+                childrenContainer.appendChild(newChild);
 
+                childCount++;
                 updateChildIndices();
             });
 
             // Remove button functionality for existing children
             document.querySelectorAll('.remove-child-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    const childEntry = this.closest('.child-entry');
-                    if (childEntry) {
-                        childEntry.remove();
-                        childCount--;
-                        updateChildIndices();
+                    if (!btn.disabled) {
+                        const childEntry = this.closest('.child-entry');
+                        if (childEntry && childrenContainer.querySelectorAll('.child-entry').length > 1) {
+                            childEntry.remove();
+                            childCount--;
+                            updateChildIndices();
+                        }
                     }
                 });
             });
 
             function updateChildIndices() {
-                const childEntries = childrenContainer.querySelectorAll('.child-entry');
+                const childEntries = childrenContainer.querySelectorAll('.child-entry:not(.d-none)');
                 childEntries.forEach((entry, index) => {
+                    const displayIndex = index + 1;
                     const indexSpan = entry.querySelector('.child-index');
+                    const headerSpan = entry.querySelector('.child-header-text');
+
                     if (indexSpan) {
-                        indexSpan.textContent = index + 1;
-                        entry.querySelector('.card-header span').textContent = `Child ${index + 1}`;
+                        indexSpan.textContent = displayIndex;
                     }
+
+                    if (headerSpan) {
+                        headerSpan.innerHTML = `Child <span class="child-index">${displayIndex}</span>`;
+                    }
+
+                    // Update input names with new indices
+                    const inputs = entry.querySelectorAll('input');
+                    inputs.forEach(input => {
+                        const originalName = input.name;
+                        if (originalName.includes('Children[')) {
+                            const newName = originalName.replace(/Children\[\d+\]/, `Children[${index}]`);
+                            input.name = newName;
+                            input.id = newName.replace(/[\[\].]/g, '_');
+                        }
+                    });
                 });
             }
+        }
 
-            // Add event listener to collect children data before form submission
-            const form = document.getElementById('createSeniorForm');
-            form.addEventListener('submit', function(e) {
-                // Collect children data
-                const children = [];
-                const childEntries = childrenContainer.querySelectorAll('.child-entry');
+        // Initialize representatives functionality - FIXED WITH PROPER NUMBERING
+        function initializeRepresentatives() {
+            const addRepBtn = document.getElementById('addRepBtn');
+            const repsContainer = document.getElementById('representativesContainer');
+            const repTemplate = document.getElementById('repTemplate');
 
-                childEntries.forEach((entry, index) => {
-                    const firstName = entry.querySelector('.child-first-name').value.trim();
-                    const lastName = entry.querySelector('.child-last-name').value.trim();
-                    const middleName = entry.querySelector('.child-middle-name').value.trim();
-                    const extension = entry.querySelector('.child-extension').value.trim();
+            let repCount = 1; // Start with 1 since we have the default representative
 
-                    if (firstName || lastName) {
-                        children.push({
-                            firstName,
-                            lastName,
-                            middleName,
-                            extension
-                        });
-                    }
+            // Add representative button click handler
+            addRepBtn.addEventListener('click', function() {
+                const newRep = repTemplate.cloneNode(true);
+                newRep.classList.remove('d-none');
+                newRep.classList.remove('rep-template');
+
+                // Update index before adding
+                const currentIndex = repCount;
+                newRep.querySelector('.rep-index').textContent = currentIndex;
+
+                // Update header text
+                const headerSpan = newRep.querySelector('.rep-header-text');
+                headerSpan.innerHTML = `Representative <span class="rep-index">${currentIndex}</span>`;
+
+                // Update input names with proper indices
+                const inputs = newRep.querySelectorAll('input');
+                inputs.forEach(input => {
+                    const originalName = input.name;
+                    const newName = originalName.replace('__INDEX__', (currentIndex - 1).toString());
+                    input.name = newName;
+                    input.id = newName.replace(/[\[\].]/g, '_');
                 });
 
-                // Store children data in hidden field for server-side processing
-                // This is a simplified approach - you might want to use JSON
-                const childrenInfoField = document.querySelector('textarea[name="ChildrenInfo"]');
-                if (children.length > 0) {
-                    // Format children data for storage
-                    const childrenText = children.map((child, index) => {
-                        return `Child ${index + 1}: ${child.firstName} ${child.middleName} ${child.lastName} ${child.extension}`.trim();
-                    }).join('\n');
+                // Add remove button functionality
+                const removeBtn = newRep.querySelector('.remove-rep-btn');
+                removeBtn.disabled = false;
+                removeBtn.addEventListener('click', function() {
+                    newRep.remove();
+                    repCount--;
+                    updateRepIndices();
+                });
 
-                    // Combine with existing additional info
-                    const existingInfo = childrenInfoField.value.trim();
-                    if (existingInfo) {
-                        childrenInfoField.value = childrenText + '\n\nAdditional Info:\n' + existingInfo;
-                    } else {
-                        childrenInfoField.value = childrenText;
-                    }
-                }
+                // Add to container
+                repsContainer.appendChild(newRep);
+
+                repCount++;
+                updateRepIndices();
             });
+
+            // Remove button functionality for existing representatives
+            document.querySelectorAll('.remove-rep-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (!btn.disabled) {
+                        const repEntry = this.closest('.rep-entry');
+                        if (repEntry && repsContainer.querySelectorAll('.rep-entry').length > 1) {
+                            repEntry.remove();
+                            repCount--;
+                            updateRepIndices();
+                        }
+                    }
+                });
+            });
+
+            function updateRepIndices() {
+                const repEntries = repsContainer.querySelectorAll('.rep-entry:not(.d-none)');
+                repEntries.forEach((entry, index) => {
+                    const displayIndex = index + 1;
+                    const indexSpan = entry.querySelector('.rep-index');
+                    const headerSpan = entry.querySelector('.rep-header-text');
+
+                    if (indexSpan) {
+                        indexSpan.textContent = displayIndex;
+                    }
+
+                    if (headerSpan) {
+                        headerSpan.innerHTML = `Representative <span class="rep-index">${displayIndex}</span>`;
+                    }
+
+                    // Update input names with new indices
+                    const inputs = entry.querySelectorAll('input');
+                    inputs.forEach(input => {
+                        const originalName = input.name;
+                        if (originalName.includes('Representatives[')) {
+                            const newName = originalName.replace(/Representatives\[\d+\]/, `Representatives[${index}]`);
+                            input.name = newName;
+                            input.id = newName.replace(/[\[\].]/g, '_');
+                        }
+                    });
+                });
+            }
         }
 
         // Initialize form
@@ -1262,6 +1407,15 @@
                     e.preventDefault();
                     alert('Age must be between 60 and 120 years.');
                     ageInput.focus();
+                    return false;
+                }
+
+                // Validate zone selection
+                const zoneSelect = document.getElementById('zoneSelect');
+                if (!zoneSelect.value) {
+                    e.preventDefault();
+                    alert('Please select a zone.');
+                    zoneSelect.focus();
                     return false;
                 }
 

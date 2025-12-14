@@ -78,20 +78,31 @@
                             <option value="Active" selected="@(Model.SelectedStatus == "Active")">Active</option>
                             <option value="Archived" selected="@(Model.SelectedStatus == "Archived")">Archived</option>
                         </select>
-                    </div>
-
-                    <!-- Zone Filter -->
-                    <div class="col-md-2">
-                        <label class="small font-weight-bold">Zone</label>
-                        <select class="form-control form-control-sm" name="zone">
-                            <option value="">All Zones</option>
-                            @for (int i = 1; i <= 7; i++)
-                            {
-                                <option value="@i" selected="@(Model.SelectedZoneFilter == i.ToString())">Zone @i</option>
-                            }
-                        </select>
-                    </div>
-
+                                            </div>
+                        <!-- Zone Filter -->
+                        <div class="col-md-2">
+                            <label class="small font-weight-bold">Zone</label>
+                            <select class="form-control form-control-sm" name="zone">
+                                <option value="">All Zones</option>
+                                @if (Model.AvailableZones != null && Model.AvailableZones.Any())
+                                {
+                                    foreach (var zone in Model.AvailableZones)
+                                    {
+                                        <option value="@zone.ZoneNumber" selected="@(Model.SelectedZoneFilter == zone.ZoneNumber.ToString())">
+                                            Zone @zone.ZoneNumber - @zone.ZoneName
+                                        </option>
+                                    }
+                                }
+                                else
+                                {
+                                    <!-- Fallback if no zones in database -->
+                                    @for (int i = 1; i <= 7; i++)
+                                    {
+                                        <option value="@i" selected="@(Model.SelectedZoneFilter == i.ToString())">Zone @i</option>
+                                    }
+                                }
+                            </select>
+                        </div>
                     <!-- Gender Filter -->
                     <div class="col-md-2">
                         <label class="small font-weight-bold">Gender</label>
@@ -745,6 +756,18 @@
                 clearBtn: true
             });
         });
+
+        function loadStaticZones() {
+    const zoneFilter = document.getElementById('zoneFilter');
+    // Add basic zone options as fallback
+    // Just show "Zone 1", "Zone 2", etc.
+    for (let i = 1; i <= 8; i++) {
+        const option = document.createElement('option');
+        option.value = i.toString();
+        option.textContent = `Zone ${i}`;
+        zoneFilter.appendChild(option);
+    }
+}
 
         // Function to update age range hidden field
         function updateAgeRange() {

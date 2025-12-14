@@ -65,6 +65,9 @@ namespace SeniorManagement.Controllers
                     .OrderBy(p => p)
                     .ToList();
 
+                // Get active zones from database
+                var activeZones = GetActiveZones();
+
                 var viewModel = new ReportViewModel
                 {
                     // Senior Data
@@ -83,6 +86,7 @@ namespace SeniorManagement.Controllers
                     SeniorSearchTerm = seniorSearch,
                     AvailableBirthDates = availableBirthDates,
                     AvailablePensionTypes = pensionTypes,
+                    AvailableZones = activeZones,
 
                     // Event Data
                     TotalEvents = events.Count,
@@ -103,6 +107,40 @@ namespace SeniorManagement.Controllers
             {
                 TempData["ErrorMessage"] = $"Error loading reports: {ex.Message}";
                 return View(new ReportViewModel());
+            }
+        }
+
+        // GET: /Report/ZoneReport
+        public IActionResult ZoneReport(string zone)
+        {
+            if (string.IsNullOrEmpty(zone))
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            try
+            {
+                // Get seniors for the specific zone
+                var seniors = GetFilteredSeniors(null, zone, null, null, null, null, null, null);
+
+                // Get active zones for navigation
+                var activeZones = GetActiveZones();
+
+                var viewModel = new ReportViewModel
+                {
+                    TotalSeniors = seniors.Count,
+                    SeniorList = seniors,
+                    ReportDate = DateTime.Now,
+                    SelectedZoneFilter = zone,
+                    AvailableZones = activeZones
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Error loading zone report: {ex.Message}";
+                return RedirectToAction(nameof(Index));
             }
         }
 
@@ -205,6 +243,41 @@ namespace SeniorManagement.Controllers
         }
 
         #region Private Helper Methods
+
+        private List<Zone> GetActiveZones()
+        {
+            var zones = new List<Zone>();
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+                    string query = "SELECT Id, ZoneNumber, ZoneName, IsActive FROM zones WHERE IsActive = 1 ORDER BY ZoneNumber";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            zones.Add(new Zone
+                            {
+                                Id = reader.GetInt32("Id"),
+                                ZoneNumber = reader.GetInt32("ZoneNumber"),
+                                ZoneName = reader.GetString("ZoneName"),
+                                IsActive = reader.GetBoolean("IsActive")
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting zones: {ex.Message}");
+            }
+
+            return zones;
+        }
 
         private List<Senior> GetFilteredSeniors(string status, string zone, string gender, string civilStatus,
                                                 string ageRange, string birthDate, string searchTerm, string pensionType)

@@ -155,8 +155,98 @@ namespace SeniorManagement.Controllers
         }
 
         // POST: Zone/Edit
-        // In your existing ZoneController, add these two methods:
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(Zone model)
+        {
+            if (!(HttpContext.Session.GetString("IsAdmin") == "True"))
+            {
+                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
+                return RedirectToAction("Index", "Home");
+            }
 
+            if (string.IsNullOrWhiteSpace(model.ZoneName))
+            {
+                TempData["ErrorMessage"] = "Zone name is required.";
+                return View(model);
+            }
+
+            if (model.ZoneNumber <= 0)
+            {
+                TempData["ErrorMessage"] = "Zone number must be greater than 0.";
+                return View(model);
+            }
+
+            try
+            {
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+
+                    // Check if zone number already exists (excluding current zone)
+                    string checkQuery = "SELECT COUNT(*) FROM zones WHERE ZoneNumber = @ZoneNumber AND Id != @Id";
+                    using (var checkCmd = new MySqlCommand(checkQuery, connection))
+                    {
+                        checkCmd.Parameters.AddWithValue("@ZoneNumber", model.ZoneNumber);
+                        checkCmd.Parameters.AddWithValue("@Id", model.Id);
+                        int existingCount = Convert.ToInt32(checkCmd.ExecuteScalar());
+
+                        if (existingCount > 0)
+                        {
+                            TempData["ErrorMessage"] = $"Zone number {model.ZoneNumber} already exists.";
+                            return View(model);
+                        }
+                    }
+
+                    // Update zone
+                    string updateQuery = @"
+                        UPDATE zones 
+                        SET ZoneNumber = @ZoneNumber, 
+                            ZoneName = @ZoneName, 
+                            Description = @Description, 
+                            UpdatedAt = @UpdatedAt,
+                            IsActive = @IsActive
+                        WHERE Id = @Id";
+
+                    using (var cmd = new MySqlCommand(updateQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", model.Id);
+                        cmd.Parameters.AddWithValue("@ZoneNumber", model.ZoneNumber);
+                        cmd.Parameters.AddWithValue("@ZoneName", model.ZoneName);
+                        cmd.Parameters.AddWithValue("@Description", model.Description ?? string.Empty);
+                        cmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
+                        cmd.Parameters.AddWithValue("@IsActive", model.IsActive);
+
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            await _activityHelper.LogActivityAsync(
+                                "Update Zone",
+                                $"Updated zone: {model.ZoneName} (Zone {model.ZoneNumber})"
+                            );
+
+                            TempData["SuccessMessage"] = $"Zone {model.ZoneName} updated successfully!";
+                            return RedirectToAction("Index");
+                        }
+                        else
+                        {
+                            TempData["ErrorMessage"] = "Zone not found or no changes made.";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await _activityHelper.LogActivityAsync("Error", $"Update Zone: {ex.Message}");
+                Debug.WriteLine($"Error updating zone: {ex.Message}");
+                TempData["ErrorMessage"] = $"Error updating zone: {ex.Message}";
+            }
+
+            return View(model);
+        }
+
+        // POST: Zone/CreateAjax
         [HttpPost]
         public async Task<IActionResult> CreateAjax([FromBody] Zone model)
         {
@@ -195,8 +285,8 @@ namespace SeniorManagement.Controllers
 
                     // Insert new zone
                     string insertQuery = @"
-                INSERT INTO zones (ZoneNumber, ZoneName, Description, CreatedAt, UpdatedAt, IsActive) 
-                VALUES (@ZoneNumber, @ZoneName, @Description, @CreatedAt, @UpdatedAt, @IsActive)";
+                        INSERT INTO zones (ZoneNumber, ZoneName, Description, CreatedAt, UpdatedAt, IsActive) 
+                        VALUES (@ZoneNumber, @ZoneName, @Description, @CreatedAt, @UpdatedAt, @IsActive)";
 
                     using (var cmd = new MySqlCommand(insertQuery, connection))
                     {
@@ -238,8 +328,9 @@ namespace SeniorManagement.Controllers
             }
         }
 
+        // GET: Zone/GetActiveZones - NEW METHOD
         [HttpGet]
-        public JsonResult GetActiveZonesForDropdown()
+        public JsonResult GetActiveZones()
         {
             try
             {
@@ -257,8 +348,54 @@ namespace SeniorManagement.Controllers
                         {
                             zones.Add(new
                             {
-                                value = reader.GetInt32("ZoneNumber").ToString(),
-                                text = $"Zone {reader.GetInt32("ZoneNumber")} - {reader.GetString("ZoneName")}"
+                                number = reader.GetInt32("ZoneNumber"),
+                                name = reader.GetString("ZoneName"),
+                                displayText = $"Zone {reader.GetInt32("ZoneNumber")} - {reader.GetString("ZoneName")}"
+                            });
+                        }
+                    }
+                }
+
+                return Json(new { success = true, zones = zones });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message, zones = new List<object>() });
+            }
+        }
+
+        // GET: Zone/GetActiveZonesForDropdown
+        [HttpGet]
+        public JsonResult GetActiveZonesForDropdown()
+        {
+            try
+            {
+                var zones = new List<object>();
+
+                using (var connection = _dbHelper.GetConnection())
+                {
+                    connection.Open();
+                    string query = "SELECT ZoneNumber, ZoneName FROM zones WHERE IsActive = 1 ORDER BY ZoneNumber";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            // Check if ZoneName is already in format "Zone X" or contains zone number
+                            string zoneName = reader.GetString("ZoneName");
+                            int zoneNumber = reader.GetInt32("ZoneNumber");
+
+                            // If zone name already starts with "Zone X", use just the zone name
+                            // Otherwise, format as "Zone X"
+                            string displayText = zoneName.StartsWith($"Zone {zoneNumber}", StringComparison.OrdinalIgnoreCase)
+                                ? zoneName
+                                : $"Zone {zoneNumber}";
+
+                            zones.Add(new
+                            {
+                                value = zoneNumber.ToString(),
+                                text = displayText
                             });
                         }
                     }

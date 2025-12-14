@@ -10,6 +10,7 @@
             <h1 class="h3 mb-2 text-gray-800">Zone @Model.SelectedZoneFilter Report</h1>
             <p class="mb-0">Senior citizens in Zone @Model.SelectedZoneFilter</p>
         </div>
+        <!-- Update this section -->
         <div class="btn-group">
             <a href="@Url.Action("ExportSeniorTable", "Report", new { zone = Model.SelectedZoneFilter })" class="btn btn-outline-primary">
                 <i class="fas fa-download me-2"></i>Export CSV

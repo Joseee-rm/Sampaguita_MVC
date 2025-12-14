@@ -14,6 +14,7 @@ namespace SeniorManagement.Models
         // Senior Filters
         public string SelectedStatus { get; set; }
         public string SelectedZoneFilter { get; set; }
+        public List<Zone> AvailableZones { get; set; } = new List<Zone>();
         public string SelectedGender { get; set; }
         public string SelectedCivilStatus { get; set; }
         public string SelectedAgeRange { get; set; }

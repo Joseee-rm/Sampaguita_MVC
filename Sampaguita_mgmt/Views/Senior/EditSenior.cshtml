@@ -1,6 +1,6 @@
 ﻿@model SeniorManagement.Models.Senior
 @{
-    ViewData["Title"] = "Edit Senior Record";
+    ViewData["Title"] = "";
 }
 
 <!-- Success/Error Message Display Area -->
@@ -194,7 +194,7 @@
                 <span id="benefitsText"></span>
             </div>
 
-            <!-- Permanent Address -->
+            <!-- Permanent Address - FIXED ZONE LABEL -->
             <div class="card mb-3 border-info">
                 <div class="card-header bg-info text-white">
                     <h6 class="mb-0"><i class="fas fa-home me-2"></i>Permanent Address</h6>
@@ -210,9 +210,8 @@
                             </div>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label asp-for="Zone" class="form-label required">Zone</label>
+                            <label asp-for="Zone" class="form-label required">Zone *</label>
                             <div class="input-group">
-                                <span class="input-group-text">Zone</span>
                                 <select asp-for="Zone" class="form-select" required onchange="updateAddressPreview()" id="zoneSelect">
                                     <option value="">Select Zone</option>
                                     @for (int i = 1; i <= 99; i++)
@@ -327,97 +326,221 @@
                         </div>
                     </div>
 
-                    <!-- Children Information - SEPARATED FIELDS -->
+                    <!-- Children Information - FIXED WITH PROPER NUMBERING -->
                     <div class="row mb-4">
                         <div class="col-md-12 mb-3">
-                            <h6 class="border-bottom pb-2">Children Information</h6>
-                            <small class="text-muted">(First child details)</small>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group mb-3">
-                                <label asp-for="ChildFirstName" class="form-label">Child's First Name</label>
-                                <input asp-for="ChildFirstName" class="form-control" placeholder="First Name" />
-                                <span asp-validation-for="ChildFirstName" class="text-danger"></span>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="border-bottom pb-2 mb-0">Children Information</h6>
+                                <button type="button" class="btn btn-sm btn-success" id="addChildBtn">
+                                    <i class="fas fa-plus me-1"></i> Add Child
+                                </button>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="form-group mb-3">
-                                <label asp-for="ChildLastName" class="form-label">Child's Last Name</label>
-                                <input asp-for="ChildLastName" class="form-control" placeholder="Last Name" />
-                                <span asp-validation-for="ChildLastName" class="text-danger"></span>
+
+                        <!-- Children Container -->
+                        <div class="col-md-12" id="childrenContainer">
+                            <!-- Child Template (Hidden) -->
+                            <div class="child-template d-none" id="childTemplate">
+                                <div class="child-entry card mb-3">
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <span class="child-header-text">Child <span class="child-index">1</span></span>
+                                        <button type="button" class="btn btn-sm btn-danger remove-child-btn">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3 mb-3">
+                                                <label class="form-label">First Name</label>
+                                                <input type="text" class="form-control child-first-name"
+                                                       name="Children[__INDEX__].FirstName"
+                                                       placeholder="First Name" />
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label class="form-label">Last Name</label>
+                                                <input type="text" class="form-control child-last-name"
+                                                       name="Children[__INDEX__].LastName"
+                                                       placeholder="Last Name" />
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label class="form-label">Middle Name</label>
+                                                <input type="text" class="form-control child-middle-name"
+                                                       name="Children[__INDEX__].MiddleName"
+                                                       placeholder="Middle Name" />
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label class="form-label">Extension</label>
+                                                <input type="text" class="form-control child-extension"
+                                                       name="Children[__INDEX__].Extension"
+                                                       placeholder="Jr, Sr" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group mb-3">
-                                <label asp-for="ChildMiddleName" class="form-label">Child's Middle Name</label>
-                                <input asp-for="ChildMiddleName" class="form-control" placeholder="Middle Name" />
-                                <span asp-validation-for="ChildMiddleName" class="text-danger"></span>
+
+                            <!-- First Child (Default) -->
+                            <div class="child-entry card mb-3">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <span class="child-header-text">Child 1</span>
+                                    <button type="button" class="btn btn-sm btn-danger remove-child-btn" disabled>
+                                        <i class="fas fa-times"></i> Remove
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <label asp-for="ChildFirstName" class="form-label">First Name</label>
+                                            <input asp-for="ChildFirstName" class="form-control child-first-name"
+                                                   placeholder="First Name" />
+                                            <span asp-validation-for="ChildFirstName" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label asp-for="ChildLastName" class="form-label">Last Name</label>
+                                            <input asp-for="ChildLastName" class="form-control child-last-name"
+                                                   placeholder="Last Name" />
+                                            <span asp-validation-for="ChildLastName" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label asp-for="ChildMiddleName" class="form-label">Middle Name</label>
+                                            <input asp-for="ChildMiddleName" class="form-control child-middle-name"
+                                                   placeholder="Middle Name" />
+                                            <span asp-validation-for="ChildMiddleName" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label asp-for="ChildExtension" class="form-label">Extension</label>
+                                            <input asp-for="ChildExtension" class="form-control child-extension"
+                                                   placeholder="Jr, Sr" />
+                                            <span asp-validation-for="ChildExtension" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group mb-3">
-                                <label asp-for="ChildExtension" class="form-label">Child's Extension</label>
-                                <input asp-for="ChildExtension" class="form-control" placeholder="Jr, Sr" />
-                                <span asp-validation-for="ChildExtension" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-12">
-                            <div class="form-group mb-3">
-                                <label asp-for="ChildrenInfo" class="form-label">Additional Children Info</label>
-                                <textarea asp-for="ChildrenInfo" class="form-control" rows="3"
-                                          placeholder="Enter details of other children (names, ages, etc.)"></textarea>
-                                <small class="text-muted">You can add more children details here.</small>
-                                <span asp-validation-for="ChildrenInfo" class="text-danger"></span>
+
+                            <!-- Additional Children Info -->
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label asp-for="ChildrenInfo" class="form-label">Additional Children Info</label>
+                                    <textarea asp-for="ChildrenInfo" class="form-control" rows="3"
+                                              placeholder="Enter details of other children (names, ages, etc.)"></textarea>
+                                    <small class="text-muted">You can add more children details here.</small>
+                                    <span asp-validation-for="ChildrenInfo" class="text-danger"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Authorized Representative - SEPARATED FIELDS -->
+                    <!-- Authorized Representatives - FIXED WITH PROPER NUMBERING -->
                     <div class="row mb-4">
                         <div class="col-md-12 mb-3">
-                            <h6 class="border-bottom pb-2">Authorized Representative</h6>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group mb-3">
-                                <label asp-for="AuthorizedRepFirstName" class="form-label">First Name</label>
-                                <input asp-for="AuthorizedRepFirstName" class="form-control" placeholder="First Name" />
-                                <span asp-validation-for="AuthorizedRepFirstName" class="text-danger"></span>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="border-bottom pb-2 mb-0">Authorized Representatives</h6>
+                                <button type="button" class="btn btn-sm btn-success" id="addRepBtn">
+                                    <i class="fas fa-plus me-1"></i> Add Representative
+                                </button>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="form-group mb-3">
-                                <label asp-for="AuthorizedRepLastName" class="form-label">Last Name</label>
-                                <input asp-for="AuthorizedRepLastName" class="form-control" placeholder="Last Name" />
-                                <span asp-validation-for="AuthorizedRepLastName" class="text-danger"></span>
+
+                        <!-- Representatives Container -->
+                        <div class="col-md-12" id="representativesContainer">
+                            <!-- Representative Template (Hidden) -->
+                            <div class="rep-template d-none" id="repTemplate">
+                                <div class="rep-entry card mb-3">
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <span class="rep-header-text">Representative <span class="rep-index">1</span></span>
+                                        <button type="button" class="btn btn-sm btn-danger remove-rep-btn">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3 mb-3">
+                                                <label class="form-label">First Name</label>
+                                                <input type="text" class="form-control rep-first-name"
+                                                       name="Representatives[__INDEX__].FirstName"
+                                                       placeholder="First Name" />
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label class="form-label">Last Name</label>
+                                                <input type="text" class="form-control rep-last-name"
+                                                       name="Representatives[__INDEX__].LastName"
+                                                       placeholder="Last Name" />
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label class="form-label">Middle Name</label>
+                                                <input type="text" class="form-control rep-middle-name"
+                                                       name="Representatives[__INDEX__].MiddleName"
+                                                       placeholder="Middle Name" />
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label class="form-label">Extension</label>
+                                                <input type="text" class="form-control rep-extension"
+                                                       name="Representatives[__INDEX__].Extension"
+                                                       placeholder="Jr, Sr" />
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Relationship</label>
+                                                <input type="text" class="form-control rep-relationship"
+                                                       name="Representatives[__INDEX__].Relationship"
+                                                       placeholder="e.g., Son, Daughter" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group mb-3">
-                                <label asp-for="AuthorizedRepMiddleName" class="form-label">Middle Name</label>
-                                <input asp-for="AuthorizedRepMiddleName" class="form-control" placeholder="Middle Name" />
-                                <span asp-validation-for="AuthorizedRepMiddleName" class="text-danger"></span>
+
+                            <!-- First Representative (Default) -->
+                            <div class="rep-entry card mb-3">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <span class="rep-header-text">Representative 1</span>
+                                    <button type="button" class="btn btn-sm btn-danger remove-rep-btn" disabled>
+                                        <i class="fas fa-times"></i> Remove
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <label asp-for="AuthorizedRepFirstName" class="form-label">First Name</label>
+                                            <input asp-for="AuthorizedRepFirstName" class="form-control rep-first-name"
+                                                   placeholder="First Name" />
+                                            <span asp-validation-for="AuthorizedRepFirstName" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label asp-for="AuthorizedRepLastName" class="form-label">Last Name</label>
+                                            <input asp-for="AuthorizedRepLastName" class="form-control rep-last-name"
+                                                   placeholder="Last Name" />
+                                            <span asp-validation-for="AuthorizedRepLastName" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label asp-for="AuthorizedRepMiddleName" class="form-label">Middle Name</label>
+                                            <input asp-for="AuthorizedRepMiddleName" class="form-control rep-middle-name"
+                                                   placeholder="Middle Name" />
+                                            <span asp-validation-for="AuthorizedRepMiddleName" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label asp-for="AuthorizedRepExtension" class="form-label">Extension</label>
+                                            <input asp-for="AuthorizedRepExtension" class="form-control rep-extension"
+                                                   placeholder="Jr, Sr" />
+                                            <span asp-validation-for="AuthorizedRepExtension" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label asp-for="AuthorizedRepRelationship" class="form-label">Relationship</label>
+                                            <input asp-for="AuthorizedRepRelationship" class="form-control rep-relationship"
+                                                   placeholder="e.g., Son, Daughter" />
+                                            <span asp-validation-for="AuthorizedRepRelationship" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group mb-3">
-                                <label asp-for="AuthorizedRepExtension" class="form-label">Extension</label>
-                                <input asp-for="AuthorizedRepExtension" class="form-control" placeholder="Jr, Sr" />
-                                <span asp-validation-for="AuthorizedRepExtension" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label asp-for="AuthorizedRepRelationship" class="form-label">Relationship</label>
-                                <input asp-for="AuthorizedRepRelationship" class="form-control" placeholder="e.g., Son, Daughter" />
-                                <span asp-validation-for="AuthorizedRepRelationship" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label asp-for="AuthorizedRepInfo" class="form-label">Additional Representative Info</label>
-                                <textarea asp-for="AuthorizedRepInfo" class="form-control" rows="2"
-                                          placeholder="Additional information about the representative"></textarea>
-                                <span asp-validation-for="AuthorizedRepInfo" class="text-danger"></span>
+
+                            <!-- Additional Representative Info -->
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label asp-for="AuthorizedRepInfo" class="form-label">Additional Representative Info</label>
+                                    <textarea asp-for="AuthorizedRepInfo" class="form-control" rows="2"
+                                              placeholder="Additional information about the representative"></textarea>
+                                    <span asp-validation-for="AuthorizedRepInfo" class="text-danger"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -656,6 +779,27 @@
             border-color: #e9ecef;
             cursor: not-allowed;
         }
+
+        /* Child and Representative Entry Styles */
+        .child-entry, .rep-entry {
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+        }
+
+            .child-entry .card-header, .rep-entry .card-header {
+                background-color: #f8f9fa;
+                border-bottom: 1px solid #dee2e6;
+            }
+
+            .child-entry .remove-child-btn, .rep-entry .remove-rep-btn {
+                font-size: 0.75rem;
+                padding: 0.25rem 0.5rem;
+            }
+
+        #addChildBtn, #addRepBtn {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+        }
     </style>
 }
 
@@ -665,6 +809,10 @@
             initializeForm();
             checkSpecialBenefits();
             updateAddressPreview();
+
+            // Initialize children and representatives functionality
+            initializeChildren();
+            initializeRepresentatives();
 
             // Setup event listeners
             document.getElementById('hasPensionToggle').addEventListener('change', togglePensionFields);
@@ -693,81 +841,6 @@
                 toggleOtherPension();
             }
         }
-
-            // Function to check and update zones
-        function updateZoneList() {
-            fetch('@Url.Action("GetZones", "Zone")')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const zoneSelect = document.getElementById('zoneSelect');
-                        const currentValue = zoneSelect.value;
-
-                        // Get existing zone numbers
-                        const existingZones = new Set();
-                        for (let option of zoneSelect.options) {
-                            if (option.value) {
-                                existingZones.add(parseInt(option.value));
-                            }
-                        }
-
-                        // Add any new zones
-                        let addedZones = 0;
-                        data.zones.forEach(zone => {
-                            if (!existingZones.has(zone.number)) {
-                                const newOption = new Option(zone.name, zone.number);
-                                zoneSelect.appendChild(newOption);
-                                addedZones++;
-
-                                // Sort options
-                                const options = Array.from(zoneSelect.options);
-                                options.sort((a, b) => {
-                                    return parseInt(a.value || 999) - parseInt(b.value || 999);
-                                });
-                                zoneSelect.innerHTML = '';
-                                options.forEach(opt => zoneSelect.appendChild(opt));
-                            }
-                        });
-
-                        // Restore selected value
-                        if (currentValue) {
-                            zoneSelect.value = currentValue;
-                        }
-
-                        // Update status message
-                        if (addedZones > 0) {
-                            document.getElementById('zoneStatus').textContent =
-                                `✓ Added ${addedZones} new zone(s)`;
-                            setTimeout(() => {
-                                document.getElementById('zoneStatus').textContent =
-                                    'Auto-updates when new zones are added';
-                            }, 3000);
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.log('Error updating zones:', error);
-                });
-        }
-
-        // Update zones when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            updateZoneList();
-
-            // Check for new zones every 30 seconds
-            setInterval(updateZoneList, 30000);
-
-            // Add refresh button (optional)
-            const refreshBtn = document.createElement('button');
-            refreshBtn.type = 'button';
-            refreshBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
-            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-            refreshBtn.title = 'Refresh zones';
-            refreshBtn.onclick = updateZoneList;
-
-            const zoneStatus = document.getElementById('zoneStatus');
-            zoneStatus.parentNode.insertBefore(refreshBtn, zoneStatus.nextSibling);
-        });
 
         function toggleOtherPension() {
             const pensionTypeSelect = document.getElementById('pensionTypeSelect');
@@ -885,6 +958,188 @@
 
             const addressPreview = document.getElementById('addressPreview');
             addressPreview.innerHTML = addressParts.join(', ');
+        }
+
+        // Initialize children functionality for Edit - FIXED WITH PROPER NUMBERING
+        function initializeChildren() {
+            const addChildBtn = document.getElementById('addChildBtn');
+            const childrenContainer = document.getElementById('childrenContainer');
+            const childTemplate = document.getElementById('childTemplate');
+
+            let childCount = 1; // Start with 1 since we have the default child
+
+            // Add child button click handler
+            addChildBtn.addEventListener('click', function() {
+                const newChild = childTemplate.cloneNode(true);
+                newChild.classList.remove('d-none');
+                newChild.classList.remove('child-template');
+
+                // Update index before adding
+                const currentIndex = childCount;
+                newChild.querySelector('.child-index').textContent = currentIndex;
+
+                // Update header text
+                const headerSpan = newChild.querySelector('.child-header-text');
+                headerSpan.innerHTML = `Child <span class="child-index">${currentIndex}</span>`;
+
+                // Update input names with proper indices
+                const inputs = newChild.querySelectorAll('input');
+                inputs.forEach(input => {
+                    const originalName = input.name;
+                    const newName = originalName.replace('__INDEX__', (currentIndex - 1).toString());
+                    input.name = newName;
+                    input.id = newName.replace(/[\[\].]/g, '_');
+                });
+
+                // Add remove button functionality
+                const removeBtn = newChild.querySelector('.remove-child-btn');
+                removeBtn.disabled = false;
+                removeBtn.addEventListener('click', function() {
+                    newChild.remove();
+                    childCount--;
+                    updateChildIndices();
+                });
+
+                // Insert before the additional children info
+                const additionalInfo = childrenContainer.querySelector('.col-md-12');
+                childrenContainer.insertBefore(newChild, additionalInfo);
+
+                childCount++;
+                updateChildIndices();
+            });
+
+            // Remove button functionality for existing children
+            document.querySelectorAll('.remove-child-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (!btn.disabled) {
+                        const childEntry = this.closest('.child-entry');
+                        if (childEntry && childrenContainer.querySelectorAll('.child-entry').length > 1) {
+                            childEntry.remove();
+                            childCount--;
+                            updateChildIndices();
+                        }
+                    }
+                });
+            });
+
+            function updateChildIndices() {
+                const childEntries = childrenContainer.querySelectorAll('.child-entry:not(.d-none)');
+                childEntries.forEach((entry, index) => {
+                    const displayIndex = index + 1;
+                    const indexSpan = entry.querySelector('.child-index');
+                    const headerSpan = entry.querySelector('.child-header-text');
+
+                    if (indexSpan) {
+                        indexSpan.textContent = displayIndex;
+                    }
+
+                    if (headerSpan) {
+                        headerSpan.innerHTML = `Child <span class="child-index">${displayIndex}</span>`;
+                    }
+
+                    // Update input names with new indices
+                    const inputs = entry.querySelectorAll('input');
+                    inputs.forEach(input => {
+                        const originalName = input.name;
+                        if (originalName.includes('Children[')) {
+                            const newName = originalName.replace(/Children\[\d+\]/, `Children[${index}]`);
+                            input.name = newName;
+                            input.id = newName.replace(/[\[\].]/g, '_');
+                        }
+                    });
+                });
+            }
+        }
+
+        // Initialize representatives functionality for Edit - FIXED WITH PROPER NUMBERING
+        function initializeRepresentatives() {
+            const addRepBtn = document.getElementById('addRepBtn');
+            const repsContainer = document.getElementById('representativesContainer');
+            const repTemplate = document.getElementById('repTemplate');
+
+            let repCount = 1; // Start with 1 since we have the default representative
+
+            // Add representative button click handler
+            addRepBtn.addEventListener('click', function() {
+                const newRep = repTemplate.cloneNode(true);
+                newRep.classList.remove('d-none');
+                newRep.classList.remove('rep-template');
+
+                // Update index before adding
+                const currentIndex = repCount;
+                newRep.querySelector('.rep-index').textContent = currentIndex;
+
+                // Update header text
+                const headerSpan = newRep.querySelector('.rep-header-text');
+                headerSpan.innerHTML = `Representative <span class="rep-index">${currentIndex}</span>`;
+
+                // Update input names with proper indices
+                const inputs = newRep.querySelectorAll('input');
+                inputs.forEach(input => {
+                    const originalName = input.name;
+                    const newName = originalName.replace('__INDEX__', (currentIndex - 1).toString());
+                    input.name = newName;
+                    input.id = newName.replace(/[\[\].]/g, '_');
+                });
+
+                // Add remove button functionality
+                const removeBtn = newRep.querySelector('.remove-rep-btn');
+                removeBtn.disabled = false;
+                removeBtn.addEventListener('click', function() {
+                    newRep.remove();
+                    repCount--;
+                    updateRepIndices();
+                });
+
+                // Insert before the additional rep info
+                const additionalInfo = repsContainer.querySelector('.col-md-12');
+                repsContainer.insertBefore(newRep, additionalInfo);
+
+                repCount++;
+                updateRepIndices();
+            });
+
+            // Remove button functionality for existing representatives
+            document.querySelectorAll('.remove-rep-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (!btn.disabled) {
+                        const repEntry = this.closest('.rep-entry');
+                        if (repEntry && repsContainer.querySelectorAll('.rep-entry').length > 1) {
+                            repEntry.remove();
+                            repCount--;
+                            updateRepIndices();
+                        }
+                    }
+                });
+            });
+
+            function updateRepIndices() {
+                const repEntries = repsContainer.querySelectorAll('.rep-entry:not(.d-none)');
+                repEntries.forEach((entry, index) => {
+                    const displayIndex = index + 1;
+                    const indexSpan = entry.querySelector('.rep-index');
+                    const headerSpan = entry.querySelector('.rep-header-text');
+
+                    if (indexSpan) {
+                        indexSpan.textContent = displayIndex;
+                    }
+
+                    if (headerSpan) {
+                        headerSpan.innerHTML = `Representative <span class="rep-index">${displayIndex}</span>`;
+                    }
+
+                    // Update input names with new indices
+                    const inputs = entry.querySelectorAll('input');
+                    inputs.forEach(input => {
+                        const originalName = input.name;
+                        if (originalName.includes('Representatives[')) {
+                            const newName = originalName.replace(/Representatives\[\d+\]/, `Representatives[${index}]`);
+                            input.name = newName;
+                            input.id = newName.replace(/[\[\].]/g, '_');
+                        }
+                    });
+                });
+            }
         }
 
         function initializeForm() {

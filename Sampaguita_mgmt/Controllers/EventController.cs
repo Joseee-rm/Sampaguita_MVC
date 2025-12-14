@@ -702,10 +702,10 @@ namespace SeniorManagement.Controllers
 
                     // Get event details
                     var eventQuery = @"
-                        SELECT Id, EventTitle, EventDescription, EventType, EventDate, EventTime, 
-                               EventLocation, OrganizedBy, MaxCapacity, AttendanceCount, Status
-                        FROM events 
-                        WHERE Id = @Id AND IsDeleted = 0";
+                SELECT Id, EventTitle, EventDescription, EventType, EventDate, EventTime, 
+                       EventLocation, OrganizedBy, MaxCapacity, AttendanceCount, Status
+                FROM events 
+                WHERE Id = @Id AND IsDeleted = 0";
 
                     Event eventDetails = null;
 
@@ -747,13 +747,44 @@ namespace SeniorManagement.Controllers
                         return RedirectToAction("Index");
                     }
 
+                    // Get all active zones from database
+                    var zonesQuery = @"
+                SELECT Id, ZoneNumber, ZoneName, Description, IsActive
+                FROM zones 
+                WHERE IsActive = 1
+                ORDER BY ZoneNumber";
+
+                    var zones = new List<Zone>();
+
+                    await using (var zonesCommand = new MySqlCommand(zonesQuery, connection))
+                    {
+                        await using (var reader = await zonesCommand.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                var zone = new Zone
+                                {
+                                    Id = reader.GetInt32("Id"),
+                                    ZoneNumber = reader.GetInt32("ZoneNumber"),
+                                    ZoneName = reader.GetString("ZoneName"),
+                                    Description = reader.IsDBNull(reader.GetOrdinal("Description"))
+                                        ? "" : reader.GetString("Description"),
+                                    IsActive = reader.GetBoolean("IsActive")
+                                };
+                                zones.Add(zone);
+                            }
+                        }
+                    }
+
+                    ViewBag.AvailableZones = zones;
+
                     // Get all active seniors
                     var seniorsQuery = @"
-                        SELECT Id, SeniorId, FirstName, LastName, MiddleInitial, 
-                               Gender, Age, Zone, Barangay, ContactNumber, Status
-                        FROM seniors 
-                        WHERE Status = 'Active'
-                        ORDER BY LastName, FirstName";
+                SELECT Id, SeniorId, FirstName, LastName, MiddleInitial, 
+                       Gender, Age, Zone, Barangay, ContactNumber, Status
+                FROM seniors 
+                WHERE Status = 'Active'
+                ORDER BY LastName, FirstName";
 
                     var seniors = new List<Senior>();
 
@@ -786,9 +817,9 @@ namespace SeniorManagement.Controllers
 
                     // Get attendance records for this event
                     var attendanceQuery = @"
-                        SELECT SeniorId, AttendanceStatus 
-                        FROM event_attendance 
-                        WHERE EventId = @EventId";
+                SELECT SeniorId, AttendanceStatus 
+                FROM event_attendance 
+                WHERE EventId = @EventId";
 
                     var attendanceStatus = new Dictionary<string, string>();
 

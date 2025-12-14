@@ -1,5 +1,4 @@
-﻿
-@model List<SeniorManagement.Models.Senior>
+﻿@model List<SeniorManagement.Models.Senior>
 @{
     ViewData["Title"] = "Event Attendance";
     var eventDetails = ViewBag.EventDetails as SeniorManagement.Models.Event;
@@ -7,30 +6,41 @@
     var presentCount = ViewBag.PresentCount as int? ?? 0;
     var absentCount = ViewBag.AbsentCount as int? ?? 0;
     var unmarkedCount = ViewBag.UnmarkedCount as int? ?? 0;
+    var zones = ViewBag.AvailableZones as List<SeniorManagement.Models.Zone> ?? new List<SeniorManagement.Models.Zone>();
 
     // Helper functions
     string GetAttendanceBadgeClass(string status)
     {
-        return status switch
+        switch (status)
         {
-            "Present" => "badge bg-success",
-            "Absent" => "badge bg-danger",
-            _ => "badge bg-secondary"
-        };
+            case "Present":
+                return "badge bg-success";
+            case "Absent":
+                return "badge bg-danger";
+            default:
+                return "badge bg-secondary";
+        }
     }
 
     string GetStatusBadgeClass(string status)
     {
-        return status switch
+        switch (status)
         {
-            "Upcoming" => "badge bg-primary",
-            "Scheduled" => "badge bg-info",
-            "Ongoing" => "badge bg-warning text-dark",
-            "Completed" => "badge bg-success",
-            "Confirmed" => "badge bg-success",
-            "Cancelled" => "badge bg-danger",
-            _ => "badge bg-secondary"
-        };
+            case "Upcoming":
+                return "badge bg-primary";
+            case "Scheduled":
+                return "badge bg-info";
+            case "Ongoing":
+                return "badge bg-warning text-dark";
+            case "Completed":
+                return "badge bg-success";
+            case "Confirmed":
+                return "badge bg-success";
+            case "Cancelled":
+                return "badge bg-danger";
+            default:
+                return "badge bg-secondary";
+        }
     }
 }
 
@@ -116,8 +126,8 @@
                     </div>
                     <div class="progress" style="height: 8px;">
                         <div class="progress-bar
-                                 @(percentage >= 90 ? "bg-danger" :
-                                                                 percentage >= 70 ? "bg-warning" : "bg-success")"
+                                     @(percentage >= 90 ? "bg-danger" :
+                                                                    percentage >= 70 ? "bg-warning" : "bg-success")"
                              style="width: @percentage%" role="progressbar">
                         </div>
                     </div>
@@ -271,9 +281,9 @@
                                 <label class="form-label small fw-medium">Zone</label>
                                 <select id="filterZone" class="form-select">
                                     <option value="">All Zones</option>
-                                    @for (int i = 1; i <= 10; i++)
+                                    @foreach (var zone in zones.Where(z => z.IsActive).OrderBy(z => z.ZoneNumber))
                                     {
-                                        <option value="@i">Zone @i</option>
+                                        <option value="@zone.ZoneNumber">Zone @zone.ZoneNumber - @zone.ZoneName</option>
                                     }
                                 </select>
                             </div>
@@ -1046,9 +1056,9 @@
             // Check if attendance has changed since page load
             @if (TempData["AttendanceUpdated"] != null)
             {
-                        <text>
-                        showToast('success', '@TempData["AttendanceUpdated"]');
-                        </text>
+                    <text>
+                    showToast('success', '@TempData["AttendanceUpdated"]');
+                    </text>
             }
 
             // Stop auto-refresh when page is hidden
